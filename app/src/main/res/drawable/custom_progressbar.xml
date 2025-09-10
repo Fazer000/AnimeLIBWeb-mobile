@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Фон прогрессбара -->
+    <item android:id="@android:id/background">
+        <shape>
+            <corners android:radius="10dp" />
+            <solid android:color="@android:color/transparent" /> <!-- Серый цвет фона -->
+        </shape>
+    </item>
+
+    <!-- Основной прогресс -->
+    <item android:id="@android:id/progress">
+        <clip>
+            <shape>
+                <corners android:radius="10dp" />
+                <solid android:color="#9575cd" /> <!-- Оранжевый цвет прогресса -->
+            </shape>
+        </clip>
+    </item>
+</layer-list>

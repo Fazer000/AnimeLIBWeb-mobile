@@ -1,0 +1,52 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Theme.AnimeLIB" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Primary brand color. -->
+        <item name="colorPrimary">@color/accent_color</item>
+        <item name="colorPrimaryVariant">@color/accent_color</item>
+        <item name="colorOnPrimary">@color/text_primary</item>
+        <!-- Secondary brand color. -->
+        <item name="colorSecondary">@color/accent_color</item>
+        <item name="colorSecondaryVariant">@color/accent_color</item>
+        <item name="colorOnSecondary">@color/text_primary</item>
+        <!-- Surface colors -->
+        <item name="colorSurface">@color/dialog_background</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorSurfaceVariant">@color/input_field_background</item>
+        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+        <!-- Error colors -->
+        <item name="colorError">@color/error_color</item>
+        <item name="colorOnError">@color/text_primary</item>
+        <!-- Background colors -->
+        <item name="android:colorBackground">@color/statusbar_color</item>
+        <item name="colorOnBackground">@color/text_primary</item>
+
+        <item name="android:statusBarColor">@color/statusbar_color</item>
+
+        <!-- Material 3 specific attributes -->
+        <item name="colorPrimaryContainer">@color/input_field_background</item>
+        <item name="colorOnPrimaryContainer">@color/text_primary</item>
+        <item name="colorSecondaryContainer">@color/button_cancel</item>
+        <item name="colorOnSecondaryContainer">@color/text_secondary</item>
+
+        <!-- Text input colors -->
+        <item name="textInputStyle">@style/Widget.Material3.TextInputLayout.FilledBox</item>
+    </style>
+
+    <!-- Custom dialog theme -->
+    <style name="Theme.AnimeLIB.Dialog" parent="Theme.Material3.DayNight.Dialog">
+        <item name="colorPrimary">@color/accent_color</item>
+        <item name="colorSurface">@color/dialog_background</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+    </style>
+
+    <!-- Shape appearance overlay for cards -->
+    <style name="ShapeAppearanceOverlay.AnimeLIB.Card.Cut" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSizeTopLeft">20dp</item>
+        <item name="cornerSizeTopRight">20dp</item>
+        <item name="cornerSizeBottomLeft">20dp</item>
+        <item name="cornerSizeBottomRight">20dp</item>
+    </style>
+</resources>

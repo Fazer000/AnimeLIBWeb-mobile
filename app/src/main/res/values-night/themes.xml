@@ -1,0 +1,25 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Theme.AnimeLIB" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Primary brand color. -->
+        <item name="colorPrimary">@color/purple_200</item>
+        <item name="colorPrimaryVariant">#252527</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <!-- Secondary brand color. -->
+        <item name="colorSecondary">@color/teal_200</item>
+        <item name="colorSecondaryVariant">@color/teal_200</item>
+        <item name="colorOnSecondary">#252527</item>
+        <!-- Customize your theme here. -->
+
+        <item name="android:statusBarColor">@color/statusbar_color</item>
+        <item name="android:windowLightStatusBar">false</item>
+
+        <item name="android:windowBackground">@color/statusbar_color</item>
+        <item name="android:navigationBarColor">@color/statusbar_color</item>
+    </style>
+
+    <style name="CustomSpinnerShapeAppearance" parent="ShapeAppearance.MaterialComponents.SmallComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">30dp</item>
+    </style>
+</resources>
