@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bs_background">
+
+    <View
+        android:layout_width="36dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center"
+        android:background="@drawable/bottom_sheet_handle"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="8dp">
+
+        <ImageButton
+            android:id="@+id/backButton"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            app:tint="?attr/primaryTextColor"
+            android:scaleX="0.8"
+            android:scaleY="0.8"
+            android:background="@drawable/button_ripple_effect"
+            android:src="@drawable/ic_next"
+            android:rotation="180"
+            android:contentDescription="Back"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Длинный переход"
+            android:textColor="?attr/primaryTextColor"
+            android:textStyle="bold"
+            android:textSize="18sp"
+            android:layout_marginStart="8dp"/>
+
+        <ImageButton
+            android:id="@+id/confirmButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0"
+            app:tint="?attr/primaryTextColor"
+            android:background="@android:color/transparent"
+            android:foreground="@drawable/ripple_circle"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_check"
+            android:contentDescription="OK"/>
+
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0.5dp"
+        android:background="?attr/lineColor"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:padding="24dp">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:layout_marginEnd="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Минуты"
+                android:textColor="?attr/primaryTextColor"
+                android:textSize="14sp"
+                android:layout_marginBottom="8dp"/>
+
+            <Spinner
+                android:id="@+id/minutesSpinner"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:gravity="center"
+                android:textColor="?attr/primaryTextColor"
+                style="@style/SpinnerTextStyle"
+                android:foregroundGravity="center"
+                android:popupBackground="?attr/primaryColor"
+                android:background="@drawable/beautiful_spinner_background"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"/>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Секунды"
+                android:textColor="?attr/primaryTextColor"
+                android:textSize="14sp"
+                android:layout_marginBottom="8dp"/>
+
+            <Spinner
+                android:id="@+id/secondsSpinner"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:textColor="?attr/primaryTextColor"
+                style="@style/SpinnerTextStyle"
+                android:popupBackground="@drawable/non_stroke_background"
+                android:background="@drawable/beautiful_spinner_background"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"/>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>

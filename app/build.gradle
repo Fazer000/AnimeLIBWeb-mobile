@@ -36,10 +36,15 @@ dependencies {
     implementation libs.room.runtime
     implementation libs.lifecycle.viewmodel
     implementation libs.lifecycle.livedata
+    implementation libs.media3.exoplayer.hls
     annotationProcessor libs.room.compiler
     testImplementation libs.junit
     androidTestImplementation libs.ext.junit
     androidTestImplementation libs.espresso.core
     implementation libs.swiperefreshlayout
     implementation libs.core
+    implementation libs.media3.exoplayer
+    implementation libs.media3.ui
+    implementation libs.media3.common
+    implementation libs.media3.datasource.okhttp
 }

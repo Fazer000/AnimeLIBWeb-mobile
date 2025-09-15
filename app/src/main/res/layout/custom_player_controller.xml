@@ -1,0 +1,349 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/exo_controller"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_gravity="bottom"
+    android:background="@drawable/player_controls_background">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginTop="20dp"
+        android:orientation="horizontal">
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0"
+
+            android:orientation="horizontal">
+            <ImageButton
+                android:id="@+id/ibClosePlayer"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:src="@drawable/ic_close"
+                android:background="@android:color/transparent"
+                android:foreground="@drawable/ripple_circle"/>
+        </LinearLayout>
+
+        <!-- Anime info -->
+        <LinearLayout
+            android:id="@+id/animeInfoContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/animeTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="@color/white_color"
+                android:textSize="18sp"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:layout_marginBottom="8dp"
+                android:text="Маг Целитель - Новый старт"/>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <TextView
+                        android:id="@+id/currentTeamName"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/dt_accent_text_color"
+                        android:textSize="12sp"
+                        android:text="Dream Cast"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/dt_accent_text_color"
+                        android:textSize="12sp"
+                        android:layout_marginHorizontal="10dp"
+                        android:text="—"/>
+
+                    <TextView
+                        android:id="@+id/currentEpisodeNumber"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/dt_accent_text_color"
+                        android:textSize="12sp"
+                        android:text="1 серия"/>
+
+                    <TextView
+                        android:id="@+id/currentEpisodeName"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/dt_accent_text_color"
+                        android:textSize="12sp"
+                        android:text=", Хуй пизда"/>
+                </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <!-- Settings Button -->
+            <ImageButton
+                android:id="@+id/settingsButton"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:layout_weight="0"
+                android:layout_gravity="top|end"
+                android:background="@android:color/transparent"
+                android:foreground="@drawable/ripple_circle"
+                android:src="@drawable/ic_settings"
+                android:scaleType="fitCenter"
+                android:contentDescription="Settings"
+                android:padding="8dp" />
+
+            <!-- Picture-in-Picture Button -->
+            <ImageButton
+                android:id="@+id/pipButton"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_weight="0"
+                android:layout_gravity="top|end"
+                android:background="@android:color/transparent"
+                android:foreground="@drawable/ripple_circle"
+                android:src="@drawable/ic_pip"
+                android:scaleType="fitCenter"
+                android:contentDescription="Picture-in-Picture"
+                android:padding="8dp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Episode Navigation and Play Controls -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_gravity="center"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <!-- Previous Episode Button -->
+        <ImageButton
+            android:id="@+id/prevEpisodeButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="16dp"
+            android:background="@android:color/transparent"
+            android:foreground="@drawable/ripple_circle"
+            android:src="@drawable/ic_player_back"
+            android:rotation="180"
+            android:scaleType="fitCenter"
+            android:contentDescription="Previous Episode"
+            android:padding="8dp"
+            android:visibility="visible"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <!-- Play/Pause Button -->
+        <FrameLayout
+            android:layout_width="64dp"
+            android:layout_height="64dp">
+
+            <ImageButton
+                android:id="@+id/exo_play"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:paddingLeft="4dp"
+                android:background="@android:color/transparent"
+                android:foreground="@drawable/ripple_circle"
+                android:src="@drawable/ic_player_play"
+                android:scaleType="fitCenter"
+                android:contentDescription="Play"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <ImageButton
+                android:id="@+id/exo_pause"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/transparent"
+                android:foreground="@drawable/ripple_circle"
+                android:src="@drawable/ic_player_pause"
+                android:scaleType="fitCenter"
+                android:visibility="gone"
+                android:contentDescription="Pause"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <com.google.android.material.progressindicator.CircularProgressIndicator
+                android:id="@+id/playLoadingIndicator"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:layout_gravity="center"
+                android:indeterminate="true"
+                app:trackCornerRadius="8dp"
+                app:indicatorColor="?attr/secondaryColor"
+                app:trackThickness="4dp"/>
+        </FrameLayout>
+
+        <!-- Next Episode Button -->
+        <ImageButton
+            android:id="@+id/nextEpisodeButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="16dp"
+            android:background="@android:color/transparent"
+            android:foreground="@drawable/ripple_circle"
+            android:src="@drawable/ic_player_next"
+            android:scaleType="fitCenter"
+            android:contentDescription="Next Episode"
+            android:padding="8dp"
+            android:visibility="visible"
+            android:clickable="true"
+            android:focusable="true" />
+
+    </LinearLayout>
+
+    <!-- Progress Bar -->
+    <LinearLayout
+        android:id="@+id/playersControlBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical">
+
+        <androidx.media3.ui.DefaultTimeBar
+            android:id="@+id/exo_progress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="-8dp"
+            android:layout_marginRight="-8dp"
+            android:alpha="0.0"
+            android:translationY="0dp"
+            app:played_color="?attr/secondaryColor"
+            app:scrubber_color="?attr/primaryColor"
+            app:bar_height="2dp"
+            app:buffered_color="?attr/alphaBorderColor"
+            app:unplayed_color="?attr/alphaPrimaryColor"
+            app:scrubber_drawable="@drawable/custom_scrubber"
+            app:scrubber_enabled_size="16dp"
+            app:scrubber_disabled_size="0dp" />
+
+        <!-- Time and Fullscreen Controls -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginBottom="10dp"
+            android:layout_marginTop="0dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/video_time_background"
+                android:paddingVertical="4dp"
+                android:paddingHorizontal="8dp"
+                android:orientation="horizontal">
+                <TextView
+                    android:id="@+id/exo_position"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="00:00"
+                    android:textColor="@color/white_color"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=" / "
+                    android:textColor="?attr/accentTextColor"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/exo_duration"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="00:00"
+                    android:textColor="?attr/accentTextColor"
+                    android:textSize="12sp" />
+
+            </LinearLayout>
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <!-- Skip Forward Button -->
+            <ImageButton
+                android:id="@+id/skipForwardButton"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginEnd="8dp"
+                android:background="@android:color/transparent"
+                android:foreground="@drawable/ripple_circle"
+                android:src="@drawable/ic_skip"
+                android:scaleType="fitCenter"
+                android:rotation="180"
+                android:contentDescription="Skip Forward 1:25"
+                android:paddingTop="4dp"
+                android:paddingBottom="6dp" />
+
+            <!-- Comments Button -->
+            <ImageButton
+                android:id="@+id/commentsButton"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginEnd="8dp"
+                android:background="@android:color/transparent"
+                android:foreground="@drawable/ripple_circle"
+                android:src="@drawable/ic_comments"
+                android:scaleType="fitCenter"
+                android:paddingTop="4dp"
+                android:contentDescription="Comments" />
+
+            <!-- Episodes Menu Button -->
+            <ImageButton
+                android:id="@+id/episodesMenuButton"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginEnd="8dp"
+                android:background="@android:color/transparent"
+                android:foreground="@drawable/ripple_circle"
+                android:src="@drawable/episodes_ico"
+                android:scaleType="fitCenter"
+                android:contentDescription="Episodes Menu"
+                android:padding="6dp" />
+
+            <!-- Players Menu Button -->
+            <ImageButton
+                android:id="@+id/menuToggleButton"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="@android:color/transparent"
+                android:foreground="@drawable/ripple_circle"
+                android:src="@drawable/ic_voice"
+                android:scaleType="fitCenter"
+                android:contentDescription="Players Menu"
+                android:padding="6dp" />
+
+        </LinearLayout>
+
+        <!-- Episodes List (hidden by default) -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/episodesHorizontalRecyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:layout_marginBottom="8dp"
+            android:paddingHorizontal="20dp"
+            android:clipToPadding="false"
+            android:fadeScrollbars="true"
+            android:visibility="gone"
+            android:alpha="0.0" />
+
+    </LinearLayout>
+
+</FrameLayout>

@@ -8,4 +8,12 @@
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">@string/site_url</domain>
     </domain-config>
+    <!-- Allow connections to Kodik API domain with SSL issues -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">burntv.ru</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </domain-config>
 </network-security-config>

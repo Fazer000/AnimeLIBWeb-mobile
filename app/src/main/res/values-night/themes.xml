@@ -1,25 +1,94 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
     <style name="Theme.AnimeLIB" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/purple_200</item>
-        <item name="colorPrimaryVariant">#252527</item>
-        <item name="colorOnPrimary">#FFFFFF</item>
-        <!-- Secondary brand color. -->
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_200</item>
-        <item name="colorOnSecondary">#252527</item>
-        <!-- Customize your theme here. -->
 
-        <item name="android:statusBarColor">@color/statusbar_color</item>
+        <!-- Custom Colors -->
+        <item name="primaryColor">@color/dt_primary_color</item>
+        <item name="secondaryColor">@color/dt_secondary_color</item>
+        <item name="blueColor">@color/dt_blue_color</item>
+        <item name="alphaPrimaryColor">@color/dt_alpha_primary_color</item>
+
+        <item name="statusBarColor">@color/dt_header_color</item>
+
+        <item name="borderColor">@color/dt_border_color</item>
+        <item name="alphaBorderColor">@color/dt_alpha_border_color</item>
+
+        <item name="lineColor">@color/dt_line_color</item>
+
+        <item name="primaryTextColor">@color/dt_primary_text_color</item>
+        <item name="secondaryTextColor">@color/dt_secondary_text_color</item>
+        <item name="accentTextColor">@color/dt_accent_text_color</item>
+
+
+
+        <!-- System Color -->
+        <item name="colorPrimary">@color/dt_primary_color</item>
+        <item name="colorPrimaryVariant">@color/dt_alpha_primary_color</item>
+        <item name="colorOnPrimary">@color/dt_secondary_color</item>
+        <item name="colorSecondary">@color/white_color</item>
+
+        <item name="android:statusBarColor">@color/dt_primary_color</item>
         <item name="android:windowLightStatusBar">false</item>
 
-        <item name="android:windowBackground">@color/statusbar_color</item>
-        <item name="android:navigationBarColor">@color/statusbar_color</item>
+        <item name="android:windowBackground">@color/dt_header_color</item>
+        <item name="android:navigationBarColor">@color/dt_primary_color</item>
+
+        <!-- Global font family -->
+        <item name="android:fontFamily">@font/open_sans</item>
+        <item name="fontFamily">@font/open_sans</item>
+        <item name="android:textColor">@color/dt_primary_text_color</item>
     </style>
 
     <style name="CustomSpinnerShapeAppearance" parent="ShapeAppearance.MaterialComponents.SmallComponent">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">30dp</item>
+        <item name="android:textColor">@color/lt_primary_text_color</item>
+    </style>
+
+    <!-- Основная тема для AlertDialog -->
+    <style name="MaterialAlertDialog.AnimeLIB" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:background">@color/dt_primary_color</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:backgroundDimAmount">0.5</item>
+
+        <!-- Цвета текста -->
+        <item name="android:textColorPrimary">@android:color/white</item>
+        <item name="android:textColorSecondary">@color/dt_accent_text_color</item>
+
+        <!-- Радиус скругления -->
+        <item name="cornerRadius">16dp</item>
+    </style>
+
+    <!-- Video player theme - always fullscreen, landscape -->
+    <style name="Theme.AnimeLIB.VideoPlayer" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:colorBackground">@color/black_color</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowBackground">@color/black_color</item>
+        <item name="android:navigationBarColor">@color/black_color</item>
+        <item name="android:statusBarColor">@color/black_color</item>
+        <!-- Ensure landscape orientation -->
+        <item name="android:screenOrientation">landscape</item>
+        <!-- Global font family -->
+        <item name="android:fontFamily">@font/open_sans</item>
+        <item name="fontFamily">@font/open_sans</item>
+        
+        <!-- Custom Colors -->
+        <item name="primaryColor">@color/dt_primary_color</item>
+        <item name="secondaryColor">@color/dt_secondary_color</item>
+        <item name="blueColor">@color/dt_blue_color</item>
+        <item name="alphaPrimaryColor">@color/dt_alpha_primary_color</item>
+        <item name="borderColor">@color/dt_border_color</item>
+        <item name="alphaBorderColor">@color/dt_alpha_border_color</item>
+        <item name="lineColor">@color/dt_line_color</item>
+        <item name="primaryTextColor">@color/dt_primary_text_color</item>
+        <item name="secondaryTextColor">@color/dt_secondary_text_color</item>
+        <item name="accentTextColor">@color/dt_accent_text_color</item>
+    </style>
+
+    <style name="SpinnerTextStyle" parent="Widget.AppCompat.Spinner">
+        <item name="android:textColor">@color/dt_primary_text_color</item>
+        <item name="android:gravity">center</item>
     </style>
 </resources>

@@ -1,21 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="purple_200">#FFBB86FC</color>
-    <color name="purple_500">#FF6200EE</color>
-    <color name="purple_700">#FF3700B3</color>
-    <color name="teal_200">#FF03DAC5</color>
-    <color name="teal_700">#FF018786</color>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
-    <color name="statusbar_color">#252527</color>
 
-    <!-- AnimeLIB theme colors -->
-    <color name="dialog_background">#1E1E1E</color>
-    <color name="input_field_background">#2D2D2D</color>
-    <color name="text_primary">#FFFFFF</color>
-    <color name="text_secondary">#CCCCCC</color>
-    <color name="text_hint">#888888</color>
-    <color name="error_color">#FF5252</color>
-    <color name="accent_color">#9575cd</color>
-    <color name="button_cancel">#424242</color>
+    <color name="white_color">#FFFFFF</color>
+    <color name="gray_color">#D8D8D8</color>
+    <color name="black_color">#000000</color>
+
+    <!-- Dark Theme -->
+    <!-- General Colors -->
+    <color name="dt_primary_color">#1c1c1c</color>
+    <color name="dt_secondary_color">#7C3AED</color>
+    <color name="dt_blue_color">#2196f3</color>
+    <color name="dt_alpha_primary_color">#30000000</color>
+
+    <color name="dt_border_color">#464649</color>
+    <color name="dt_alpha_border_color">#70545458</color>
+
+    <color name="dt_line_color">#464649</color>
+
+    <color name="dt_header_color">#252527</color>
+
+    <!-- Text Colors -->
+    <color name="dt_primary_text_color">#bfbfbf</color>
+    <color name="dt_secondary_text_color">#7C3AED</color>
+    <color name="dt_accent_text_color">#80F5F5FA</color>
+
+
+    <!-- Light Theme -->
+    <!-- General Colors -->
+    <color name="lt_primary_color">#FFFFFF</color>
+    <color name="lt_secondary_color">#7C3AED</color>
+    <color name="lt_blue_color">#1976D2</color>
+    <color name="lt_alpha_primary_color">#1AFFFFFF</color>
+
+    <color name="lt_border_color">#E0E0E0</color>
+    <color name="lt_alpha_border_color">#33E0E0E0</color>
+
+    <color name="lt_line_color">#AAAAAA</color>
+
+    <color name="lt_header_color">#ede7f6</color>
+
+    <!-- Text Colors -->
+    <color name="lt_primary_text_color">#212121</color>
+    <color name="lt_secondary_text_color">#7C3AED</color>
+    <color name="lt_accent_text_color">#757575</color>
 </resources>

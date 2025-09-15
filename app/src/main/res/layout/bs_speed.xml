@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:background="@drawable/bs_background"
+    android:paddingBottom="12dp">
+
+    <View
+        android:layout_width="36dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center"
+        android:background="@drawable/bottom_sheet_handle"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"/>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="8dp">
+
+        <ImageButton
+            android:id="@+id/backButton"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:scaleX="0.8"
+            android:scaleY="0.8"
+            app:tint="?attr/primaryTextColor"
+            android:background="@android:color/transparent"
+            android:foreground="@drawable/ripple_circle"
+            android:src="@drawable/ic_next"
+            android:rotation="180"
+            android:contentDescription="Back"/>
+
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Скорость"
+            android:textColor="?attr/primaryTextColor"
+            android:textStyle="bold"
+            android:textSize="18sp"
+            android:layout_marginStart="8dp"/>
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0.5dp"
+        android:background="?attr/lineColor"
+        android:layout_marginBottom="10dp"/>
+
+    <TextView
+        android:id="@+id/currentSpeedText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:textColor="?attr/primaryTextColor"
+        android:text="1.0x"
+        android:textSize="16sp"/>
+
+    <SeekBar
+        android:id="@+id/speedSeekBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:max="20"
+        android:maxHeight="6dp"
+        android:progressDrawable="@drawable/seekbar_speed_track"
+        android:thumb="@drawable/seekbar_speed_thumb"
+        android:splitTrack="false"/>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:paddingTop="8dp"
+        android:paddingBottom="4dp">
+
+        <TextView android:id="@+id/speed05x" style="@style/Widget.MaterialComponents.Chip.Choice"
+            android:layout_width="55dp"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:layout_marginEnd="10dp"
+            android:background="@drawable/episode_item_normal"
+            android:text="0.5x" android:padding="8dp" android:textColor="?attr/accentTextColor"/>
+
+        <TextView android:id="@+id/speed1x" style="@style/Widget.MaterialComponents.Chip.Choice"
+            android:layout_width="55dp"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:layout_marginEnd="10dp"
+            android:background="@drawable/episode_item_normal"
+            android:text="1.0x" android:padding="8dp" android:textColor="?attr/accentTextColor"/>
+        <TextView android:id="@+id/speed15x" style="@style/Widget.MaterialComponents.Chip.Choice"
+            android:layout_width="55dp"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:layout_marginEnd="10dp"
+            android:background="@drawable/episode_item_normal"
+            android:text="1.5x" android:padding="8dp" android:textColor="?attr/accentTextColor"/>
+        <TextView android:id="@+id/speed2x" style="@style/Widget.MaterialComponents.Chip.Choice"
+            android:layout_width="55dp"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:background="@drawable/episode_item_normal"
+            android:text="2.0x" android:padding="8dp" android:textColor="?attr/accentTextColor"/>
+    </LinearLayout>
+
+    <TextView android:id="@+id/speedSkip" style="@style/Widget.MaterialComponents.Chip.Choice"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:layout_gravity="center"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/episode_item_normal"
+        android:text="Скипнуть серию" android:padding="8dp" android:textColor="?attr/accentTextColor"/>
+</LinearLayout>
+
+

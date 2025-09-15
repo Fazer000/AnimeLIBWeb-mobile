@@ -2,8 +2,7 @@
 <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/swipeRefreshLayout"
-    android:fitsSystemWindows="false"
-    android:paddingTop="45dp"
+    android:background="?attr/statusBarColor"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -23,7 +22,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:fitsSystemWindows="false"
-            android:background="#80000000"
+            android:background="@color/dt_alpha_primary_color"
             android:visibility="gone">
 
             <com.google.android.material.progressindicator.CircularProgressIndicator

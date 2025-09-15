@@ -1,19 +1,16 @@
 package com.example.animelib;
 
 import android.annotation.SuppressLint;
-import android.content.res.Configuration;
+import android.content.Intent;
 import android.graphics.Bitmap;
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
-import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
-import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
 import android.webkit.CookieManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -24,12 +21,23 @@ import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
+import androidx.annotation.OptIn;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.graphics.Insets;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.media3.common.util.UnstableApi;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+
+import com.example.animelib.api.ApiResponse;
+import com.example.animelib.data.AppSettings;
+import com.example.animelib.data.ButtonData;
+import com.example.animelib.ui.UrlInputDialog;
+import com.example.animelib.viewmodel.AppSettingsViewModel;
+import com.example.animelib.VideoPlayerActivity;
+import com.example.animelib.util.ThemeUtils;
+import com.example.animelib.api.AnimeApiService;
 import com.google.android.material.progressindicator.CircularProgressIndicator;
 
 import com.google.gson.Gson;
@@ -40,13 +48,12 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 import java.io.IOException;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
     private WebView webView;
@@ -61,6 +68,7 @@ public class MainActivity extends AppCompatActivity {
     private Executor executor;
     private Gson gson;
     private AppSettingsViewModel viewModel;
+    private AnimeApiService apiService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,290 +92,42 @@ public class MainActivity extends AppCompatActivity {
 
         // Initialize ViewModel
         viewModel = new ViewModelProvider(this).get(AppSettingsViewModel.class);
+        
+        // Initialize API service
+        apiService = new AnimeApiService(this);
 
-//        updateFitsSystemWindows();
+        // Load and apply theme
+        loadAndApplyTheme();
+
         setupWebView();
         setupRefreshLayout();
         setupBackPressHandler();
+
+//         ТЕСТОВЫЙ РЕЖИМ - раскомментируйте строку ниже для тестирования плеера
+//        startTestPlayer();
+
         checkAndLoadUrl();
-    } 
-
-    @Override
-    public void onConfigurationChanged(@NonNull Configuration newConfig) {
-        super.onConfigurationChanged(newConfig);
-//        updateFitsSystemWindows();
     }
-
-    private void updateFitsSystemWindows() {
-        boolean isPortrait = getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT;
-        swipeRefreshLayout.setFitsSystemWindows(isPortrait);
-    }
-
-    private void setupRefreshLayout() {
-        swipeRefreshLayout.setOnRefreshListener(() -> {
-            webView.reload();
-            spinner.setVisibility(View.VISIBLE);
-            spinnerBackground.setVisibility(View.VISIBLE);
-            Animation fadeIn = AnimationUtils.loadAnimation(this, R.anim.fade_in);
-            spinner.startAnimation(fadeIn);
-            spinnerBackground.startAnimation(fadeIn);
-            Log.d("WebView", "Refresh triggered, spinner and background shown with fade-in");
-        });
-        swipeRefreshLayout.setOnChildScrollUpCallback((parent, child) -> webView.getScrollY() > 0);
-        swipeRefreshLayout.setOverScrollMode(View.OVER_SCROLL_NEVER);
-    }
-
-    @SuppressLint("SetJavaScriptEnabled")
-    private void setupWebView() {
-        WebSettings webSettings = webView.getSettings();
-
-        webSettings.setJavaScriptEnabled(true);
-        webSettings.setDomStorageEnabled(true);
-        webSettings.setDatabaseEnabled(true);
-        webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
-        webSettings.setLoadWithOverviewMode(true);
-        webSettings.setUseWideViewPort(true);
-        webSettings.setAllowFileAccess(true);
-        webSettings.setAllowContentAccess(true);
-        webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
-        webSettings.setMediaPlaybackRequiresUserGesture(false);
-        webSettings.setGeolocationEnabled(true);
-        webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-        webSettings.setUserAgentString(getRandomUserAgent());
-
-        webSettings.setSupportZoom(false);
-        webSettings.setBuiltInZoomControls(false);
-        webSettings.setDisplayZoomControls(false);
-
-        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-
-        CookieManager.getInstance().setAcceptCookie(true);
-        CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
-
-        Map<String, String> headers = getStringStringMap();
-        webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
-
-        webView.setWebViewClient(new WebViewClient() {
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                String url = request.getUrl().toString();
-                Log.d("WebView", "Redirect to: " + url);
-                view.loadUrl(url, headers);
-                return true;
-            }
-
-            @Override
-            public void onPageStarted(WebView view, String url, Bitmap favicon) {
-                if (isFirstLoad && spinner.getVisibility() != View.VISIBLE) {
-                    spinner.setVisibility(View.VISIBLE);
-                    spinnerBackground.setVisibility(View.VISIBLE);
-                    Animation fadeIn = AnimationUtils.loadAnimation(MainActivity.this, R.anim.fade_in);
-                    spinner.startAnimation(fadeIn);
-                    spinnerBackground.startAnimation(fadeIn);
-                    Log.d("WebView", "First load, spinner and background shown with fade-in: " + url);
-                }
-                swipeRefreshLayout.setRefreshing(false);
-            }
-
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                Animation fadeOut = AnimationUtils.loadAnimation(MainActivity.this, R.anim.fade_out);
-                fadeOut.setAnimationListener(new Animation.AnimationListener() {
-                    @Override
-                    public void onAnimationStart(Animation animation) {}
-                    @Override
-                    public void onAnimationEnd(Animation animation) {
-                        spinner.setVisibility(View.GONE);
-                        spinnerBackground.setVisibility(View.GONE);
-                        if (isFirstLoad) {
-                            isFirstLoad = false;
-                        }
-                    }
-                    @Override
-                    public void onAnimationRepeat(Animation animation) {}
-                });
-                if (spinner.getVisibility() == View.VISIBLE) {
-                    spinner.startAnimation(fadeOut);
-                    spinnerBackground.startAnimation(fadeOut);
-                }
-                swipeRefreshLayout.setRefreshing(false);
-                view.evaluateJavascript(
-                        "Object.defineProperty(navigator, 'webdriver', { get: () => false });" +
-                                "Object.defineProperty(navigator, 'platform', { get: () => 'Android' });" +
-                                "Object.defineProperty(navigator, 'maxTouchPoints', { get: () => 5 });" +
-                                "if (document.querySelector('video')) { " +
-                                "  let video = document.querySelector('video');" +
-                                "  video.setAttribute('playsinline', '');" +
-                                "  video.preload = 'auto';" +
-                                "  video.play().catch(e => console.log('Autoplay error: ', e));" +
-                                "}" +
-                                "window.scrollTo(0, document.body.scrollHeight / 2);" +
-                                "setTimeout(() => { window.scrollTo(0, 0); }, 1000);" +
-                                "document.addEventListener('touchstart', function() { console.log('Touch event'); });" +
-                                "if (window._cf_chl_opt) { window._cf_chl_opt.cfp(); }" +
-                                "if (document.querySelector('iframe[src*=\"turnstile\"]')) { " +
-                                "  console.log('Turnstile CAPTCHA detected');" +
-                                "  window.postMessage({ type: 'TURNSTILE_CHALLENGE', data: 'solving' }, '*');" +
-                                "}",
-                        null);
-                Log.d("WebView", "Finished, spinner and background hidden with fade-out: " + url);
-            }
-            @Override
-            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
-                Log.e("WebView", "Error: " + errorCode + " - " + description + " - URL: " + failingUrl);
-                Animation fadeOut = AnimationUtils.loadAnimation(MainActivity.this, R.anim.fade_out);
-                fadeOut.setAnimationListener(new Animation.AnimationListener() {
-                    @Override
-                    public void onAnimationStart(Animation animation) {}
-                    @Override
-                    public void onAnimationEnd(Animation animation) {
-                        spinner.setVisibility(View.GONE);
-                        spinnerBackground.setVisibility(View.GONE);
-                    }
-                    @Override
-                    public void onAnimationRepeat(Animation animation) {}
-                });
-                spinner.startAnimation(fadeOut);
-                spinnerBackground.startAnimation(fadeOut);
-                swipeRefreshLayout.setRefreshing(false);
-                if (errorCode == WebViewClient.ERROR_TIMEOUT || errorCode == WebViewClient.ERROR_HOST_LOOKUP) {
-                    Log.e("WebView", "Timeout or host lookup error, retrying...");
-                    view.reload();
-                }
-            }
-        });
-
-        webView.setWebChromeClient(new WebChromeClient() {
-            @Override
-            public void onProgressChanged(WebView view, int newProgress) {
-                if (newProgress < 100 && isFirstLoad && spinner.getVisibility() != View.VISIBLE) {
-                    spinner.setVisibility(View.VISIBLE);
-                    spinnerBackground.setVisibility(View.VISIBLE);
-                    Animation fadeIn = AnimationUtils.loadAnimation(MainActivity.this, R.anim.fade_in);
-                    spinner.startAnimation(fadeIn);
-                    spinnerBackground.startAnimation(fadeIn);
-                    Log.d("WebView", "Progress: " + newProgress + "%, spinner and background shown with fade-in");
-                } else if (newProgress == 100 && isFirstLoad) {
-                    Animation fadeOut = AnimationUtils.loadAnimation(MainActivity.this, R.anim.fade_out);
-                    fadeOut.setAnimationListener(new Animation.AnimationListener() {
-                        @Override
-                        public void onAnimationStart(Animation animation) {}
-                        @Override
-                        public void onAnimationEnd(Animation animation) {
-                            spinner.setVisibility(View.GONE);
-                            spinnerBackground.setVisibility(View.GONE);
-                            isFirstLoad = false;
-                        }
-                        @Override
-                        public void onAnimationRepeat(Animation animation) {}
-                    });
-                    if (spinner.getVisibility() == View.VISIBLE) {
-                        spinner.startAnimation(fadeOut);
-                        spinnerBackground.startAnimation(fadeOut);
-                    }
-                    Log.d("WebView", "Progress: 100%, spinner and background hidden with fade-out");
-                }
-            }
-
-            @Override
-            public void onShowCustomView(View view, CustomViewCallback callback) {
-                if (customView != null) {
-                    callback.onCustomViewHidden();
-                    return;
-                }
-
-                customView = view;
-                customViewCallback = callback;
-
-                FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                );
-                fullscreenContainer.addView(customView, params);
-                fullscreenContainer.setVisibility(View.VISIBLE);
-
-                webView.setVisibility(View.GONE);
-
-                customView.setFitsSystemWindows(false);
-                fullscreenContainer.setFitsSystemWindows(false);
-                webView.setFitsSystemWindows(false);
-
-                swipeRefreshLayout.setPadding(0, 0, 0,0);
-
-                getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
-            }
-
-            @Override
-            public void onHideCustomView() {
-                if (customView == null) {
-                    return;
-                }
-
-                fullscreenContainer.removeView(customView);
-                customView = null;
-
-                fullscreenContainer.setVisibility(View.GONE);
-                webView.setVisibility(View.VISIBLE);
-                customViewCallback.onCustomViewHidden();
-
-                int paddingTopInPx = (int) TypedValue.applyDimension(
-                        TypedValue.COMPLEX_UNIT_DIP,
-                        45,
-                        getResources().getDisplayMetrics()
-                );
-
-                swipeRefreshLayout.setPadding(0, paddingTopInPx, 0, 0);
-
-                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
-            }
+    
+    private void loadAndApplyTheme() {
+        executor.execute(() -> {
+            int themeMode = apiService.loadThemeSetting();
+            runOnUiThread(() -> {
+                ThemeUtils.applyTheme(themeMode);
+                Log.d("MainActivity", "Theme applied: " + themeMode);
+            });
         });
     }
 
-    private String getRandomUserAgent() {
-        String[] userAgents = {
-                "Mozilla/5.0 (Linux; Android 10; SM-G975F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Mobile Safari/537.36",
-                "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Mobile Safari/537.36",
-                "Mozilla/5.0 (Linux; Android 12; SM-A525F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.62 Mobile Safari/537.36",
-                "Mozilla/5.0 (Linux; Android 13; SM-N986B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.71 Mobile Safari/537.36"
-        };
-        return userAgents[new Random().nextInt(userAgents.length)];
-    }
-
-    @NonNull
-    private Map<String, String> getStringStringMap() {
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
-        headers.put("Accept-Language", "en-US,en;q=0.5");
-        headers.put("Connection", "keep-alive");
-        headers.put("Upgrade-Insecure-Requests", "1");
-        headers.put("Sec-Fetch-Dest", "document");
-        headers.put("Sec-Fetch-Mode", "navigate");
-        headers.put("Sec-Fetch-Site", "none");
-        headers.put("Sec-Fetch-User", "?1");
-        headers.put("Referer", "https://www.google.com/");
-        headers.put("DNT", "1");
-        headers.put("Accept-Encoding", "gzip, deflate, br");
-        headers.put("User-Agent", getRandomUserAgent());
-        headers.put("Sec-CH-UA", "\"Chromium\";v=\"94\", \"Google Chrome\";v=\"94\", \";Not A Brand\";v=\"99\"");
-        headers.put("Sec-CH-UA-Mobile", "?1");
-        headers.put("Sec-CH-UA-Platform", "\"Android\"");
-        return headers;
-    }
-
-    private void setupBackPressHandler() {
-        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
-            @Override
-            public void handleOnBackPressed() {
-                if (customView != null) {
-                    Objects.requireNonNull(webView.getWebChromeClient()).onHideCustomView();
-                } else if (webView.canGoBack()) {
-                    webView.goBack();
-                } else {
-                    setEnabled(false);
-                    onBackPressed();
-                }
-            }
-        });
+    @OptIn(markerClass = UnstableApi.class)
+    private void startTestPlayer() {
+        // Тестовый запуск плеера с демо видео
+        // Для тестирования интерфейса плеера
+        Intent intent = new Intent(this, VideoPlayerActivity.class);
+        intent.putExtra(VideoPlayerActivity.EXTRA_ANIME_URL,
+            "https://v3.animelib.org/ru/anime/18858--sono-bisque-doll-wa-koi-wo-suru-anime/watch");
+        startActivity(intent);
+        finish(); // Закрываем MainActivity чтобы не было возможности вернуться
     }
 
     private void checkAndLoadUrl() {
@@ -422,7 +182,7 @@ public class MainActivity extends AppCompatActivity {
                 public void onFailure(@NonNull Call call, @NonNull IOException e) {
                     Log.e("ApiCheck", "API request failed", e);
                     runOnUiThread(() -> Toast.makeText(MainActivity.this, "Хуй там - " + e, Toast.LENGTH_SHORT).show());
-                }
+    } 
 
                 @Override
                 public void onResponse(@NonNull Call call, @NonNull Response response) {
@@ -476,10 +236,271 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private void setupWebView() {
+        WebSettings webSettings = webView.getSettings();
+
+        webSettings.setJavaScriptEnabled(true);
+        webSettings.setDomStorageEnabled(true);
+        webSettings.setDatabaseEnabled(true);
+        webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        webSettings.setLoadWithOverviewMode(true);
+        webSettings.setUseWideViewPort(true);
+        webSettings.setAllowFileAccess(true);
+        webSettings.setAllowContentAccess(true);
+        webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
+        webSettings.setMediaPlaybackRequiresUserGesture(false);
+        webSettings.setGeolocationEnabled(true);
+        webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        webSettings.setUserAgentString(getRandomUserAgent());
+
+        webSettings.setSupportZoom(false);
+        webSettings.setBuiltInZoomControls(false);
+        webSettings.setDisplayZoomControls(false);
+
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+
+        CookieManager.getInstance().setAcceptCookie(true);
+        CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
+
+        // Add JavaScript interface for video detection
+        webView.addJavascriptInterface(new Object() {
+            @OptIn(markerClass = UnstableApi.class)
+            @JavascriptInterface
+            public void onPlayerButtonClicked(String buttonHref) {
+                runOnUiThread(() -> {
+                    Log.d("JSInterface", "Player button clicked: " + buttonHref);
+                    Log.d("PlayerHandler", "Starting VideoPlayerActivity for URL: " + buttonHref);
+                    VideoPlayerActivity.startFromAnimePage(MainActivity.this, buttonHref);
+                });
+            }
+        }, "AndroidInterface");
+
+        Map<String, String> headers = getStringStringMap();
+        webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+
+        webView.setWebViewClient(new WebViewClient() {
+            @OptIn(markerClass = UnstableApi.class)
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                String url = request.getUrl().toString();
+
+                // Allow other URLs to load normally
+                view.loadUrl(url, headers);
+                return true;
+            }
+
+            @Override
+            public void onPageStarted(WebView view, String url, Bitmap favicon) {
+                if (isFirstLoad && spinner.getVisibility() != View.VISIBLE) {
+                    spinner.setVisibility(View.VISIBLE);
+                    spinnerBackground.setVisibility(View.VISIBLE);
+                    Log.d("WebView", "First load, spinner shown: " + url);
+                }
+                swipeRefreshLayout.setRefreshing(false);
+
+                // Always setup listeners - let JavaScript determine if it's needed
+                Log.d("WebView", "Setting up player button listeners for SPA");
+                setupPlayerButtonListeners(view);
+            }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                        spinner.setVisibility(View.GONE);
+                        spinnerBackground.setVisibility(View.GONE);
+                        if (isFirstLoad) {
+                            isFirstLoad = false;
+                        }
+                swipeRefreshLayout.setRefreshing(false);
+                Log.d("WebView", "Finished loading: " + url);
+            }
+
+            @Override
+            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                Log.e("WebView", "Error: " + errorCode + " - " + description + " - URL: " + failingUrl);
+                        spinner.setVisibility(View.GONE);
+                        spinnerBackground.setVisibility(View.GONE);
+                swipeRefreshLayout.setRefreshing(false);
+            }
+        });
+
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onShowCustomView(View view, CustomViewCallback callback) {
+                if (customView != null) {
+                    callback.onCustomViewHidden();
+                    return;
+                }
+
+                customView = view;
+                customViewCallback = callback;
+
+                FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                );
+                fullscreenContainer.addView(customView, params);
+                fullscreenContainer.setVisibility(View.VISIBLE);
+
+                webView.setVisibility(View.GONE);
+            }
+
+            @Override
+            public void onHideCustomView() {
+                if (customView == null) {
+                    return;
+                }
+
+                fullscreenContainer.removeView(customView);
+                customView = null;
+
+                fullscreenContainer.setVisibility(View.GONE);
+                webView.setVisibility(View.VISIBLE);
+                customViewCallback.onCustomViewHidden();
+            }
+        });
+    }
+
+    private void setupPlayerButtonListeners(WebView webView) {
+        Log.d("WebView", "Setting up SPA-aware player button listeners");
+        
+        // First test basic JavaScript
+        webView.evaluateJavascript("'test'", value -> {
+            Log.d("WebView", "Basic JS test: " + value);
+        });
+        
+        // Simple and working JavaScript code
+        webView.evaluateJavascript(
+            "console.log('[AnimeLIB] Test log'); " +
+            "window.animelibTest = 'working'; " +
+            "'basic_test_ok'", 
+            value -> Log.d("WebView", "Basic test result: " + value)
+        );
+        
+        // Simplified working JavaScript
+        String jsCode = 
+            "try {" +
+            "  console.log('[AnimeLIB] Starting simple setup');" +
+            "  " +
+            "  if (window.animelibSetup) {" +
+            "    console.log('[AnimeLIB] Already setup');" +
+            "  } else {" +
+            "    window.animelibSetup = true;" +
+            "    " +
+            "    document.addEventListener('click', function(e) {" +
+            "      console.log('[AnimeLIB] Click detected on: ' + e.target.tagName);" +
+            "      " +
+            "      var el = e.target;" +
+            "      for (var i = 0; i < 5 && el; i++) {" +
+            "        if (el.tagName === 'A') {" +
+            "          var href = el.href || el.getAttribute('href') || '';" +
+            "          console.log('[AnimeLIB] Link found: ' + href);" +
+            "          " +
+            "          if (href.includes('/watch') || href.includes('episode')) {" +
+            "            console.log('[AnimeLIB] Player button clicked: ' + href);" +
+            "            e.preventDefault();" +
+            "            e.stopPropagation();" +
+            "            AndroidInterface.onPlayerButtonClicked(href);" +
+            "            break;" +
+            "          }" +
+            "        }" +
+            "        el = el.parentElement;" +
+            "      }" +
+            "    }, true);" +
+            "    " +
+            "    console.log('[AnimeLIB] Simple setup complete');" +
+            "  }" +
+            "  'setup_ok';" +
+            "} catch (e) {" +
+            "  console.error('[AnimeLIB] Error: ' + e.message);" +
+            "  'error: ' + e.message;" +
+            "}";
+
+        // Execute the simplified JavaScript
+        webView.evaluateJavascript(jsCode, value -> {
+            Log.d("WebView", "Simple setup result: " + value);
+            if (value == null || "null".equals(value)) {
+                Log.e("WebView", "JavaScript returned null - syntax error!");
+            }
+        });
+        
+        // Also test with delay
+        webView.postDelayed(() -> {
+            Log.d("WebView", "Running delayed simple setup");
+            webView.evaluateJavascript(
+                "console.log('[AnimeLIB] Delayed test at: ' + window.location.href); 'delayed_ok'",
+                value -> Log.d("WebView", "Delayed test result: " + value)
+            );
+        }, 2000);
+    }
+
+    private void setupRefreshLayout() {
+        swipeRefreshLayout.setOnRefreshListener(() -> {
+            webView.reload();
+            spinner.setVisibility(View.VISIBLE);
+            spinnerBackground.setVisibility(View.VISIBLE);
+            Log.d("WebView", "Refresh triggered, spinner shown");
+        });
+        swipeRefreshLayout.setOnChildScrollUpCallback((parent, child) -> webView.getScrollY() > 0);
+        swipeRefreshLayout.setOverScrollMode(View.OVER_SCROLL_NEVER);
+    }
+
+    private String getRandomUserAgent() {
+        String[] userAgents = {
+                "Mozilla/5.0 (Linux; Android 10; SM-G975F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Mobile Safari/537.36",
+                "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Mobile Safari/537.36",
+                "Mozilla/5.0 (Linux; Android 12; SM-A525F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.62 Mobile Safari/537.36",
+                "Mozilla/5.0 (Linux; Android 13; SM-N986B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.71 Mobile Safari/537.36"
+        };
+        return userAgents[new Random().nextInt(userAgents.length)];
+    }
+
+    @NonNull
+    private Map<String, String> getStringStringMap() {
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
+        headers.put("Accept-Language", "en-US,en;q=0.5");
+        headers.put("Connection", "keep-alive");
+        headers.put("Upgrade-Insecure-Requests", "1");
+        headers.put("Sec-Fetch-Dest", "document");
+        headers.put("Sec-Fetch-Mode", "navigate");
+        headers.put("Sec-Fetch-Site", "none");
+        headers.put("Sec-Fetch-User", "?1");
+        headers.put("Referer", "https://www.google.com/");
+        headers.put("DNT", "1");
+        headers.put("Accept-Encoding", "gzip, deflate, br");
+        headers.put("User-Agent", getRandomUserAgent());
+        headers.put("Sec-CH-UA", "\"Chromium\";v=\"94\", \"Google Chrome\";v=\"94\", \";Not A Brand\";v=\"99\"");
+        headers.put("Sec-CH-UA-Mobile", "?1");
+        headers.put("Sec-CH-UA-Platform", "\"Android\"");
+        return headers;
+    }
+
+    private void setupBackPressHandler() {
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (customView != null) {
+                    Objects.requireNonNull(webView.getWebChromeClient()).onHideCustomView();
+                } else if (webView.canGoBack()) {
+                    webView.goBack();
+                } else {
+                    setEnabled(false);
+                    MainActivity.super.onBackPressed();
+                }
+            }
+        });
+    }
+
     @Override
     protected void onDestroy() {
         if (webView != null) {
             webView.destroy();
+        }
+        if (apiService != null) {
+            apiService.shutdown();
         }
         super.onDestroy();
     }

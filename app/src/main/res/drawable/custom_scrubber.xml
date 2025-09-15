@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Pressed state -->
+    <item android:state_pressed="true">
+        <layer-list>
+            <!-- Shadow -->
+            <item android:top="1dp" android:left="1dp">
+                <shape android:shape="oval">
+                    <solid android:color="?attr/alphaPrimaryColor" />
+                    <size android:width="20dp" android:height="20dp" />
+                </shape>
+            </item>
+            <!-- Main circle -->
+            <item android:bottom="1dp" android:right="1dp">
+                <shape android:shape="oval">
+                    <solid android:color="?attr/primaryColor" />
+                    <size android:width="20dp" android:height="20dp" />
+                    <stroke 
+                        android:width="3dp"
+                        android:color="?attr/secondaryColor" />
+                </shape>
+            </item>
+        </layer-list>
+    </item>
+    
+    <!-- Normal state -->
+    <item>
+        <layer-list>
+            <!-- Shadow -->
+            <item android:top="1dp" android:left="1dp">
+                <shape android:shape="oval">
+                    <solid android:color="?attr/alphaPrimaryColor" />
+                    <size android:width="16dp" android:height="16dp" />
+                </shape>
+            </item>
+            <!-- Main circle -->
+            <item android:bottom="1dp" android:right="1dp">
+                <shape android:shape="oval">
+                    <solid android:color="?attr/primaryColor" />
+                    <size android:width="16dp" android:height="16dp" />
+                    <stroke 
+                        android:width="2dp"
+                        android:color="?attr/secondaryColor" />
+                </shape>
+            </item>
+        </layer-list>
+    </item>
+</selector>

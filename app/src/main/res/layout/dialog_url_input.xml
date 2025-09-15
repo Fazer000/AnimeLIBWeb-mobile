@@ -2,15 +2,14 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="match_parent">
 
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:cardBackgroundColor="@color/statusbar_color"
+        app:cardBackgroundColor="?attr/primaryColor"
         app:cardCornerRadius="16dp"
         app:cardElevation="8dp"
-        app:strokeColor="@color/accent_color"
         app:strokeWidth="1dp">
 
         <!-- Основной контейнер -->
@@ -33,7 +32,7 @@
                     android:text="🔗"
                     android:textSize="24sp"
                     android:layout_marginEnd="12dp"
-                    android:textColor="@color/accent_color" />
+                    android:textColor="?attr/secondaryColor" />
 
                 <com.google.android.material.textview.MaterialTextView
                     android:layout_width="0dp"
@@ -42,7 +41,7 @@
                     android:text="Настройка AnimeLIB"
                     android:textSize="20sp"
                     android:textStyle="bold"
-                    android:textColor="@color/text_primary"
+                    android:textColor="?attr/primaryTextColor"
                     android:layout_gravity="center_vertical" />
 
             </LinearLayout>
@@ -53,7 +52,7 @@
                 android:layout_height="wrap_content"
                 android:text="Введите URL сайта AnimeLIB для подключения:"
                 android:textSize="16sp"
-                android:textColor="@color/text_secondary"
+                android:textColor="?attr/accentTextColor"
                 android:layout_marginBottom="20dp"
                 android:lineSpacingExtra="4dp"
                 app:textAppearanceBodyLarge="@style/TextAppearance.Material3.BodyLarge" />
@@ -63,20 +62,19 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                app:hintTextColor="@color/text_secondary"
+                app:hintTextColor="?attr/accentTextColor"
                 app:boxCornerRadiusTopStart="8dp"
                 app:boxCornerRadiusTopEnd="8dp"
                 app:boxCornerRadiusBottomStart="8dp"
                 app:boxCornerRadiusBottomEnd="8dp"
-                android:background="@android:color/transparent"
-                style="@style/Widget.Material3.TextInputLayout.FilledBox">
+                android:background="@android:color/transparent">
 
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     app:cardCornerRadius="16dp"
                     app:cardElevation="8dp"
-                    app:strokeColor="@color/accent_color"
+                    app:strokeColor="?attr/secondaryColor"
                     app:strokeWidth="1dp">
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/urlEditText"
@@ -84,8 +82,8 @@
                         android:layout_height="wrap_content"
                         android:text="https://v2.animelib.org"
                         android:inputType="textUri"
-                        android:textColor="@color/text_primary"
-                        android:textColorHint="@color/text_hint"
+                        android:textColor="?attr/primaryTextColor"
+                        android:textColorHint="?attr/accentTextColor"
                         android:textSize="16sp"
                         android:padding="16dp"
                         android:singleLine="true"
@@ -101,7 +99,7 @@
                 android:id="@+id/errorTextView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="@color/error_color"
+                android:textColor="?attr/secondaryColor"
                 android:textSize="14sp"
                 android:visibility="gone"
                 android:layout_marginBottom="20dp"
@@ -124,7 +122,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Отмена"
-                    android:textColor="@color/text_secondary"
+                    android:textColor="?attr/primaryTextColor"
                     android:layout_marginEnd="8dp"
                     android:textSize="14sp"
                     style="@style/Widget.Material3.Button.TextButton"
@@ -136,11 +134,11 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Сохранить"
-                    android:textColor="@color/text_primary"
+                    android:textColor="?attr/primaryTextColor"
                     android:textSize="14sp"
                     android:layout_marginStart="8dp"
                     style="@style/Widget.Material3.Button"
-                    app:backgroundTint="@color/accent_color"
+                    app:backgroundTint="?attr/secondaryColor"
                     app:cornerRadius="8dp" />
 
             </LinearLayout>

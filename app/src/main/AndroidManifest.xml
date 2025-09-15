@@ -43,7 +43,20 @@
             </intent-filter>
         </activity>
 
-<!--        &lt;!&ndash; Для загрузки файлов &ndash;&gt;-->
+        <activity
+            android:name="com.example.animelib.VideoPlayerActivity"
+            android:exported="false"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize"
+            android:screenOrientation="landscape"
+            android:supportsPictureInPicture="true"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.AnimeLIB.VideoPlayer" />
+
+        <meta-data
+            android:name="preloaded_fonts"
+            android:resource="@array/preloaded_fonts" />
+
+        <!--        &lt;!&ndash; Для загрузки файлов &ndash;&gt;-->
 <!--        <provider-->
 <!--            android:name="androidx.core.content.FileProvider"-->
 <!--            android:authorities="${applicationId}.fileprovider"-->

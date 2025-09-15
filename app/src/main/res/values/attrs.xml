@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <attr name="primaryColor" format="color" />
+    <attr name="secondaryColor" format="color" />
+    <attr name="blueColor" format="color" />
+    <attr name="alphaPrimaryColor" format="color" />
+
+    <attr name="statusBarColor" format="color" />
+
+    <attr name="borderColor" format="color" />
+    <attr name="alphaBorderColor" format="color" />
+
+    <attr name="lineColor" format="color" />
+
+    <attr name="primaryTextColor" format="color" />
+    <attr name="secondaryTextColor" format="color" />
+    <attr name="accentTextColor" format="color" />
+</resources>

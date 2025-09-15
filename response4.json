@@ -1,0 +1,37 @@
+{
+    "data": {
+        "id": 24653,
+        "name": "Sakamoto Days Part 2",
+        "rus_name": "Дни Сакамото. Часть 2",
+        "eng_name": "Sakamoto Days Part 2",
+        "model": "anime",
+        "slug": "sakamoto-days-part-2-anime",
+        "slug_url": "24653--sakamoto-days-part-2-anime",
+        "cover": {
+            "filename": "d019661b-58a8-44d6-a608-dde6313cec59",
+            "thumbnail": "https://cover.imglib.info/uploads/anime/24653/cover/d019661b-58a8-44d6-a608-dde6313cec59_thumb.jpg",
+            "default": "https://cover.imglib.info/uploads/anime/24653/cover/d019661b-58a8-44d6-a608-dde6313cec59.jpg",
+            "md": "https://cover.imglib.info/uploads/anime/24653/cover/d019661b-58a8-44d6-a608-dde6313cec59.jpg"
+        },
+        "ageRestriction": {
+            "id": 3,
+            "label": "16+"
+        },
+        "site": 5,
+        "type": {
+            "id": 16,
+            "label": "TV Сериал"
+        },
+        "is_licensed": false,
+        "status": {
+            "id": 1,
+            "label": "Онгоинг"
+        },
+        "releaseDateString": "15 июля 2025 г.",
+        "shikimori_href": "https://shikimori.one/animes/60285",
+        "shiki_rate": 7.95
+    },
+    "meta": {
+        "country": "RU"
+    }
+}
