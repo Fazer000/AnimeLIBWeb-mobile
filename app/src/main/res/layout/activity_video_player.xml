@@ -3,6 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:fitsSystemWindows="false"
     android:background="@color/black_color">
 
     <!-- Loading Overlay -->
@@ -38,6 +39,7 @@
         android:id="@+id/playerView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        app:animation_enabled="false"
         app:controller_layout_id="@layout/custom_player_controller"
         app:show_buffering="never"
         app:show_subtitle_button="false"
@@ -89,7 +91,7 @@
     <!-- Sliding Menu Panel -->
     <LinearLayout
         android:id="@+id/slidingMenuPanel"
-        android:layout_width="300dp"
+        android:layout_width="320dp"
         android:layout_height="match_parent"
         android:layout_gravity="top|end"
         android:background="@drawable/non_stroke_background"
@@ -134,6 +136,7 @@
                         android:foreground="@drawable/ripple_circle"
                         android:background="@android:color/transparent"
                         android:src="@drawable/ic_close"
+                        app:tint="?attr/primaryTextColor"
                         android:scaleType="fitCenter"
                         android:contentDescription="Close Menu"
                         android:padding="8dp" />
@@ -170,15 +173,16 @@
 
             <FrameLayout
                 android:id="@+id/menuLoadingOverlay"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+                android:background="?attr/primaryColor"
                 android:visibility="visible">
 
                 <com.google.android.material.progressindicator.CircularProgressIndicator
                     android:id="@+id/menuLoadingIndicator"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
-                    android:layout_gravity="center"
+        android:layout_gravity="center"
                     android:indeterminate="true"
                     app:trackCornerRadius="8dp"
                     app:indicatorColor="?attr/secondaryColor"
@@ -197,7 +201,6 @@
         android:background="@drawable/non_stroke_background"
         android:elevation="200dp"
         android:orientation="vertical"
-        android:translationX="320dp"
         android:visibility="visible">
 
         <androidx.cardview.widget.CardView
@@ -238,6 +241,7 @@
                         android:layout_marginEnd="6dp"
                         android:background="@drawable/button_ripple_effect"
                         android:src="@drawable/ic_more_vert"
+                        app:tint="?attr/primaryTextColor"
                         android:scaleType="fitCenter"
                         android:contentDescription="Options"
                         android:padding="8dp" />
@@ -248,6 +252,7 @@
                         android:layout_height="36dp"
                         android:background="@drawable/button_close_background"
                         android:src="@drawable/ic_close"
+                        app:tint="?attr/primaryTextColor"
                         android:scaleType="fitCenter"
                         android:contentDescription="Close Comments"
                         android:padding="8dp" />
@@ -284,7 +289,7 @@
                     app:indicatorColor="?attr/secondaryColor"
                     app:trackThickness="4dp" />
             </FrameLayout>
-        </FrameLayout>
+</FrameLayout>
 
     </LinearLayout>
 

@@ -211,6 +211,7 @@
         android:id="@+id/playersControlBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:translationY="60dp"
         android:layout_gravity="bottom"
         android:orientation="vertical">
 
@@ -220,8 +221,6 @@
             android:layout_height="wrap_content"
             android:layout_marginLeft="-8dp"
             android:layout_marginRight="-8dp"
-            android:alpha="0.0"
-            android:translationY="0dp"
             app:played_color="?attr/secondaryColor"
             app:scrubber_color="?attr/primaryColor"
             app:bar_height="2dp"
@@ -336,13 +335,11 @@
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/episodesHorizontalRecyclerView"
             android:layout_width="match_parent"
-            android:layout_height="60dp"
+            android:layout_height="52dp"
             android:layout_marginBottom="8dp"
             android:paddingHorizontal="20dp"
             android:clipToPadding="false"
-            android:fadeScrollbars="true"
-            android:visibility="gone"
-            android:alpha="0.0" />
+            android:fadeScrollbars="true" />
 
     </LinearLayout>
 

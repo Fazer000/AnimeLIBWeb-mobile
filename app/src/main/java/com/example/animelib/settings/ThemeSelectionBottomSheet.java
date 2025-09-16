@@ -1,6 +1,5 @@
-package com.example.animelib.dialogs;
+package com.example.animelib.settings;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -61,7 +60,8 @@ public class ThemeSelectionBottomSheet extends BottomSheetDialog {
                 FrameLayout bottom = findViewById(com.google.android.material.R.id.design_bottom_sheet);
                 if (bottom != null) {
                     BottomSheetBehavior<FrameLayout> behavior = BottomSheetBehavior.from(bottom);
-                    behavior.setFitToContents(true);
+
+                    behavior.setFitToContents(true); // Отключаем автоматическое подгонение
                     behavior.setSkipCollapsed(true);
                     behavior.setExpandedOffset(0);
                     behavior.setState(BottomSheetBehavior.STATE_EXPANDED);
@@ -90,7 +90,14 @@ public class ThemeSelectionBottomSheet extends BottomSheetDialog {
         updateThemeSelection();
         
         // Обработчики кликов
-        closeButton.setOnClickListener(v -> dismiss());
+        closeButton.setOnClickListener(v -> {
+            if (onBackPressedListener != null) {
+                dismiss();
+                onBackPressedListener.onBackPressed();
+            } else {
+                dismiss();
+            }
+        });
         
         themeAutoOption.setOnClickListener(v -> selectTheme(ThemeUtils.THEME_SYSTEM));
         themeLightOption.setOnClickListener(v -> selectTheme(ThemeUtils.THEME_LIGHT));

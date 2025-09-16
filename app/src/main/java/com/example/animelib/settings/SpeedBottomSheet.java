@@ -1,4 +1,4 @@
-package com.example.animelib.dialogs;
+package com.example.animelib.settings;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -17,7 +17,7 @@ import android.util.TypedValue;
 
 import java.util.Objects;
 
-public class SpeedDialog extends BottomSheetDialog {
+public class SpeedBottomSheet extends BottomSheetDialog {
     private float currentSpeed;
     private OnSpeedChangedListener listener;
     private SeekBar speedSeekBar;
@@ -32,7 +32,7 @@ public class SpeedDialog extends BottomSheetDialog {
         void onBackPressed();
     }
 
-    public SpeedDialog(Context context, float currentSpeed, OnSpeedChangedListener listener) {
+    public SpeedBottomSheet(Context context, float currentSpeed, OnSpeedChangedListener listener) {
         super(context, com.google.android.material.R.style.ThemeOverlay_Material3_BottomSheetDialog);
         this.currentSpeed = currentSpeed;
         this.listener = listener;

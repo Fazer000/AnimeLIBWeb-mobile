@@ -1,6 +1,5 @@
-package com.example.animelib.dialogs;
+package com.example.animelib.settings;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.Resources;
 import android.os.Bundle;
@@ -11,7 +10,6 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Spinner;
 import android.widget.Toast;
@@ -22,14 +20,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class SkipDurationDialog extends BottomSheetDialog {
+public class SkipDurationBottomSheet extends BottomSheetDialog {
     private int currentDuration; // in seconds
     private OnDurationChangedListener listener;
     private Spinner minutesSpinner;
     private Spinner secondsSpinner;
     private OnBackPressedListener onBackPressedListener;
 
-    public SkipDurationDialog(Context context, int currentDuration, OnDurationChangedListener listener) {
+    public SkipDurationBottomSheet(Context context, int currentDuration, OnDurationChangedListener listener) {
         super(context, com.google.android.material.R.style.ThemeOverlay_Material3_BottomSheetDialog);
         this.currentDuration = currentDuration;
         this.listener = listener;

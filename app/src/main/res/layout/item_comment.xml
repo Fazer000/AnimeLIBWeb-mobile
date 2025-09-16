@@ -41,13 +41,22 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="?attr/primaryTextColor"
-            android:textSize="13sp"/>
+            android:textSize="13sp"
+            android:lineSpacingExtra="0dp"
+            android:lineSpacingMultiplier="1.0"/>
+
+        <LinearLayout
+            android:id="@+id/spoilerContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"/>
 
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginTop="4dp">
+            android:layout_marginTop="2dp">
 
             <TextView
                 android:id="@+id/dateView"

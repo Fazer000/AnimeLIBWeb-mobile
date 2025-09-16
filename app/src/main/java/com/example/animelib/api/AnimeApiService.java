@@ -4,18 +4,12 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import com.example.animelib.data.AppSettings;
 import com.example.animelib.models.*;
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import java.io.IOException;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.lang.reflect.Type;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import okhttp3.Call;
@@ -69,9 +63,9 @@ public class AnimeApiService {
     private final Gson gson;
     private final ExecutorService executor;
     private final Context context;
-    
+
     // Room DB (uses existing data/ AppDatabase)
-    private com.example.animelib.data.AppDatabase db;
+    private final com.example.animelib.data.AppDatabase db;
 
     public AnimeApiService(Context context) {
         this.context = context.getApplicationContext();
@@ -92,16 +86,17 @@ public class AnimeApiService {
 
                 httpClient.newCall(request).enqueue(new Callback() {
                     @Override
-                    public void onFailure(Call call, IOException e) {
+                    public void onFailure(@NonNull Call call, @NonNull IOException e) {
                         callback.onError("Ошибка сети: " + e.getMessage());
                     }
 
                     @Override
-                    public void onResponse(Call call, Response response) throws IOException {
+                    public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                         if (!response.isSuccessful()) {
                             callback.onError("HTTP " + response.code());
                             return;
                         }
+                        assert response.body() != null;
                         String body = response.body().string();
                         try {
                             AnimeInfoResponse info = gson.fromJson(body, AnimeInfoResponse.class);
@@ -131,15 +126,16 @@ public class AnimeApiService {
 
                 httpClient.newCall(request).enqueue(new Callback() {
                     @Override
-                    public void onFailure(Call call, IOException e) {
+                    public void onFailure(@NonNull Call call, @NonNull IOException e) {
                         Log.e("AnimeApiService", "Episodes list request failed", e);
                         callback.onError("Ошибка загрузки эпизодов: " + e.getMessage());
                     }
 
                     @Override
-                    public void onResponse(Call call, Response response) {
+                    public void onResponse(@NonNull Call call, @NonNull Response response) {
                         try (response) {
                             if (response.isSuccessful()) {
+                                assert response.body() != null;
                                 String responseBody = response.body().string();
                                 Log.d("AnimeApiService", "Episodes list response received");
 
@@ -178,15 +174,16 @@ public class AnimeApiService {
 
                 httpClient.newCall(request).enqueue(new Callback() {
                     @Override
-                    public void onFailure(Call call, IOException e) {
+                    public void onFailure(@NonNull Call call, @NonNull IOException e) {
                         Log.e("AnimeApiService", "Episode data request failed", e);
                         callback.onError("Ошибка загрузки данных эпизода: " + e.getMessage());
                     }
 
                     @Override
-                    public void onResponse(Call call, Response response) {
+                    public void onResponse(@NonNull Call call, @NonNull Response response) {
                         try (response) {
                             if (response.isSuccessful()) {
+                                assert response.body() != null;
                                 String responseBody = response.body().string();
                                 Log.d("AnimeApiService", "Episode data response received");
 
@@ -225,15 +222,16 @@ public class AnimeApiService {
 
                 httpClient.newCall(request).enqueue(new Callback() {
                     @Override
-                    public void onFailure(Call call, IOException e) {
+                    public void onFailure(@NonNull Call call, @NonNull IOException e) {
                         Log.e("AnimeApiService", "Kodik video links request failed", e);
                         callback.onError("Ошибка загрузки HLS ссылок: " + e.getMessage());
                     }
 
                     @Override
-                    public void onResponse(Call call, Response response) {
+                    public void onResponse(@NonNull Call call, @NonNull Response response) {
                         try (response) {
                             if (response.isSuccessful()) {
+                                assert response.body() != null;
                                 String responseBody = response.body().string();
                                 Log.d("AnimeApiService", "Kodik video links response received");
 
@@ -266,15 +264,7 @@ public class AnimeApiService {
     public void fetchEpisodeComments(long episodeId, String sortType, int page, EpisodeCommentsCallback callback) {
         executor.execute(() -> {
             try {
-                String safeSort = (sortType == null || sortType.isEmpty()) ? "desc" : sortType;
-                int safePage = Math.max(1, page);
-                // API: для популярного нужна сортировка по полю голосов
-                boolean byVotes = "votes_up".equalsIgnoreCase(safeSort);
-                String sortBy = byVotes ? "votes_up" : "id";
-                String sortDir = byVotes ? "desc" : safeSort;
-                String apiUrl = "https://api.cdnlibs.org/api/comments?page=" + safePage +
-                        "&post_id=" + episodeId +
-                        "&post_type=episodes&sort_by=" + sortBy + "&sort_type=" + sortDir;
+                String apiUrl = getSort(episodeId, sortType, page);
 
                 Request request = new Request.Builder()
                         .url(apiUrl)
@@ -283,16 +273,17 @@ public class AnimeApiService {
 
                 httpClient.newCall(request).enqueue(new Callback() {
                     @Override
-                    public void onFailure(Call call, IOException e) {
+                    public void onFailure(@NonNull Call call, @NonNull IOException e) {
                         callback.onError("Ошибка сети: " + e.getMessage());
                     }
 
                     @Override
-                    public void onResponse(Call call, Response response) throws IOException {
+                    public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                         if (!response.isSuccessful()) {
                             callback.onError("HTTP " + response.code());
                             return;
                         }
+                        assert response.body() != null;
                         String body = response.body().string();
                         try {
                             CommentsResponse comments = gson.fromJson(body, CommentsResponse.class);
@@ -308,6 +299,19 @@ public class AnimeApiService {
         });
     }
 
+    @NonNull
+    private static String getSort(long episodeId, String sortType, int page) {
+        String safeSort = (sortType == null || sortType.isEmpty()) ? "desc" : sortType;
+        int safePage = Math.max(1, page);
+        // API: для популярного нужна сортировка по полю голосов
+        boolean byVotes = "votes_up".equalsIgnoreCase(safeSort);
+        String sortBy = byVotes ? "votes_up" : "id";
+        String sortDir = byVotes ? "desc" : safeSort;
+        return "https://api.cdnlibs.org/api/comments?page=" + safePage +
+                "&post_id=" + episodeId +
+                "&post_type=episodes&sort_by=" + sortBy + "&sort_type=" + sortDir;
+    }
+
     /**
      * Creates OkHttpClient with disabled SSL verification for domains with certificate issues
      */
@@ -316,6 +320,7 @@ public class AnimeApiService {
             // Create a trust manager that does not validate certificate chains
             @SuppressLint("CustomX509TrustManager") final TrustManager[] trustAllCerts = new TrustManager[] {
                 new X509TrustManager() {
+                    @SuppressLint("TrustAllX509TrustManager")
                     @Override
                     public void checkClientTrusted(java.security.cert.X509Certificate[] chain, String authType) throws CertificateException {
                     }
@@ -363,8 +368,7 @@ public class AnimeApiService {
             String[] parts = url.split("/");
             for (String part : parts) {
                 if (part.contains("--")) {
-                    String animeId = part.split("--")[0];
-                    return animeId;
+                    return part.split("--")[0];
                 }
             }
         } catch (Exception e) {
@@ -414,15 +418,16 @@ public class AnimeApiService {
 
                 httpClient.newCall(request).enqueue(new Callback() {
                     @Override
-                    public void onFailure(Call call, IOException e) {
+                    public void onFailure(@NonNull Call call, @NonNull IOException e) {
                         Log.e("AnimeApiService", "Direct API request failed", e);
                         callback.onError("Ошибка API: " + e.getMessage());
                     }
 
                     @Override
-                    public void onResponse(Call call, Response response) {
+                    public void onResponse(@NonNull Call call, @NonNull Response response) {
                         try (response) {
                             if (response.isSuccessful()) {
+                                assert response.body() != null;
                                 String responseBody = response.body().string();
                                 Log.d("AnimeApiService", "Direct API response: " + responseBody);
 
@@ -470,15 +475,16 @@ public class AnimeApiService {
                 OkHttpClient kodikClient = getUnsafeOkHttpClient();
                 kodikClient.newCall(request).enqueue(new Callback() {
                     @Override
-                    public void onFailure(Call call, IOException e) {
+                    public void onFailure(@NonNull Call call, @NonNull IOException e) {
                         Log.e("AnimeApiService", "Direct API request failed", e);
                         callback.onError("Ошибка HLS API: " + e.getMessage());
                     }
 
                     @Override
-                    public void onResponse(Call call, Response response) {
+                    public void onResponse(@NonNull Call call, @NonNull Response response) {
                         try (response) {
                             if (response.isSuccessful()) {
+                                assert response.body() != null;
                                 String responseBody = response.body().string();
                                 Log.d("AnimeApiService", "Direct API response: " + responseBody);
 

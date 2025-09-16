@@ -17,15 +17,18 @@
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="wrap_content"
+        android:fillViewport="true"
+        android:nestedScrollingEnabled="true">
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:minHeight="400dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="wrap_content"
                 android:paddingHorizontal="16dp"
                 android:layout_marginVertical="12dp"
                 android:orientation="horizontal">
@@ -133,7 +136,7 @@
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="wrap_content"
                 android:paddingHorizontal="16dp"
                 android:layout_marginVertical="12dp"
                 android:orientation="horizontal">
@@ -259,6 +262,7 @@
                 android:foreground="?attr/selectableItemBackground">
 
                 <ImageView
+                    android:id="@+id/ivTheme"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:src="@drawable/ic_theme"

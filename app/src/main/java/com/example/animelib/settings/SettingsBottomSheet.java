@@ -1,4 +1,4 @@
-package com.example.animelib.dialogs;
+package com.example.animelib.settings;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -11,56 +11,57 @@ import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.Switch;
 import android.widget.TextView;
+
 import com.example.animelib.R;
 import com.example.animelib.adapters.QualityAdapter;
-import com.example.animelib.VideoPlayerActivity;
 import com.example.animelib.util.ThemeUtils;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 //import com.google.android.material.bottomsheet.BottomSheetDialogThemeUtils;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.materialswitch.MaterialSwitch;
-import com.google.android.material.switchmaterial.SwitchMaterial;
 
 import android.widget.FrameLayout;
 import android.view.ViewGroup;
 import android.util.TypedValue;
+
+import androidx.annotation.Nullable;
+
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Objects;
 
-public class SettingsDialog extends BottomSheetDialog {
+public class SettingsBottomSheet extends BottomSheetDialog {
     private final List<String> qualities;
     private String currentQuality;
-    private QualityAdapter.OnQualitySelectedListener listener;
+    private final QualityAdapter.OnQualitySelectedListener listener;
     private QualityAdapter qualityAdapter;
-    private QualityDialog currentQualityDialog;
+    private QualityBottomSheet currentQualityBottomSheet;
     private float currentPlaybackSpeed = 1.0f;
-    private SpeedDialog.OnSpeedChangedListener speedListener;
+    private final SpeedBottomSheet.OnSpeedChangedListener speedListener;
     private boolean enable4K = false;
-    private On4KToggledListener on4KToggledListener;
+    private final On4KToggledListener on4KToggledListener;
     private boolean autoPlay = true;
-    private OnAutoPlayToggledListener onAutoPlayToggledListener;
+    private final OnAutoPlayToggledListener onAutoPlayToggledListener;
     private int longSkipDuration = 85; // seconds
-    private OnSkipDurationChangedListener onSkipDurationChangedListener;
+    private final OnSkipDurationChangedListener onSkipDurationChangedListener;
     private int currentTheme = ThemeUtils.THEME_SYSTEM;
-    private OnThemeChangedListener onThemeChangedListener;
+    private final OnThemeChangedListener onThemeChangedListener;
 
-    public SettingsDialog(Context context,
-                          List<String> qualities,
-                          String currentQuality,
-                          QualityAdapter.OnQualitySelectedListener listener,
-                          float initialSpeed,
-                          SpeedDialog.OnSpeedChangedListener speedListener,
-                          boolean enable4K,
-                          On4KToggledListener on4KToggledListener,
-                          boolean autoPlay,
-                          OnAutoPlayToggledListener onAutoPlayToggledListener,
-                          int longSkipDuration,
-                          OnSkipDurationChangedListener onSkipDurationChangedListener,
-                          int currentTheme,
-                          OnThemeChangedListener onThemeChangedListener) {
+    public SettingsBottomSheet(Context context,
+                               List<String> qualities,
+                               String currentQuality,
+                               QualityAdapter.OnQualitySelectedListener listener,
+                               float initialSpeed,
+                               SpeedBottomSheet.OnSpeedChangedListener speedListener,
+                               boolean enable4K,
+                               On4KToggledListener on4KToggledListener,
+                               boolean autoPlay,
+                               OnAutoPlayToggledListener onAutoPlayToggledListener,
+                               int longSkipDuration,
+                               OnSkipDurationChangedListener onSkipDurationChangedListener,
+                               int currentTheme,
+                               OnThemeChangedListener onThemeChangedListener) {
         super(context, com.google.android.material.R.style.ThemeOverlay_Material3_BottomSheetDialog);
         this.qualities = qualities;
         this.currentQuality = currentQuality;
@@ -82,7 +83,7 @@ public class SettingsDialog extends BottomSheetDialog {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        View view = LayoutInflater.from(getContext()).inflate(R.layout.bs_settings, null);
+        @SuppressLint("InflateParams") View view = LayoutInflater.from(getContext()).inflate(R.layout.bs_settings, null);
         setContentView(view);
         Objects.requireNonNull(getWindow()).setLayout(1000, ViewGroup.LayoutParams.WRAP_CONTENT);
         // Expand like YouTube
@@ -93,30 +94,15 @@ public class SettingsDialog extends BottomSheetDialog {
                 if (bottom != null) {
                     BottomSheetBehavior<FrameLayout> behavior = BottomSheetBehavior.from(bottom);
 
-                    // Устанавливаем максимальную высоту (70% от экрана)
-                    DisplayMetrics displayMetrics = new DisplayMetrics();
+                    // Устанавливаем фиксированную высоту (примерно 300dp)
+                    int fixedHeight = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 400, getContext().getResources().getDisplayMetrics());
 
-                    // Получаем Activity из контекста
-                    Activity activity = null;
-                    Context context = getContext();
-                    if (context instanceof Activity) {
-                        activity = (Activity) context;
-                    } else if (context instanceof ContextWrapper) {
-                        Context baseContext = ((ContextWrapper) context).getBaseContext();
-                        if (baseContext instanceof Activity) {
-                            activity = (Activity) baseContext;
-                        }
+                    ViewGroup.LayoutParams layoutParams = bottom.getLayoutParams();
+                    if (layoutParams != null) {
+                        layoutParams.height = fixedHeight;
+                        bottom.setLayoutParams(layoutParams);
                     }
 
-                    if (activity != null && !activity.isFinishing()) {
-                        activity.getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
-                    } else {
-                        // Fallback: используем контекст приложения
-                        getContext().getResources().getDisplayMetrics();
-                    }
-
-                    int maxHeight = (int) (displayMetrics.heightPixels * 0.9);
-                    behavior.setMaxHeight(maxHeight);
                     behavior.setFitToContents(true);
                     behavior.setSkipCollapsed(true);
                     behavior.setExpandedOffset(0);
@@ -130,7 +116,8 @@ public class SettingsDialog extends BottomSheetDialog {
                     bottom.setLayoutParams(lp);
                 }
             });
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+        }
 
         // Setup option click listeners
         LinearLayout qualityOption = view.findViewById(R.id.qualityOption);
@@ -147,6 +134,7 @@ public class SettingsDialog extends BottomSheetDialog {
         MaterialSwitch fourKSwitch = view.findViewById(R.id.fourKSwitch);
         MaterialSwitch autoPlaySwitch = view.findViewById(R.id.autoPlaySwitch);
 
+        ImageView ivTheme = findViewById(R.id.ivTheme);
         ImageView exitBtn = view.findViewById(R.id.bs_exit);
 
         // Set current values
@@ -157,6 +145,32 @@ public class SettingsDialog extends BottomSheetDialog {
         currentSkipDurationText.setText(formatDuration(longSkipDuration));
         currentThemeText.setText(getThemeText(currentTheme));
 
+        if (ivTheme != null) {
+            int iconResId;
+            float scale;
+            switch (currentTheme) {
+                case ThemeUtils.THEME_SYSTEM:
+                    iconResId = R.drawable.ic_auto; // Иконка для автотемы
+                    scale = 0.9F;
+                    break;
+                case ThemeUtils.THEME_LIGHT:
+                    iconResId = R.drawable.ic_light; // Иконка для светлой темы
+                    scale = 1F;
+                    break;
+                case ThemeUtils.THEME_DARK:
+                    iconResId = R.drawable.ic_night; // Иконка для темной темы (исправлено написание)
+                    scale = 0.8F;
+                    break;
+                default:
+                    iconResId = R.drawable.ic_auto; // Иконка по умолчанию
+                    scale = 0.9F;
+                    break;
+            }
+            ivTheme.setImageResource(iconResId);
+            ivTheme.setScaleX(scale);
+            ivTheme.setScaleY(scale);
+        }
+
         exitBtn.setOnClickListener(v -> dismiss());
 
         // Quality option click
@@ -166,9 +180,7 @@ public class SettingsDialog extends BottomSheetDialog {
         });
 
         // 4K option click
-        fourKOption.setOnClickListener(v -> {
-            fourKSwitch.setChecked(!fourKSwitch.isChecked());
-        });
+        fourKOption.setOnClickListener(v -> fourKSwitch.setChecked(!fourKSwitch.isChecked()));
 
         // 4K switch listener
         fourKSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -179,9 +191,7 @@ public class SettingsDialog extends BottomSheetDialog {
         });
 
         // AutoPlay option click
-        autoPlayOption.setOnClickListener(v -> {
-            autoPlaySwitch.setChecked(!autoPlaySwitch.isChecked());
-        });
+        autoPlayOption.setOnClickListener(v -> autoPlaySwitch.setChecked(!autoPlaySwitch.isChecked()));
 
         // AutoPlay switch listener
         autoPlaySwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -212,10 +222,25 @@ public class SettingsDialog extends BottomSheetDialog {
         setCancelable(true);
     }
 
+    @Nullable
+    private Activity getActivity() {
+        Activity activity = null;
+        Context context = getContext();
+        if (context instanceof Activity) {
+            activity = (Activity) context;
+        } else if (context instanceof ContextWrapper) {
+            Context baseContext = ((ContextWrapper) context).getBaseContext();
+            if (baseContext instanceof Activity) {
+                activity = (Activity) baseContext;
+            }
+        }
+        return activity;
+    }
+
     private void showQualityDialog() {
         // Create dialog only if it doesn't exist
-        if (currentQualityDialog == null) {
-            currentQualityDialog = new QualityDialog(getContext(), new ArrayList<>(qualities), currentQuality, quality -> {
+        if (currentQualityBottomSheet == null) {
+            currentQualityBottomSheet = new QualityBottomSheet(getContext(), new ArrayList<>(qualities), currentQuality, quality -> {
                 if (listener != null) {
                     listener.onQualitySelected(quality);
                 }
@@ -226,26 +251,24 @@ public class SettingsDialog extends BottomSheetDialog {
                     currentQualityText.setText(quality);
                 }
                 // Update the quality dialog itself
-                if (currentQualityDialog != null) {
-                    currentQualityDialog.updateCurrentQuality(quality);
+                if (currentQualityBottomSheet != null) {
+                    currentQualityBottomSheet.updateCurrentQuality(quality);
                 }
             });
-            
+
             // Set up back button listener
-            currentQualityDialog.setOnBackPressedListener(() -> {
-                // Show main settings when back button is pressed
-                show();
-            });
+            // Show main settings when back button is pressed
+            currentQualityBottomSheet.setOnBackPressedListener(this::show);
         } else {
             // Update existing dialog with current data
-            currentQualityDialog.updateCurrentQuality(currentQuality);
+            currentQualityBottomSheet.updateCurrentQuality(currentQuality);
         }
-        
-        currentQualityDialog.show();
+
+        currentQualityBottomSheet.show();
     }
 
     private void showSpeedDialog() {
-        @SuppressLint("DefaultLocale") SpeedDialog dialog = new SpeedDialog(getContext(), currentPlaybackSpeed, speed -> {
+        @SuppressLint("DefaultLocale") SpeedBottomSheet dialog = new SpeedBottomSheet(getContext(), currentPlaybackSpeed, speed -> {
             currentPlaybackSpeed = speed;
             // Update UI in settings
             TextView currentSpeedText = findViewById(R.id.currentSpeedText);
@@ -257,18 +280,16 @@ public class SettingsDialog extends BottomSheetDialog {
                 speedListener.onSpeedChanged(speed);
             }
         });
-        
+
         // Set up back button listener
-        dialog.setOnBackPressedListener(() -> {
-            // Show main settings when back button is pressed
-            show();
-        });
-        
+        // Show main settings when back button is pressed
+        dialog.setOnBackPressedListener(this::show);
+
         dialog.show();
     }
 
     private void showSkipDurationDialog() {
-        SkipDurationDialog dialog = new SkipDurationDialog(getContext(), longSkipDuration, duration -> {
+        SkipDurationBottomSheet dialog = new SkipDurationBottomSheet(getContext(), longSkipDuration, duration -> {
             longSkipDuration = duration;
             // Update UI in settings
             TextView currentSkipDurationText = findViewById(R.id.currentSkipDurationText);
@@ -280,16 +301,15 @@ public class SettingsDialog extends BottomSheetDialog {
                 onSkipDurationChangedListener.onSkipDurationChanged(duration);
             }
         });
-        
+
         // Set up back button listener
-        dialog.setOnBackPressedListener(() -> {
-            // Show main settings when back button is pressed
-            show();
-        });
-        
+        // Show main settings when back button is pressed
+        dialog.setOnBackPressedListener(this::show);
+
         dialog.show();
     }
 
+    @SuppressLint("DefaultLocale")
     private String formatDuration(int seconds) {
         int minutes = seconds / 60;
         int remainingSeconds = seconds % 60;
@@ -299,64 +319,64 @@ public class SettingsDialog extends BottomSheetDialog {
     public float getCurrentPlaybackSpeed() {
         return currentPlaybackSpeed;
     }
-    
+
     public void updateQualities(List<String> newQualities, String newCurrentQuality) {
         android.util.Log.d("SettingsDialog", "updateQualities called - newQualities: " + newQualities + ", newCurrentQuality: " + newCurrentQuality);
         this.qualities.clear();
         this.qualities.addAll(newQualities);
         this.currentQuality = newCurrentQuality;
-        
+
         // Update UI
         TextView currentQualityText = findViewById(R.id.currentQualityText);
         if (currentQualityText != null) {
             currentQualityText.setText(newCurrentQuality != null ? newCurrentQuality : "1080p");
         }
-        
+
         // Update quality dialog if it exists
-        if (currentQualityDialog != null) {
-            currentQualityDialog.updateCurrentQuality(newCurrentQuality);
+        if (currentQualityBottomSheet != null) {
+            currentQualityBottomSheet.updateCurrentQuality(newCurrentQuality);
         }
     }
-    
+
     public interface On4KToggledListener {
         void on4KToggled(boolean enabled);
     }
-    
+
     public interface OnAutoPlayToggledListener {
         void onAutoPlayToggled(boolean enabled);
     }
-    
+
     public interface OnSkipDurationChangedListener {
         void onSkipDurationChanged(int durationInSeconds);
     }
-    
+
     public interface OnThemeChangedListener {
         void onThemeChanged(int themeMode);
     }
-    
+
     private void showThemeDialog() {
         ThemeSelectionBottomSheet bottomSheet = new ThemeSelectionBottomSheet(getContext(), currentTheme, themeMode -> {
             currentTheme = themeMode;
             // Update UI in settings
             TextView currentThemeText = findViewById(R.id.currentThemeText);
+
             if (currentThemeText != null) {
                 currentThemeText.setText(getThemeText(themeMode));
             }
+
             // Propagate to owner
             if (onThemeChangedListener != null) {
                 onThemeChangedListener.onThemeChanged(themeMode);
             }
         });
-        
+
         // Set up back button listener
-        bottomSheet.setOnBackPressedListener(() -> {
-            // Show main settings when back button is pressed
-            show();
-        });
-        
+        // Show main settings when back button is pressed
+        bottomSheet.setOnBackPressedListener(this::show);
+
         bottomSheet.show();
     }
-    
+
     private String getThemeText(int themeMode) {
         switch (themeMode) {
             case ThemeUtils.THEME_SYSTEM:

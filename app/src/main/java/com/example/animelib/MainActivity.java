@@ -75,10 +75,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Window window = getWindow();
-        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-        window.setStatusBarColor(0xFF252527);
-
         webView = findViewById(R.id.webView);
         spinner = findViewById(R.id.spinner);
         spinnerBackground = findViewById(R.id.spinnerBackground);

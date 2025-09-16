@@ -1,4 +1,4 @@
-package com.example.animelib.dialogs;
+package com.example.animelib.settings;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -18,7 +18,7 @@ import android.util.TypedValue;
 import java.util.List;
 import java.util.Objects;
 
-public class QualityDialog extends BottomSheetDialog {
+public class QualityBottomSheet extends BottomSheetDialog {
     private final QualityAdapter.OnQualitySelectedListener listener;
     private QualityAdapter adapter;
     private OnBackPressedListener onBackPressedListener;
@@ -27,7 +27,7 @@ public class QualityDialog extends BottomSheetDialog {
         void onBackPressed();
     }
 
-    public QualityDialog(Context context, List<String> qualities, String currentQuality, QualityAdapter.OnQualitySelectedListener listener) {
+    public QualityBottomSheet(Context context, List<String> qualities, String currentQuality, QualityAdapter.OnQualitySelectedListener listener) {
         super(context, com.google.android.material.R.style.ThemeOverlay_Material3_BottomSheetDialog);
         this.listener = listener;
         
