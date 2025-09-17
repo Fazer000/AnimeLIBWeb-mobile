@@ -42,6 +42,7 @@ public class CommentsManager {
     private ImageButton commentsButton;
     private ImageButton commentsOptionsButton;
     private View menuOverlay;
+    private TextView emptyCommentsText;
     
     // Адаптер и состояние
     private CommentsAdapter commentsAdapter;
@@ -89,11 +90,12 @@ public class CommentsManager {
      * @param commentsButton Кнопка открытия комментариев
      * @param commentsOptionsButton Кнопка опций сортировки
      * @param menuOverlay Overlay для закрытия по клику вне панели
+     * @param emptyCommentsText Текст для отображения когда комментариев нет
      */
     public void initializeViews(View commentsPanel, ImageButton closeCommentsButton,
                                RecyclerView commentsRecyclerView, View commentsLoadingOverlay,
                                ImageButton commentsButton, ImageButton commentsOptionsButton,
-                               View menuOverlay) {
+                               View menuOverlay, TextView emptyCommentsText) {
         this.commentsPanel = commentsPanel;
         this.closeCommentsButton = closeCommentsButton;
         this.commentsRecyclerView = commentsRecyclerView;
@@ -101,6 +103,7 @@ public class CommentsManager {
         this.commentsButton = commentsButton;
         this.commentsOptionsButton = commentsOptionsButton;
         this.menuOverlay = menuOverlay;
+        this.emptyCommentsText = emptyCommentsText;
         
         setupCommentsViews();
         initializePanelPosition();
@@ -122,6 +125,12 @@ public class CommentsManager {
             Log.d("CommentsManager", "Comments button initialized successfully");
         } else {
             Log.w("CommentsManager", "Comments button is null!");
+        }
+        
+        // Настройка текста для пустого состояния
+        if (emptyCommentsText != null) {
+            emptyCommentsText.setText("Комментариев пока нет");
+            emptyCommentsText.setVisibility(View.GONE);
         }
         
         setupCommentsOptionsButton();
@@ -382,6 +391,22 @@ public class CommentsManager {
                         if (response != null && commentsAdapter != null) {
                             commentsAdapter.appendResponse(response, page > 1);
                             
+                            // Проверяем есть ли комментарии и показываем соответствующий текст
+                            boolean hasComments = false;
+                            if (response.getData() != null) {
+                                if (response.getData().getRoot() != null && !response.getData().getRoot().isEmpty()) {
+                                    hasComments = true;
+                                }
+                                if (response.getData().getReplies() != null && !response.getData().getReplies().isEmpty()) {
+                                    hasComments = true;
+                                }
+                            }
+                            
+                            // Показываем/скрываем текст пустого состояния
+                            if (emptyCommentsText != null) {
+                                emptyCommentsText.setVisibility(hasComments ? View.GONE : View.VISIBLE);
+                            }
+                            
                             // Уведомить о загрузке данных
                             if (dataCallback != null && response.getData() != null) {
                                 // Объединяем root и replies комментарии
@@ -413,6 +438,11 @@ public class CommentsManager {
                     commentsLoadingOverlay.setVisibility(View.GONE);
                 }
                 
+                // Скрываем текст пустого состояния при ошибке
+                if (emptyCommentsText != null) {
+                    emptyCommentsText.setVisibility(View.GONE);
+                }
+                
                 // Показать Toast в UI потоке
                 if (context instanceof android.app.Activity) {
                     ((android.app.Activity) context).runOnUiThread(() -> {
@@ -439,6 +469,11 @@ public class CommentsManager {
         
         if (commentsAdapter != null) {
             commentsAdapter.clearAll();
+        }
+        
+        // Скрываем текст пустого состояния при сбросе
+        if (emptyCommentsText != null) {
+            emptyCommentsText.setVisibility(View.GONE);
         }
         
         if (reloadIfVisible && isCommentsVisible) {
@@ -550,6 +585,11 @@ public class CommentsManager {
     public void cleanup() {
         if (commentsAdapter != null) {
             commentsAdapter.clearAll();
+        }
+        
+        // Скрываем текст пустого состояния при очистке
+        if (emptyCommentsText != null) {
+            emptyCommentsText.setVisibility(View.GONE);
         }
         
         commentsCurrentPage = 1;

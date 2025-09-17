@@ -100,6 +100,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
     private RecyclerView commentsRecyclerView;
     private View commentsLoadingOverlay;
     private ImageButton commentsOptionsButton;
+    private TextView emptyCommentsText;
     private TextView seekPreviewText;
     private TextView holdSpeedToast;
     private ImageButton pipButton;
@@ -460,6 +461,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
         RecyclerView commentsRecyclerView = findViewById(R.id.commentsRecyclerView);
         View commentsLoadingOverlay = findViewById(R.id.commentsLoadingOverlay);
         ImageButton commentsOptionsButton = findViewById(R.id.commentsOptionsButton);
+        TextView emptyCommentsText = findViewById(R.id.emptyCommentsText);
         
         // Player control components
         if (controllerView != null) {
@@ -482,6 +484,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
         this.commentsRecyclerView = commentsRecyclerView;
         this.commentsLoadingOverlay = commentsLoadingOverlay;
         this.commentsOptionsButton = commentsOptionsButton;
+        this.emptyCommentsText = emptyCommentsText;
         this.seekPreviewText = seekPreviewText;
         this.holdSpeedToast = holdSpeedToast;
         this.pipButton = pipButton;
@@ -526,7 +529,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
         
         // Initialize comments manager
         commentsManager.initializeViews(commentsPanel, closeCommentsButton, commentsRecyclerView,
-                commentsLoadingOverlay, commentsButton, commentsOptionsButton, menuOverlay);
+                commentsLoadingOverlay, commentsButton, commentsOptionsButton, menuOverlay, emptyCommentsText);
         
         // Initialize players manager
         playersManager.initializeViews(slidingMenuPanel, closeMenuButton, playerTabLayout,
@@ -689,6 +692,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
     /**
      * Настройка touch listener для overlay
      */
+    @SuppressLint("ClickableViewAccessibility")
     private void setupOverlayTouchListener() {
         if (menuOverlay == null) return;
         
@@ -886,6 +890,13 @@ public class VideoPlayerActivity extends AppCompatActivity {
             if (controllerView != null) {
                 ImageButton playButton = controllerView.findViewById(R.id.exo_play);
                 ImageButton pauseButton = controllerView.findViewById(R.id.exo_pause);
+                View spinner = controllerView.findViewById(R.id.playLoadingIndicator);
+
+                // Если показывается индикатор загрузки, не меняем видимость кнопок
+                if (spinner != null && spinner.getVisibility() == View.VISIBLE) {
+                    Log.d("PlayerControls", "Loading spinner is visible - not updating button visibility");
+                    return;
+                }
 
                 boolean isPlaying = player.isPlaying();
 
@@ -929,8 +940,8 @@ public class VideoPlayerActivity extends AppCompatActivity {
             }
         }
 
-        // Hide menu
-        playersManager.hideMenu();
+        // Don't hide menu automatically - let user control it
+        Log.d("VideoPlayer", "Player selected, keeping menu visible for user control");
 
         // Route to appropriate player handler (start from beginning for new player)
         if (playerData.getPlayer() != null && "animelib".equalsIgnoreCase(playerData.getPlayer())) {
@@ -1711,20 +1722,38 @@ public class VideoPlayerActivity extends AppCompatActivity {
         View spinner = controllerView.findViewById(R.id.playLoadingIndicator);
         if (spinner == null) return;
 
-        boolean buffering = playbackState == Player.STATE_BUFFERING || playbackState == Player.STATE_READY && player != null && !player.isPlaying();
+        // Показываем индикатор загрузки только при буферизации
+        boolean isBuffering = playbackState == Player.STATE_BUFFERING;
 
-        if (playbackState == Player.STATE_BUFFERING) {
-            // show spinner, hide play/pause
+        if (isBuffering) {
+            // Показываем спиннер, скрываем ОБЕ кнопки play/pause
             spinner.setVisibility(View.VISIBLE);
-            if (play != null) play.setVisibility(View.GONE);
-            if (pause != null) pause.setVisibility(View.GONE);
+            if (play != null) {
+                play.setVisibility(View.GONE);
+                pause.setVisibility(View.GONE);
+                Log.d("PlayLoadingIndicator", "Hiding PLAY button");
+            }
+            if (pause != null) {
+                pause.setVisibility(View.GONE);
+                assert play != null;
+                play.setVisibility(View.GONE);
+                Log.d("PlayLoadingIndicator", "Hiding PAUSE button");
+            }
+            Log.d("PlayLoadingIndicator", "Showing loading spinner - hiding BOTH play/pause buttons");
         } else {
+            // Скрываем спиннер, восстанавливаем play/pause согласно состоянию плеера
             spinner.setVisibility(View.GONE);
-            // restore according to isPlaying
             if (player != null) {
                 boolean isPlaying = player.isPlaying();
-                if (play != null) play.setVisibility(isPlaying ? View.GONE : View.VISIBLE);
-                if (pause != null) pause.setVisibility(isPlaying ? View.VISIBLE : View.GONE);
+                if (play != null) {
+                    play.setVisibility(isPlaying ? View.GONE : View.VISIBLE);
+                    Log.d("PlayLoadingIndicator", "Showing PLAY button: " + !isPlaying);
+                }
+                if (pause != null) {
+                    pause.setVisibility(isPlaying ? View.VISIBLE : View.GONE);
+                    Log.d("PlayLoadingIndicator", "Showing PAUSE button: " + isPlaying);
+                }
+                Log.d("PlayLoadingIndicator", "Hiding loading spinner - showing " + (isPlaying ? "pause" : "play") + " button");
             }
         }
     }

@@ -2,6 +2,7 @@ package com.example.animelib.adapters;
 
 import android.text.Html;
 import android.text.Spanned;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.animelib.R;
 import com.example.animelib.models.CommentsResponse;
 import com.example.animelib.util.ImageLoader;
+import com.example.animelib.util.CommentHtmlProcessor;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -117,23 +119,41 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
 
         holder.usernameView.setText(item.getUser() != null ? item.getUser().getUsername() : "");
         String commentText = item.getComment() != null ? item.getComment() : "";
+
+        // Используем новый HTML процессор для обработки комментария
+        CommentHtmlProcessor processor = new CommentHtmlProcessor(holder.itemView.getContext());
         
-        // Обрабатываем спойлеры
-        if (commentText.contains("<div class=\"comment__spoiler\">")) {
+        // Добавляем логирование для отладки
+        Log.d("CommentsAdapter", "Comment text: " + commentText);
+        Log.d("CommentsAdapter", "Contains spoiler-node: " + commentText.contains("spoiler-node"));
+        Log.d("CommentsAdapter", "Contains blockquote: " + commentText.contains("<blockquote>"));
+        Log.d("CommentsAdapter", "Contains strong: " + commentText.contains("<strong>"));
+        
+        // Проверяем есть ли спойлеры или сложное форматирование
+        if (commentText.contains("spoiler-node") || 
+            commentText.contains("<blockquote>") || 
+            commentText.contains("<strong>") || 
+            commentText.contains("<em>") || 
+            commentText.contains("<u>") || 
+            commentText.contains("<strike>")) {
+            
+            // Используем контейнер для сложного форматирования
             holder.commentHtmlView.setVisibility(View.GONE);
             holder.spoilerContainer.setVisibility(View.VISIBLE);
             
-            // Парсим спойлеры
-            parseAndCreateSpoilers(holder, commentText);
+            // Обрабатываем HTML с помощью нового процессора
+            processor.processCommentHtml(commentText, holder.spoilerContainer);
         } else {
+            // Простое форматирование - используем обычный TextView
             holder.commentHtmlView.setVisibility(View.VISIBLE);
             holder.spoilerContainer.setVisibility(View.GONE);
-            
+
             // Очищаем от лишних переносов строк и пробелов
             commentText = commentText.replaceAll("\\n\\s*\\n", "\n").trim();
             Spanned sp = Html.fromHtml(commentText, Html.FROM_HTML_MODE_LEGACY);
             holder.commentHtmlView.setText(sp);
         }
+        
         holder.dateView.setText(item.getCreated_at_ts() > 0 ? dateFormat.format(new Date(item.getCreated_at_ts())) : "");
         if (item.getVotes() != null) {
             holder.votesView.setText("↑" + item.getVotes().getUp() + "  ↓" + item.getVotes().getDown());
@@ -152,88 +172,6 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
             avatarUrl = item.getUser().getAvatar().getUrl();
         }
         ImageLoader.getInstance().loadInto(holder.avatarView, avatarUrl, R.drawable.ic_avatar_placeholder);
-    }
-    
-    private void parseAndCreateSpoilers(CommentVH holder, String commentText) {
-        // Очищаем контейнер спойлеров
-        holder.spoilerContainer.removeAllViews();
-        
-        // Парсим HTML для поиска спойлеров
-        String remainingText = commentText;
-        
-        while (remainingText.contains("<div class=\"comment__spoiler\">")) {
-            int startIndex = remainingText.indexOf("<div class=\"comment__spoiler\">");
-            int endIndex = remainingText.indexOf("</div>", startIndex);
-            
-            if (endIndex == -1) break;
-            
-            // Добавляем текст до спойлера
-            String beforeSpoiler = remainingText.substring(0, startIndex).trim();
-            if (!beforeSpoiler.isEmpty()) {
-                TextView textView = new TextView(holder.itemView.getContext());
-                textView.setTextSize(13);
-                textView.setTextColor(holder.itemView.getContext().getColor(R.color.white_color));
-                Spanned spannedText = Html.fromHtml(beforeSpoiler, Html.FROM_HTML_MODE_LEGACY);
-                textView.setText(spannedText);
-                holder.spoilerContainer.addView(textView);
-            }
-            
-            // Извлекаем спойлер
-            String spoilerHtml = remainingText.substring(startIndex, endIndex + 6);
-            
-            // Парсим title и text из спойлера
-            String title = extractSpoilerTitle(spoilerHtml);
-            String text = extractSpoilerText(spoilerHtml);
-            
-            // Создаем SpoilerView
-            com.example.animelib.ui.SpoilerView spoilerView = new com.example.animelib.ui.SpoilerView(holder.itemView.getContext());
-            spoilerView.setSpoilerData(title, text);
-            holder.spoilerContainer.addView(spoilerView);
-            
-            // Обновляем remainingText
-            remainingText = remainingText.substring(endIndex + 6);
-        }
-        
-        // Добавляем оставшийся текст после последнего спойлера
-        remainingText = remainingText.trim();
-        if (!remainingText.isEmpty()) {
-            TextView textView = new TextView(holder.itemView.getContext());
-            textView.setTextSize(13);
-            textView.setTextColor(holder.itemView.getContext().getColor(R.color.white_color));
-            Spanned spannedText = Html.fromHtml(remainingText, Html.FROM_HTML_MODE_LEGACY);
-            textView.setText(spannedText);
-            holder.spoilerContainer.addView(textView);
-        }
-    }
-    
-    private String extractSpoilerTitle(String spoilerHtml) {
-        try {
-            int titleStart = spoilerHtml.indexOf("<span class=\"spoiler-title\">");
-            if (titleStart == -1) return null;
-            
-            int titleEnd = spoilerHtml.indexOf("</span>", titleStart);
-            if (titleEnd == -1) return null;
-            
-            String title = spoilerHtml.substring(titleStart + 30, titleEnd); // 30 = length of "<span class=\"spoiler-title\">"
-            return Html.fromHtml(title, Html.FROM_HTML_MODE_LEGACY).toString().trim();
-        } catch (Exception e) {
-            return null;
-        }
-    }
-    
-    private String extractSpoilerText(String spoilerHtml) {
-        try {
-            int textStart = spoilerHtml.indexOf("<span class=\"spoiler-text\">");
-            if (textStart == -1) return "";
-            
-            int textEnd = spoilerHtml.indexOf("</span>", textStart);
-            if (textEnd == -1) return "";
-            
-            String text = spoilerHtml.substring(textStart + 29, textEnd); // 29 = length of "<span class=\"spoiler-text\">"
-            return text.trim();
-        } catch (Exception e) {
-            return "";
-        }
     }
 
     @Override
@@ -260,5 +198,3 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
         }
     }
 }
-
-

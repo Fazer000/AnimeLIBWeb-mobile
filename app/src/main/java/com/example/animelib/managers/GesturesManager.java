@@ -33,6 +33,10 @@ public class GesturesManager {
     private float swipeStartY = 0f;
     private int swipeTouchSlopPx = 0;
     
+    // Переменные для hold-to-speed
+    private long holdStartTime = 0L;
+    private Runnable holdToSpeedRunnable = null;
+    
     // Переменные для свайпа (как в оригинале)
     private float swipeAccumulatedDx = 0f;
     private long basePositionMs = 0L;
@@ -99,33 +103,10 @@ public class GesturesManager {
     private void setupCombinedGestures() {
         if (playerView == null) return;
         
-        // Setup long click listener for hold-to-speed
-        playerView.setOnLongClickListener(v -> {
-            if (isSwipingSeek || player == null) return false;
-            
-            Log.d(TAG, "Hold to speed activated");
-            isHoldToSpeed = true;
-            
-            // Set playback speed to 2x
-            float speedMultiplier = 2.0f;
-            player.setPlaybackSpeed(speedMultiplier);
-            
-            // Show speed toast
-            if (holdSpeedToast != null) {
-                holdSpeedToast.setVisibility(View.VISIBLE);
-                holdSpeedToast.setAlpha(0f);
-                holdSpeedToast.animate().alpha(1f).setDuration(120).start();
-            }
-            
-            // Notify callback about speed change
-            if (gestureCallback != null) {
-                gestureCallback.onSpeedChange(speedMultiplier);
-            }
-            
-            return true; // Consume long press
-        });
+        // Убираем OnLongClickListener - будем обрабатывать все через OnTouchListener
+        playerView.setOnLongClickListener(null);
         
-        // Setup combined touch listener for both swipe seek and hold-to-speed release
+        // Setup combined touch listener for both swipe seek and hold-to-speed
         setupSwipeSeek();
     }
     
@@ -141,6 +122,19 @@ public class GesturesManager {
             
             switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
+                    // Принудительно сбрасываем все состояния жестов
+                    if (isHoldToSpeed && player != null) {
+                        Log.d(TAG, "Force reset hold-to-speed on new touch");
+                        isHoldToSpeed = false;
+                        player.setPlaybackSpeed(1.0f);
+                        if (holdSpeedToast != null) {
+                            holdSpeedToast.setVisibility(View.GONE);
+                        }
+                        if (gestureCallback != null) {
+                            gestureCallback.onSpeedChange(1.0f);
+                        }
+                    }
+                    
                     // Не перехватываем сразу — даём кликам/контролам работать
                     isSwipingSeek = false;
                     swipeAccumulatedDx = 0f;
@@ -148,6 +142,36 @@ public class GesturesManager {
                     lastSwipeX = event.getX();
                     swipeStartX = event.getX();
                     swipeStartY = event.getY();
+                    holdStartTime = System.currentTimeMillis();
+                    
+                    // Запускаем таймер для hold-to-speed
+                    if (holdToSpeedRunnable != null) {
+                        v.removeCallbacks(holdToSpeedRunnable);
+                    }
+                    holdToSpeedRunnable = () -> {
+                        if (!isSwipingSeek && !isHoldToSpeed && player != null) {
+                            Log.d(TAG, "Hold to speed activated");
+                            isHoldToSpeed = true;
+                            
+                            // Set playback speed to 2x
+                            float speedMultiplier = 2.0f;
+                            player.setPlaybackSpeed(speedMultiplier);
+                            
+                            // Show speed toast
+                            if (holdSpeedToast != null) {
+                                holdSpeedToast.setVisibility(View.VISIBLE);
+                                holdSpeedToast.setAlpha(0f);
+                                holdSpeedToast.animate().alpha(1f).setDuration(120).start();
+                            }
+                            
+                            // Notify callback about speed change
+                            if (gestureCallback != null) {
+                                gestureCallback.onSpeedChange(speedMultiplier);
+                            }
+                        }
+                    };
+                    v.postDelayed(holdToSpeedRunnable, 500); // 500ms для активации hold-to-speed
+                    
                     if (seekPreviewText != null) {
                         seekPreviewText.setVisibility(View.GONE);
                         if (seekPreviewText instanceof android.widget.TextView) {
@@ -157,14 +181,20 @@ public class GesturesManager {
                     return false;
                     
                 case MotionEvent.ACTION_MOVE:
-                    // Don't interfere with hold-to-speed
-                    if (isHoldToSpeed) return false;
-                    
                     float currentX = event.getX();
                     float currentY = event.getY();
                     float totalDx = Math.abs(currentX - swipeStartX);
                     float totalDy = Math.abs(currentY - swipeStartY);
                     boolean passedDeadZone = totalDx > swipeTouchSlopPx && totalDx > totalDy * 1.5f;
+
+                    // Если есть движение, отменяем hold-to-speed
+                    if (passedDeadZone && holdToSpeedRunnable != null) {
+                        v.removeCallbacks(holdToSpeedRunnable);
+                        holdToSpeedRunnable = null;
+                    }
+
+                    // Don't interfere with hold-to-speed если он уже активен
+                    if (isHoldToSpeed) return false;
 
                     if (!isSwipingSeek) {
                         if (passedDeadZone) {
@@ -201,6 +231,17 @@ public class GesturesManager {
                     
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
+                    // Отменяем таймер hold-to-speed
+                    if (holdToSpeedRunnable != null) {
+                        v.removeCallbacks(holdToSpeedRunnable);
+                        holdToSpeedRunnable = null;
+                    }
+                    
+                    // Принудительно скрываем seek preview если он видим
+                    if (seekPreviewText != null && seekPreviewText.getVisibility() == View.VISIBLE) {
+                        seekPreviewText.setVisibility(View.GONE);
+                    }
+                    
                     // Handle swipe seek completion
                     if (isSwipingSeek) {
                         long finalOffsetMs = Math.round(swipeAccumulatedDx / 12f) * 1000L;
@@ -208,7 +249,6 @@ public class GesturesManager {
                         long dur = player.getDuration();
                         if (dur > 0) newPos = Math.min(newPos, dur);
                         player.seekTo(newPos);
-                        if (seekPreviewText != null) seekPreviewText.setVisibility(View.GONE);
                         v.postDelayed(() -> isSwipingSeek = false, 60);
                         swipeAccumulatedDx = 0f;
                         lastSwipeX = null;
@@ -265,6 +305,19 @@ public class GesturesManager {
      * @param player Новый экземпляр плеера
      */
     public void updatePlayer(Player player) {
+        // Принудительно сбрасываем hold-to-speed при смене плеера
+        if (isHoldToSpeed && this.player != null) {
+            Log.d(TAG, "Resetting hold-to-speed on player update");
+            isHoldToSpeed = false;
+            this.player.setPlaybackSpeed(1.0f);
+            if (holdSpeedToast != null) {
+                holdSpeedToast.setVisibility(View.GONE);
+            }
+            if (gestureCallback != null) {
+                gestureCallback.onSpeedChange(1.0f);
+            }
+        }
+        
         this.player = player;
         Log.d(TAG, "Player updated");
     }
@@ -274,6 +327,19 @@ public class GesturesManager {
      * @param playerView Новый экземпляр PlayerView
      */
     public void updatePlayerView(PlayerView playerView) {
+        // Принудительно сбрасываем hold-to-speed при смене PlayerView
+        if (isHoldToSpeed && player != null) {
+            Log.d(TAG, "Resetting hold-to-speed on PlayerView update");
+            isHoldToSpeed = false;
+            player.setPlaybackSpeed(1.0f);
+            if (holdSpeedToast != null) {
+                holdSpeedToast.setVisibility(View.GONE);
+            }
+            if (gestureCallback != null) {
+                gestureCallback.onSpeedChange(1.0f);
+            }
+        }
+        
         this.playerView = playerView;
         setupCombinedGestures(); // Re-setup gestures with new PlayerView
         Log.d(TAG, "PlayerView updated and gestures re-setup");
@@ -303,7 +369,20 @@ public class GesturesManager {
         
         isSwipingSeek = false;
         
+        // Принудительно отменяем таймер
+        if (holdToSpeedRunnable != null && playerView != null) {
+            playerView.removeCallbacks(holdToSpeedRunnable);
+            holdToSpeedRunnable = null;
+        }
+        
+        // Принудительно скрываем seek preview
+        if (seekPreviewText != null) {
+            seekPreviewText.setVisibility(View.GONE);
+        }
+        
+        // Принудительно сбрасываем hold-to-speed
         if (isHoldToSpeed && player != null) {
+            Log.d(TAG, "Force stopping hold-to-speed");
             isHoldToSpeed = false;
             player.setPlaybackSpeed(1.0f);
             
@@ -324,8 +403,23 @@ public class GesturesManager {
      * Скрытие всех UI элементов жестов (для PiP режима)
      */
     public void hideAllGesturesUI() {
+        // Принудительно сбрасываем hold-to-speed
+        if (isHoldToSpeed && player != null) {
+            Log.d(TAG, "Force resetting hold-to-speed on UI hide");
+            isHoldToSpeed = false;
+            player.setPlaybackSpeed(1.0f);
+            if (gestureCallback != null) {
+                gestureCallback.onSpeedChange(1.0f);
+            }
+        }
+        
         if (holdSpeedToast != null) {
             holdSpeedToast.setVisibility(View.GONE);
+        }
+        
+        // Принудительно скрываем seek preview
+        if (seekPreviewText != null) {
+            seekPreviewText.setVisibility(View.GONE);
         }
         
         // Stop any active gestures
@@ -366,6 +460,10 @@ public class GesturesManager {
         if (playerView != null) {
             playerView.setOnTouchListener(null);
             playerView.setOnLongClickListener(null);
+            if (holdToSpeedRunnable != null) {
+                playerView.removeCallbacks(holdToSpeedRunnable);
+                holdToSpeedRunnable = null;
+            }
         }
         
         playerView = null;

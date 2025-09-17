@@ -110,11 +110,11 @@ public class MainActivity extends AppCompatActivity {
         checkAndLoadUrl();
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
+//    @Override
+//    protected void onResume() {
+//        super.onResume();
 //        startTestPlayer();
-    }
+//    }
 
     private void loadAndApplyTheme() {
         executor.execute(() -> {
@@ -132,7 +132,7 @@ public class MainActivity extends AppCompatActivity {
         // Для тестирования интерфейса плеера
         Intent intent = new Intent(this, VideoPlayerActivity.class);
         intent.putExtra(VideoPlayerActivity.EXTRA_ANIME_URL,
-                "https://v3.animelib.org/ru/anime/18858--sono-bisque-doll-wa-koi-wo-suru-anime/watch");
+                "https://v3.animelib.org/ru/anime/22934--saikyou-tank-no-meikyuu-kouryaku-tairyoku-9999-no-rare-skill-mochi-tank-yuusha-party-wo-tsuihou-sareru-anime/watch");
         startActivity(intent);
         finish(); // Закрываем MainActivity чтобы не было возможности вернуться
     }

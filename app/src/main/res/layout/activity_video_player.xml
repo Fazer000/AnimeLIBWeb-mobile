@@ -3,18 +3,18 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fitsSystemWindows="false"
-    android:background="@color/black_color">
+    android:background="@color/black_color"
+    android:fitsSystemWindows="false">
 
     <!-- Loading Overlay -->
     <LinearLayout
+        android:id="@+id/loadingOverlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:gravity="center"
         android:background="@color/black_color"
-        android:visibility="gone"
-        android:id="@+id/loadingOverlay">
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="gone">
 
         <ProgressBar
             android:id="@+id/loadingProgress"
@@ -27,10 +27,10 @@
             android:id="@+id/loadingText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="?attr/primaryTextColor"
-            android:textSize="16sp"
+            android:gravity="center"
             android:text="Загрузка видео..."
-            android:gravity="center" />
+            android:textColor="?attr/primaryTextColor"
+            android:textSize="16sp" />
 
     </LinearLayout>
 
@@ -41,12 +41,12 @@
         android:layout_height="match_parent"
         app:animation_enabled="false"
         app:controller_layout_id="@layout/custom_player_controller"
+        app:repeat_toggle_modes="none"
         app:show_buffering="never"
-        app:show_subtitle_button="false"
         app:show_next_button="false"
         app:show_previous_button="false"
         app:show_shuffle_button="false"
-        app:repeat_toggle_modes="none" />
+        app:show_subtitle_button="false" />
 
     <!-- Swipe seek preview -->
     <TextView
@@ -55,14 +55,14 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="80dp"
+        android:background="@drawable/video_time_background"
         android:paddingHorizontal="14dp"
         android:paddingVertical="8dp"
-        android:background="@drawable/video_time_background"
+        android:text="+0 c"
         android:textColor="?attr/primaryTextColor"
         android:textSize="16sp"
         android:textStyle="bold"
-        android:visibility="gone"
-        android:text="+0 c"/>
+        android:visibility="gone" />
 
     <!-- Hold-to-speed plaque -->
     <TextView
@@ -71,22 +71,22 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="80dp"
+        android:background="@drawable/video_time_background"
         android:paddingHorizontal="16dp"
         android:paddingVertical="4dp"
-        android:background="@drawable/video_time_background"
+        android:text="2x"
         android:textColor="?attr/primaryTextColor"
         android:textSize="18sp"
         android:textStyle="bold"
-        android:visibility="gone"
-        android:text="2x"/>
+        android:visibility="gone" />
 
     <View
         android:id="@+id/menuOverlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:visibility="visible"
+        android:background="@color/dt_alpha_primary_color"
         android:clickable="true"
-        android:background="@color/dt_alpha_primary_color" />
+        android:visibility="visible" />
 
     <!-- Sliding Menu Panel -->
     <LinearLayout
@@ -102,9 +102,10 @@
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardElevation="12dp"
+            android:background="@color/black_color"
             app:cardCornerRadius="16dp"
-            android:background="@color/black_color">
+            app:cardElevation="12dp">
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -114,32 +115,32 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:background="@drawable/menu_header_background"
+                    android:gravity="center_vertical"
                     android:orientation="horizontal"
-                    android:paddingTop="8dp"
                     android:paddingHorizontal="12dp"
-                    android:gravity="center_vertical">
+                    android:paddingTop="8dp">
 
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
+                        android:letterSpacing="0.02"
                         android:text="Озвучка"
                         android:textColor="?attr/primaryTextColor"
                         android:textSize="20sp"
-                        android:textStyle="bold"
-                        android:letterSpacing="0.02" />
+                        android:textStyle="bold" />
 
                     <ImageButton
                         android:id="@+id/closeMenuButton"
                         android:layout_width="36dp"
                         android:layout_height="36dp"
-                        android:foreground="@drawable/ripple_circle"
                         android:background="@android:color/transparent"
-                        android:src="@drawable/ic_close"
-                        app:tint="?attr/primaryTextColor"
-                        android:scaleType="fitCenter"
                         android:contentDescription="Close Menu"
-                        android:padding="8dp" />
+                        android:foreground="@drawable/ripple_circle"
+                        android:padding="8dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_close"
+                        app:tint="?attr/primaryTextColor" />
 
                 </LinearLayout>
 
@@ -148,14 +149,14 @@
                     android:id="@+id/playerTabLayout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    app:tabIndicatorColor="?attr/secondaryColor"
-                    app:tabSelectedTextColor="?attr/primaryTextColor"
-                    app:tabTextColor="?attr/accentTextColor"
                     android:background="?attr/primaryColor"
-                    app:tabMode="fixed"
                     app:tabGravity="fill"
+                    app:tabIndicatorColor="?attr/secondaryColor"
+                    app:tabIndicatorGravity="bottom"
                     app:tabIndicatorHeight="3dp"
-                    app:tabIndicatorGravity="bottom"/>
+                    app:tabMode="fixed"
+                    app:tabSelectedTextColor="?attr/primaryTextColor"
+                    app:tabTextColor="?attr/accentTextColor" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
@@ -173,8 +174,8 @@
 
             <FrameLayout
                 android:id="@+id/menuLoadingOverlay"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
                 android:background="?attr/primaryColor"
                 android:visibility="visible">
 
@@ -182,10 +183,10 @@
                     android:id="@+id/menuLoadingIndicator"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
-        android:layout_gravity="center"
+                    android:layout_gravity="center"
                     android:indeterminate="true"
-                    app:trackCornerRadius="8dp"
                     app:indicatorColor="?attr/secondaryColor"
+                    app:trackCornerRadius="8dp"
                     app:trackThickness="4dp" />
             </FrameLayout>
         </FrameLayout>
@@ -200,15 +201,15 @@
         android:layout_gravity="top|end"
         android:background="@drawable/non_stroke_background"
         android:elevation="200dp"
-        android:orientation="vertical"
-        android:visibility="visible">
+        android:orientation="vertical">
 
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardElevation="12dp"
+            android:background="@color/black_color"
             app:cardCornerRadius="16dp"
-            android:background="@color/black_color">
+            app:cardElevation="12dp">
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -219,20 +220,20 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:background="@drawable/menu_header_background"
+                    android:gravity="center_vertical"
                     android:orientation="horizontal"
-                    android:paddingVertical="8dp"
                     android:paddingHorizontal="12dp"
-                    android:gravity="center_vertical">
+                    android:paddingVertical="8dp">
 
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
+                        android:letterSpacing="0.02"
                         android:text="Комментарии"
                         android:textColor="?attr/primaryTextColor"
                         android:textSize="20sp"
-                        android:textStyle="bold"
-                        android:letterSpacing="0.02" />
+                        android:textStyle="bold" />
 
                     <ImageButton
                         android:id="@+id/commentsOptionsButton"
@@ -240,22 +241,22 @@
                         android:layout_height="36dp"
                         android:layout_marginEnd="6dp"
                         android:background="@drawable/button_ripple_effect"
-                        android:src="@drawable/ic_more_vert"
-                        app:tint="?attr/primaryTextColor"
-                        android:scaleType="fitCenter"
                         android:contentDescription="Options"
-                        android:padding="8dp" />
+                        android:padding="8dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_more_vert"
+                        app:tint="?attr/primaryTextColor" />
 
                     <ImageButton
                         android:id="@+id/closeCommentsButton"
                         android:layout_width="36dp"
                         android:layout_height="36dp"
                         android:background="@drawable/button_close_background"
-                        android:src="@drawable/ic_close"
-                        app:tint="?attr/primaryTextColor"
-                        android:scaleType="fitCenter"
                         android:contentDescription="Close Comments"
-                        android:padding="8dp" />
+                        android:padding="8dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_close"
+                        app:tint="?attr/primaryTextColor" />
                 </LinearLayout>
 
             </LinearLayout>
@@ -271,8 +272,18 @@
                 android:id="@+id/commentsRecyclerView"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:padding="8dp"
-                android:clipToPadding="false" />
+                android:clipToPadding="false"
+                android:padding="8dp" />
+
+            <TextView
+                android:id="@+id/emptyCommentsText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="Комментариев пока нет"
+                android:textColor="?attr/accentTextColor"
+                android:textSize="14sp"
+                android:visibility="gone" />
 
             <FrameLayout
                 android:id="@+id/commentsLoadingOverlay"
@@ -285,12 +296,10 @@
                     android:layout_height="48dp"
                     android:layout_gravity="center"
                     android:indeterminate="true"
-                    app:trackCornerRadius="8dp"
                     app:indicatorColor="?attr/secondaryColor"
+                    app:trackCornerRadius="8dp"
                     app:trackThickness="4dp" />
             </FrameLayout>
-</FrameLayout>
-
+        </FrameLayout>
     </LinearLayout>
-
 </FrameLayout>

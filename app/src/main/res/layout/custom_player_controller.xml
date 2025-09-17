@@ -160,6 +160,7 @@
                 android:foreground="@drawable/ripple_circle"
                 android:src="@drawable/ic_player_play"
                 android:scaleType="fitCenter"
+                android:visibility="gone"
                 android:contentDescription="Play"
                 android:clickable="true"
                 android:focusable="true" />
