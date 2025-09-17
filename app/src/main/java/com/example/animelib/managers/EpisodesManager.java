@@ -15,7 +15,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.animelib.adapters.HorizontalEpisodesAdapter;
-import com.example.animelib.api.AnimeApiService;
+import com.example.animelib.api.ApiService;
 import com.example.animelib.models.EpisodesListResponse;
 import com.example.animelib.util.DensityUtils;
 
@@ -31,7 +31,7 @@ public class EpisodesManager {
 
     // Контекст и зависимости
     private final Context context;
-    private final AnimeApiService apiService;
+    private final ApiService apiService;
     private DensityUtils densityUtils;
 
     // UI компоненты
@@ -73,7 +73,7 @@ public class EpisodesManager {
     private EpisodesVisibilityCallback visibilityCallback;
     private EpisodesDataCallback dataCallback;
 
-    public EpisodesManager(Context context, AnimeApiService apiService) {
+    public EpisodesManager(Context context, ApiService apiService) {
         this.context = context;
         this.apiService = apiService;
     }
@@ -381,7 +381,7 @@ public class EpisodesManager {
     public void loadEpisodes(String animeId) {
         Log.d(TAG, "Loading episodes for anime ID: " + animeId);
 
-        apiService.fetchEpisodesList(animeId, new AnimeApiService.EpisodesCallback() {
+        apiService.fetchEpisodesList(animeId, new ApiService.EpisodesCallback() {
             @Override
             public void onEpisodesReceived(EpisodesListResponse response) {
                 ((android.app.Activity) context).runOnUiThread(() -> {

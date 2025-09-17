@@ -17,8 +17,6 @@ import android.util.Rational;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
-import android.view.animation.AccelerateInterpolator;
-import android.view.animation.DecelerateInterpolator;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -40,7 +38,7 @@ import androidx.viewpager2.widget.ViewPager2;
 
 import com.example.animelib.models.AnimeInfoResponse;
 
-import com.example.animelib.api.AnimeApiService;
+import com.example.animelib.api.ApiService;
 import com.example.animelib.settings.SettingsBottomSheet;
 import com.example.animelib.managers.CommentsManager;
 import com.example.animelib.managers.EpisodesManager;
@@ -82,7 +80,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
 
     private ExecutorService executor;
     private DefaultHttpDataSource.Factory httpDataSourceFactory;
-    private AnimeApiService apiService;
+    private ApiService apiService;
 
     // Menu components
     private ImageButton ibClosePlayer;
@@ -188,7 +186,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
 
         // Initialize network components
         executor = Executors.newSingleThreadExecutor();
-        apiService = new AnimeApiService(this);
+        apiService = new ApiService(this);
 
         // Initialize comments manager
         commentsManager = new CommentsManager(this, apiService);
@@ -934,7 +932,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
 
         // Save current episode through API
         if (currentAnimeId != null && episode.getNumber() != null) {
-            apiService.saveCurrentEpisode(currentAnimeId, episode.getNumber(), new AnimeApiService.CurrentEpisodeCallback() {
+            apiService.saveCurrentEpisode(currentAnimeId, episode.getNumber(), new ApiService.CurrentEpisodeCallback() {
                 @Override
                 public void onCurrentEpisodeReceived(EpisodesListResponse.EpisodeItem episode) {
                     Log.d("EpisodeMemory", "Successfully saved current episode via API");
@@ -1221,7 +1219,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
     }
 
     private void loadAnimeFromUrl(String url) {
-        apiService.loadAnimeFromUrl(url, new AnimeApiService.EpisodeDataCallback() {
+        apiService.loadAnimeFromUrl(url, new ApiService.EpisodeDataCallback() {
             @Override
             public void onEpisodeDataReceived(EpisodeResponse response) {
                 runOnUiThread(() -> {
@@ -1369,7 +1367,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
         Log.d("KodikAPI", "Fetching HLS links for Kodik src: " + kodikSrc);
         runOnUiThread(() -> showLoading("Получение HLS ссылок..."));
 
-        apiService.fetchKodikVideoLinksUnsafe(kodikSrc, new AnimeApiService.KodikVideoCallback() {
+        apiService.fetchKodikVideoLinksUnsafe(kodikSrc, new ApiService.KodikVideoCallback() {
             @Override
             public void onKodikVideoReceived(KodikResponse response) {
                 runOnUiThread(() -> {
@@ -1412,7 +1410,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
         String slugOrId = apiService.extractAnimeSlug(animeUrl);
         if (slugOrId == null) return;
 
-        apiService.fetchAnimeInfo(slugOrId, new AnimeApiService.AnimeInfoCallback() {
+        apiService.fetchAnimeInfo(slugOrId, new ApiService.AnimeInfoCallback() {
             @Override
             public void onAnimeInfoReceived(AnimeInfoResponse response) {
                 runOnUiThread(() -> {

@@ -1,8 +1,6 @@
 package com.example.animelib.managers;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
-import android.os.Build;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
@@ -11,7 +9,7 @@ import android.widget.Toast;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.example.animelib.adapters.PlayerTabsAdapter;
-import com.example.animelib.api.AnimeApiService;
+import com.example.animelib.api.ApiService;
 import com.example.animelib.models.EpisodeResponse;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
@@ -28,7 +26,7 @@ public class PlayersManager {
     
     // Контекст и зависимости
     private final Context context;
-    private final AnimeApiService apiService;
+    private final ApiService apiService;
     
     // UI компоненты
     private View slidingMenuPanel;
@@ -75,7 +73,7 @@ public class PlayersManager {
     private PlayersVisibilityCallback visibilityCallback;
     private PlayersDataCallback dataCallback;
     
-    public PlayersManager(Context context, AnimeApiService apiService) {
+    public PlayersManager(Context context, ApiService apiService) {
         this.context = context;
         this.apiService = apiService;
     }
@@ -298,7 +296,7 @@ public class PlayersManager {
         // Show loading
         showLoading();
         
-        apiService.fetchEpisodeData(episodeId, new AnimeApiService.EpisodeDataCallback() {
+        apiService.fetchEpisodeData(episodeId, new ApiService.EpisodeDataCallback() {
             @Override
             public void onEpisodeDataReceived(EpisodeResponse response) {
                 ((android.app.Activity) context).runOnUiThread(() -> {
