@@ -13,6 +13,9 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Spinner;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+
 import com.example.animelib.R;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
@@ -73,7 +76,8 @@ public class SkipDurationBottomSheet extends BottomSheetDialog {
         for (int i = 0; i <= 10; i++) {
             minutesList.add(i + " мин");
         }
-        ArrayAdapter<String> minutesAdapter = new ArrayAdapter<String>(getContext(), R.layout.beautiful_spinner_item, minutesList) {
+        ArrayAdapter<String> minutesAdapter = new ArrayAdapter<>(getContext(), R.layout.beautiful_spinner_item, minutesList) {
+            @NonNull
             @Override
             public View getView(int position, View convertView, ViewGroup parent) {
                 View view = super.getView(position, convertView, parent);

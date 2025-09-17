@@ -26,7 +26,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.security.cert.CertificateException;
 
-public class AnimeApiService {
+public class ApiService {
     private static final String CDNLIBS_BEARER_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIxIiwianRpIjoiOTZkYjliMDI4NGM0OWQ1Yzc2NTIxMzkxZTRlNDJkNjAwNTFmMDUzMDU2NjBjZGQzYTRjYmEzN2FjMmRmYTZhNjEyM2VmNDgxZDBjMGU0Y2MiLCJpYXQiOjE3NTc0MzEyNDcuOTg2MjE5LCJuYmYiOjE3NTc0MzEyNDcuOTg2MjIxLCJleHAiOjE3NjAwMjMyNDcuOTgyNTM3LCJzdWIiOiI5NDM5MzIxIiwic2NvcGVzIjpbXX0.FG2bBdeF0328Prrsr9Q_SL-VkQyeJMqE9b9uQ1E74JsCnJPveeMMLYNuJt_cTp5XpkvFK3XHltfCM7wi4Gg-x3rlpG-sTELMaoMNWv-4TmNcQbrKwSnTSVJfUFlnguVA7kpGHBgfAaL3NVKSwu_Pu1xqq6UwqpV9hBSJ6iTHG7T3vz7e_HxhGWQ7AZ47xmoo76aOnWQ2vIceF-zq6gF0peKBsHXuG8Prl-88xyltkT2SSnAJrTl4xmPQsM0F0OntkkFZGU6XPdFwXw-orxvtpCfsv556ra5fdbACMjqfZ3euwqXEHGRtkjMJpmku1-sV_xubQvCgbwuO8WRc-ukuWv3x2WTffkXypFKviEdNTXLBFki5ex4sblvaYhDUd4IrZwIjL-GRPQ9_X6WZITz7Lic5faKs1kr3mxXDSuK7u7tC2WSCom_I_CYR9_aIytJ_XkxixG-aa3LP9-jaOn0n7iZS8XNjaIlLHyqr2Of9wPvJ-A1NVv41EeaptXWs7VcSWg42-fUkofNyS2Qn1Qdo9DzVKmqzO9jMpe-8suwBVGl3gpr4nCwn4J8tIKOTzWX--xHkotH5w1TYaQAtzKs6ocyptylNdAD8WRm_FU3E3pdY5Ecarem7SK8ij5rh724GMiBXN9y9s6jBSwPoIAD9W-R4UoXo1mhsRNGiJ4EkC0U";
 
     public interface EpisodesCallback {
@@ -59,6 +59,11 @@ public class AnimeApiService {
         void onError(String error);
     }
 
+    public interface ToastCheckCallback {
+        void onToastReceived(String message, String newUrl);
+        void onError(String error);
+    }
+
     private final OkHttpClient httpClient;
     private final Gson gson;
     private final ExecutorService executor;
@@ -67,7 +72,7 @@ public class AnimeApiService {
     // Room DB (uses existing data/ AppDatabase)
     private final com.example.animelib.data.AppDatabase db;
 
-    public AnimeApiService(Context context) {
+    public ApiService(Context context) {
         this.context = context.getApplicationContext();
         this.httpClient = new OkHttpClient();
         this.gson = new Gson();
@@ -75,14 +80,57 @@ public class AnimeApiService {
         this.db = com.example.animelib.data.AppDatabase.getDatabase(this.context);
     }
 
+    private Request.Builder buildApiRequest(String url) {
+        // Получаем URL из базы данных
+        String siteUrl = getSiteUrlFromDb();
+        
+        return new Request.Builder()
+                .url(url)
+                .addHeader("Authorization", "Bearer " + CDNLIBS_BEARER_TOKEN)
+                .addHeader("Accept", "*/*")
+                .addHeader("Accept-Language", "ru,en;q=0.9,de;q=0.8,zh;q=0.7")
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Origin", siteUrl)
+                .addHeader("Referer", siteUrl + "/")
+                .addHeader("Sec-Ch-Ua", "\"Google Chrome\";v=\"131\", \"Chromium\";v=\"131\", \"Not_A Brand\";v=\"24\"")
+                .addHeader("Sec-Ch-Ua-Mobile", "?1")
+                .addHeader("Sec-Ch-Ua-Platform", "\"Android\"")
+                .addHeader("Sec-Fetch-Dest", "empty")
+                .addHeader("Sec-Fetch-Mode", "cors")
+                .addHeader("Sec-Fetch-Site", "cross-site")
+                .addHeader("Site-Id", "5")
+                .addHeader("User-Agent", "Mozilla/5.0 (Linux; Android 14; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36")
+                .addHeader("Client-Time-Zone", "Europe/Samara")
+                .addHeader("Priority", "u=1, i");
+    }
+
+    private String getSiteUrlFromDb() {
+        try {
+            AppSettings settings = db.appSettingsDao().getSettingsSync();
+            if (settings != null && settings.getSiteUrl() != null) {
+                String url = settings.getSiteUrl();
+                // Убираем trailing slash если есть
+                if (url.endsWith("/")) {
+                    url = url.substring(0, url.length() - 1);
+                }
+                // Добавляем https:// если нет протокола
+                if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                    url = "https://" + url;
+                }
+                return url;
+            }
+        } catch (Exception e) {
+            Log.e("AnimeApiService", "Failed to get site URL from DB", e);
+        }
+        // Fallback на дефолтный URL
+        return "https://v3.animelib.org";
+    }
+
     public void fetchAnimeInfo(String animeSlugOrId, AnimeInfoCallback callback) {
         executor.execute(() -> {
             try {
                 String apiUrl = "https://api.cdnlibs.org/api/anime/" + animeSlugOrId;
-                Request request = new Request.Builder()
-                        .url(apiUrl)
-                        .addHeader("Authorization", "Bearer " + CDNLIBS_BEARER_TOKEN)
-                        .build();
+                Request request = buildApiRequest(apiUrl).build();
 
                 httpClient.newCall(request).enqueue(new Callback() {
                     @Override
@@ -119,10 +167,7 @@ public class AnimeApiService {
                 String apiUrl = "https://api.cdnlibs.org/api/episodes?anime_id=" + animeId;
                 Log.d("AnimeApiService", "Fetching episodes list for anime_id: " + animeId);
 
-                Request request = new Request.Builder()
-                        .url(apiUrl)
-                        .addHeader("Authorization", "Bearer " + CDNLIBS_BEARER_TOKEN)
-                        .build();
+                Request request = buildApiRequest(apiUrl).build();
 
                 httpClient.newCall(request).enqueue(new Callback() {
                     @Override
@@ -167,10 +212,7 @@ public class AnimeApiService {
                 String apiUrl = "https://api.cdnlibs.org/api/episodes/" + episodeId;
                 Log.d("AnimeApiService", "Fetching episode data for episode_id: " + episodeId);
 
-                Request request = new Request.Builder()
-                        .url(apiUrl)
-                        .addHeader("Authorization", "Bearer " + CDNLIBS_BEARER_TOKEN)
-                        .build();
+                Request request = buildApiRequest(apiUrl).build();
 
                 httpClient.newCall(request).enqueue(new Callback() {
                     @Override
@@ -266,10 +308,7 @@ public class AnimeApiService {
             try {
                 String apiUrl = getSort(episodeId, sortType, page);
 
-                Request request = new Request.Builder()
-                        .url(apiUrl)
-                        .addHeader("Authorization", "Bearer " + CDNLIBS_BEARER_TOKEN)
-                        .build();
+                Request request = buildApiRequest(apiUrl).build();
 
                 httpClient.newCall(request).enqueue(new Callback() {
                     @Override
@@ -411,10 +450,7 @@ public class AnimeApiService {
                 String apiUrl = "https://api.cdnlibs.org/api/episodes?anime_id=" + animeId;
                 Log.d("AnimeApiService", "Making direct API request to: " + apiUrl);
 
-                Request request = new Request.Builder()
-                        .url(apiUrl)
-                        .addHeader("Authorization", "Bearer " + CDNLIBS_BEARER_TOKEN)
-                        .build();
+                Request request = buildApiRequest(apiUrl).build();
 
                 httpClient.newCall(request).enqueue(new Callback() {
                     @Override
@@ -726,6 +762,74 @@ public class AnimeApiService {
             Log.e("AnimeApiService", "Failed to load theme setting", e);
             return 0; // Default to system theme
         }
+    }
+
+    public void checkApiForToast(ToastCheckCallback callback) {
+        executor.execute(() -> {
+            String apiUrl = "https://api.cdnlibs.org/api/";
+            Request request = buildApiRequest(apiUrl).build();
+
+            httpClient.newCall(request).enqueue(new Callback() {
+                @Override
+                public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                    Log.e("AnimeApiService", "Toast API request failed", e);
+                    callback.onError("Хуй там - " + e);
+                }
+
+                @Override
+                public void onResponse(@NonNull Call call, @NonNull Response response) {
+                    try (response) {
+                        if (response.isSuccessful()) {
+                            assert response.body() != null;
+                            String responseBody = response.body().string();
+                            Log.d("AnimeApiService", "Toast API Response: " + responseBody);
+
+                            // Проверяем, что ответ является валидным JSON объектом
+                            if (responseBody.trim().startsWith("{") && responseBody.trim().endsWith("}")) {
+                                ApiResponse apiResponse = gson.fromJson(responseBody, ApiResponse.class);
+
+                                if (apiResponse != null && apiResponse.getData() != null
+                                    && apiResponse.getData().getToast() != null
+                                    && apiResponse.getData().getToast().getButtons() != null
+                                    && !apiResponse.getData().getToast().getButtons().isEmpty()) {
+
+                                    com.example.animelib.data.ButtonData button = apiResponse.getData().getToast().getButtons().get(0);
+                                    String message = button.getText();
+
+                                    if (message != null && message.contains("Перейти на зеркало")) {
+                                        // Извлекаем новый URL из href
+                                        String newUrl = button.getHref();
+                                        if (newUrl != null && !newUrl.isEmpty()) {
+                                            callback.onToastReceived(message, newUrl);
+                                            Log.d("AnimeApiService", "Mirror URL found: " + newUrl);
+                                        } else {
+                                            callback.onError("Хуй там нет URL");
+                                        }
+                                    } else if (message != null) {
+                                        // Показываем обычное сообщение
+                                        callback.onToastReceived(message, null);
+                                    } else {
+                                        callback.onError("Хуй там нет текста");
+                                    }
+                                } else {
+                                    callback.onError("Хуй там нет текста");
+                                }
+                            } else {
+                                // Ответ не является JSON объектом
+                                Log.w("AnimeApiService", "Toast API returned non-JSON response: " + responseBody);
+                                callback.onError("Неверный формат ответа API");
+                            }
+                        } else {
+                            Log.e("AnimeApiService", "Toast API request failed with code: " + response.code());
+                            callback.onError("HTTP " + response.code());
+                        }
+                    } catch (Exception e) {
+                        Log.e("AnimeApiService", "Error parsing toast API response", e);
+                        callback.onError("Хуй там - " + e);
+                    }
+                }
+            });
+        });
     }
 
     public void shutdown() {

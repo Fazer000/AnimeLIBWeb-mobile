@@ -5,7 +5,6 @@ import android.content.Context;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -21,7 +20,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.animelib.R;
 import com.example.animelib.adapters.CommentsAdapter;
-import com.example.animelib.api.AnimeApiService;
+import com.example.animelib.api.ApiService;
 import com.example.animelib.models.CommentsResponse;
 import com.example.animelib.models.EpisodesListResponse;
 import com.google.android.material.button.MaterialButton;
@@ -55,7 +54,7 @@ public class CommentsManager {
     
     // Контекст и сервисы
     private Context context;
-    private AnimeApiService apiService;
+    private ApiService apiService;
     private EpisodesListResponse.EpisodeItem currentEpisode;
     
     // Callback интерфейсы
@@ -76,7 +75,7 @@ public class CommentsManager {
      * @param context Контекст приложения
      * @param apiService Сервис для API запросов
      */
-    public CommentsManager(Context context, AnimeApiService apiService) {
+    public CommentsManager(Context context, ApiService apiService) {
         this.context = context;
         this.apiService = apiService;
     }
@@ -369,7 +368,7 @@ public class CommentsManager {
         
         long episodeId = currentEpisode.getId();
         apiService.fetchEpisodeComments(episodeId, commentsSortType, page, 
-            new AnimeApiService.EpisodeCommentsCallback() {
+            new ApiService.EpisodeCommentsCallback() {
             @Override
             public void onCommentsReceived(CommentsResponse response) {
                 // Выполняем обновление UI в главном потоке

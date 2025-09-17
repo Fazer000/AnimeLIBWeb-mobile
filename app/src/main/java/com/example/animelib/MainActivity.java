@@ -7,7 +7,6 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;
 import android.view.WindowManager;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
@@ -23,32 +22,25 @@ import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.annotation.OptIn;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
-import androidx.core.graphics.Insets;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.media3.common.util.UnstableApi;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
-import com.example.animelib.api.ApiResponse;
 import com.example.animelib.data.AppSettings;
-import com.example.animelib.data.ButtonData;
 import com.example.animelib.ui.UrlInputDialog;
 import com.example.animelib.viewmodel.AppSettingsViewModel;
-import com.example.animelib.VideoPlayerActivity;
 import com.example.animelib.util.ThemeUtils;
-import com.example.animelib.api.AnimeApiService;
+import com.example.animelib.api.ApiService;
 import com.google.android.material.progressindicator.CircularProgressIndicator;
 
 import com.google.gson.Gson;
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
 
-import java.io.IOException;
+import okhttp3.OkHttpClient;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
@@ -68,7 +60,7 @@ public class MainActivity extends AppCompatActivity {
     private Executor executor;
     private Gson gson;
     private AppSettingsViewModel viewModel;
-    private AnimeApiService apiService;
+    private ApiService apiService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -88,9 +80,25 @@ public class MainActivity extends AppCompatActivity {
 
         // Initialize ViewModel
         viewModel = new ViewModelProvider(this).get(AppSettingsViewModel.class);
-        
+
         // Initialize API service
-        apiService = new AnimeApiService(this);
+        apiService = new ApiService(this);
+
+        // Clear WebView cache to avoid Chromium errors
+        try {
+            android.webkit.WebView tempWebView = new android.webkit.WebView(this);
+            tempWebView.clearCache(true);
+            tempWebView.clearHistory();
+            tempWebView.destroy();
+        } catch (Exception e) {
+            Log.w("MainActivity", "Failed to clear WebView cache", e);
+        }
+        
+        // Включаем аппаратное ускорение для всего приложения
+        getWindow().setFlags(
+            WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+            WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
+        );
 
         // Load and apply theme
         loadAndApplyTheme();
@@ -99,12 +107,15 @@ public class MainActivity extends AppCompatActivity {
         setupRefreshLayout();
         setupBackPressHandler();
 
-//         ТЕСТОВЫЙ РЕЖИМ - раскомментируйте строку ниже для тестирования плеера
-//        startTestPlayer();
-
         checkAndLoadUrl();
     }
-    
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+//        startTestPlayer();
+    }
+
     private void loadAndApplyTheme() {
         executor.execute(() -> {
             int themeMode = apiService.loadThemeSetting();
@@ -121,7 +132,7 @@ public class MainActivity extends AppCompatActivity {
         // Для тестирования интерфейса плеера
         Intent intent = new Intent(this, VideoPlayerActivity.class);
         intent.putExtra(VideoPlayerActivity.EXTRA_ANIME_URL,
-            "https://v3.animelib.org/ru/anime/18858--sono-bisque-doll-wa-koi-wo-suru-anime/watch");
+                "https://v3.animelib.org/ru/anime/18858--sono-bisque-doll-wa-koi-wo-suru-anime/watch");
         startActivity(intent);
         finish(); // Закрываем MainActivity чтобы не было возможности вернуться
     }
@@ -159,79 +170,29 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void checkApiForToast() {
-        executor.execute(() -> {
-            String refererUrl = "https://v2.animelib.org/";
-
-            // Получаем текущий URL из базы данных
-            AppSettings settings = viewModel.getSettings().getValue();
-            if (settings != null && settings.getSiteUrl() != null) {
-                refererUrl = settings.getSiteUrl();
+        apiService.checkApiForToast(new ApiService.ToastCheckCallback() {
+            @Override
+            public void onToastReceived(String message, String newUrl) {
+                runOnUiThread(() -> {
+                    if (newUrl != null && message.contains("Перейти на зеркало")) {
+                        // Обновляем URL в базе данных
+                        viewModel.updateSettings(newUrl);
+                        Toast.makeText(MainActivity.this,
+                                "Зеркало обновлено: " + newUrl,
+                                Toast.LENGTH_LONG).show();
+                        Log.d("ApiCheck", "URL updated to: " + newUrl);
+                    } else {
+                        Log.d("checkApiForToast", message);
+                    }
+                });
             }
 
-            Request request = new Request.Builder()
-                    .url("https://api.cdnlibs.org/api/")
-                    .addHeader("referer", refererUrl)
-                    .build();
-
-            httpClient.newCall(request).enqueue(new Callback() {
-                @Override
-                public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                    Log.e("ApiCheck", "API request failed", e);
-                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Хуй там - " + e, Toast.LENGTH_SHORT).show());
-    } 
-
-                @Override
-                public void onResponse(@NonNull Call call, @NonNull Response response) {
-                    try (response) {
-                        if (response.isSuccessful()) {
-                            assert response.body() != null;
-                            String responseBody = response.body().string();
-                            Log.d("ApiCheck", "Response: " + responseBody);
-
-                            ApiResponse apiResponse = gson.fromJson(responseBody, ApiResponse.class);
-
-                            if (apiResponse != null && apiResponse.getData() != null
-                                && apiResponse.getData().getToast() != null
-                                && apiResponse.getData().getToast().getButtons() != null
-                                && !apiResponse.getData().getToast().getButtons().isEmpty()) {
-
-                                ButtonData button = apiResponse.getData().getToast().getButtons().get(0);
-                                String message = button.getText();
-
-                                if (message != null && message.contains("Перейти на зеркало")) {
-                                    // Извлекаем новый URL из href
-                                    String newUrl = button.getHref();
-                                    if (newUrl != null && !newUrl.isEmpty()) {
-                                        // Обновляем URL в базе данных
-                                        runOnUiThread(() -> {
-                                            viewModel.updateSettings(newUrl);
-                                            Toast.makeText(MainActivity.this,
-                                                "Зеркало обновлено: " + newUrl,
-                                                Toast.LENGTH_LONG).show();
-                                            Log.d("ApiCheck", "URL updated to: " + newUrl);
-                                        });
-                                    }
-                                } else if (message != null) {
-                                    // Показываем обычное сообщение
-                                    runOnUiThread(() -> {
-                                        Toast.makeText(MainActivity.this, message, Toast.LENGTH_LONG).show();
-                                    });
-                                } else {
-                                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Хуй там нет текста", Toast.LENGTH_SHORT).show());
-                                }
-                            }
-                        } else {
-                            Log.e("ApiCheck", "API request failed with code: " + response.code());
-                        }
-                    } catch (Exception e) {
-                        Log.e("ApiCheck", "Error parsing API response", e);
-                        runOnUiThread(() -> Toast.makeText(MainActivity.this, "Хуй там - " + e, Toast.LENGTH_SHORT).show());
-                    }
-                }
-            });
+            @Override
+            public void onError(String error) {
+                Log.d("checkApiForToast", error);
+            }
         });
     }
-
 
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -244,6 +205,11 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webSettings.setLoadWithOverviewMode(true);
         webSettings.setUseWideViewPort(true);
+        
+        // Современные настройки кэширования
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
+        }
         webSettings.setAllowFileAccess(true);
         webSettings.setAllowContentAccess(true);
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
@@ -251,11 +217,29 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setGeolocationEnabled(true);
         webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         webSettings.setUserAgentString(getRandomUserAgent());
+        
+        // Улучшение качества рендера
+        webSettings.setRenderPriority(WebSettings.RenderPriority.HIGH);
+        webSettings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING);
+        webSettings.setLoadsImagesAutomatically(true);
+        webSettings.setBlockNetworkImage(false);
+        webSettings.setBlockNetworkLoads(false);
+        webSettings.setPluginState(WebSettings.PluginState.OFF);
+        webSettings.setAllowFileAccessFromFileURLs(false);
+        webSettings.setAllowUniversalAccessFromFileURLs(false);
+        webSettings.setSaveFormData(false);
+        webSettings.setSavePassword(false);
 
         webSettings.setSupportZoom(false);
         webSettings.setBuiltInZoomControls(false);
         webSettings.setDisplayZoomControls(false);
 
+        // Оптимизация рендера
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        webView.setDrawingCacheEnabled(true);
+        webView.setDrawingCacheQuality(View.DRAWING_CACHE_QUALITY_HIGH);
+        
+        // Включаем аппаратное ускорение
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
 
         CookieManager.getInstance().setAcceptCookie(true);
@@ -276,6 +260,12 @@ public class MainActivity extends AppCompatActivity {
 
         Map<String, String> headers = getStringStringMap();
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        
+        // Оптимизация скроллинга
+        webView.setScrollBarStyle(View.SCROLLBARS_OUTSIDE_OVERLAY);
+        webView.setScrollbarFadingEnabled(true);
+        webView.setVerticalScrollBarEnabled(true);
+        webView.setHorizontalScrollBarEnabled(false);
 
         webView.setWebViewClient(new WebViewClient() {
             @OptIn(markerClass = UnstableApi.class)
@@ -304,11 +294,11 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onPageFinished(WebView view, String url) {
-                        spinner.setVisibility(View.GONE);
-                        spinnerBackground.setVisibility(View.GONE);
-                        if (isFirstLoad) {
-                            isFirstLoad = false;
-                        }
+                spinner.setVisibility(View.GONE);
+                spinnerBackground.setVisibility(View.GONE);
+                if (isFirstLoad) {
+                    isFirstLoad = false;
+                }
                 swipeRefreshLayout.setRefreshing(false);
                 Log.d("WebView", "Finished loading: " + url);
             }
@@ -316,8 +306,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
                 Log.e("WebView", "Error: " + errorCode + " - " + description + " - URL: " + failingUrl);
-                        spinner.setVisibility(View.GONE);
-                        spinnerBackground.setVisibility(View.GONE);
+                spinner.setVisibility(View.GONE);
+                spinnerBackground.setVisibility(View.GONE);
                 swipeRefreshLayout.setRefreshing(false);
             }
         });
@@ -361,58 +351,58 @@ public class MainActivity extends AppCompatActivity {
 
     private void setupPlayerButtonListeners(WebView webView) {
         Log.d("WebView", "Setting up SPA-aware player button listeners");
-        
+
         // First test basic JavaScript
         webView.evaluateJavascript("'test'", value -> {
             Log.d("WebView", "Basic JS test: " + value);
         });
-        
+
         // Simple and working JavaScript code
         webView.evaluateJavascript(
-            "console.log('[AnimeLIB] Test log'); " +
-            "window.animelibTest = 'working'; " +
-            "'basic_test_ok'", 
-            value -> Log.d("WebView", "Basic test result: " + value)
+                "console.log('[AnimeLIB] Test log'); " +
+                        "window.animelibTest = 'working'; " +
+                        "'basic_test_ok'",
+                value -> Log.d("WebView", "Basic test result: " + value)
         );
-        
+
         // Simplified working JavaScript
-        String jsCode = 
-            "try {" +
-            "  console.log('[AnimeLIB] Starting simple setup');" +
-            "  " +
-            "  if (window.animelibSetup) {" +
-            "    console.log('[AnimeLIB] Already setup');" +
-            "  } else {" +
-            "    window.animelibSetup = true;" +
-            "    " +
-            "    document.addEventListener('click', function(e) {" +
-            "      console.log('[AnimeLIB] Click detected on: ' + e.target.tagName);" +
-            "      " +
-            "      var el = e.target;" +
-            "      for (var i = 0; i < 5 && el; i++) {" +
-            "        if (el.tagName === 'A') {" +
-            "          var href = el.href || el.getAttribute('href') || '';" +
-            "          console.log('[AnimeLIB] Link found: ' + href);" +
-            "          " +
-            "          if (href.includes('/watch') || href.includes('episode')) {" +
-            "            console.log('[AnimeLIB] Player button clicked: ' + href);" +
-            "            e.preventDefault();" +
-            "            e.stopPropagation();" +
-            "            AndroidInterface.onPlayerButtonClicked(href);" +
-            "            break;" +
-            "          }" +
-            "        }" +
-            "        el = el.parentElement;" +
-            "      }" +
-            "    }, true);" +
-            "    " +
-            "    console.log('[AnimeLIB] Simple setup complete');" +
-            "  }" +
-            "  'setup_ok';" +
-            "} catch (e) {" +
-            "  console.error('[AnimeLIB] Error: ' + e.message);" +
-            "  'error: ' + e.message;" +
-            "}";
+        String jsCode =
+                "try {" +
+                        "  console.log('[AnimeLIB] Starting simple setup');" +
+                        "  " +
+                        "  if (window.animelibSetup) {" +
+                        "    console.log('[AnimeLIB] Already setup');" +
+                        "  } else {" +
+                        "    window.animelibSetup = true;" +
+                        "    " +
+                        "    document.addEventListener('click', function(e) {" +
+                        "      console.log('[AnimeLIB] Click detected on: ' + e.target.tagName);" +
+                        "      " +
+                        "      var el = e.target;" +
+                        "      for (var i = 0; i < 5 && el; i++) {" +
+                        "        if (el.tagName === 'A') {" +
+                        "          var href = el.href || el.getAttribute('href') || '';" +
+                        "          console.log('[AnimeLIB] Link found: ' + href);" +
+                        "          " +
+                        "          if (href.includes('/watch') || href.includes('episode')) {" +
+                        "            console.log('[AnimeLIB] Player button clicked: ' + href);" +
+                        "            e.preventDefault();" +
+                        "            e.stopPropagation();" +
+                        "            AndroidInterface.onPlayerButtonClicked(href);" +
+                        "            break;" +
+                        "          }" +
+                        "        }" +
+                        "        el = el.parentElement;" +
+                        "      }" +
+                        "    }, true);" +
+                        "    " +
+                        "    console.log('[AnimeLIB] Simple setup complete');" +
+                        "  }" +
+                        "  'setup_ok';" +
+                        "} catch (e) {" +
+                        "  console.error('[AnimeLIB] Error: ' + e.message);" +
+                        "  'error: ' + e.message;" +
+                        "}";
 
         // Execute the simplified JavaScript
         webView.evaluateJavascript(jsCode, value -> {
@@ -421,13 +411,13 @@ public class MainActivity extends AppCompatActivity {
                 Log.e("WebView", "JavaScript returned null - syntax error!");
             }
         });
-        
+
         // Also test with delay
         webView.postDelayed(() -> {
             Log.d("WebView", "Running delayed simple setup");
             webView.evaluateJavascript(
-                "console.log('[AnimeLIB] Delayed test at: ' + window.location.href); 'delayed_ok'",
-                value -> Log.d("WebView", "Delayed test result: " + value)
+                    "console.log('[AnimeLIB] Delayed test at: ' + window.location.href); 'delayed_ok'",
+                    value -> Log.d("WebView", "Delayed test result: " + value)
             );
         }, 2000);
     }
@@ -445,32 +435,45 @@ public class MainActivity extends AppCompatActivity {
 
     private String getRandomUserAgent() {
         String[] userAgents = {
-                "Mozilla/5.0 (Linux; Android 10; SM-G975F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Mobile Safari/537.36",
-                "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Mobile Safari/537.36",
-                "Mozilla/5.0 (Linux; Android 12; SM-A525F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.62 Mobile Safari/537.36",
-                "Mozilla/5.0 (Linux; Android 13; SM-N986B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.71 Mobile Safari/537.36"
+                "Mozilla/5.0 (Linux; Android 14; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
+                "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
+                "Mozilla/5.0 (Linux; Android 14; SM-S928B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
+                "Mozilla/5.0 (Linux; Android 14; SM-A546B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36"
         };
         return userAgents[new Random().nextInt(userAgents.length)];
+    }
+
+    public String getCurrentDate() {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss 'GMT'", Locale.ENGLISH);
+        dateFormat.setTimeZone(java.util.TimeZone.getTimeZone("GMT"));
+        return dateFormat.format(new Date());
     }
 
     @NonNull
     private Map<String, String> getStringStringMap() {
         Map<String, String> headers = new HashMap<>();
-        headers.put("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
-        headers.put("Accept-Language", "en-US,en;q=0.5");
-        headers.put("Connection", "keep-alive");
-        headers.put("Upgrade-Insecure-Requests", "1");
-        headers.put("Sec-Fetch-Dest", "document");
-        headers.put("Sec-Fetch-Mode", "navigate");
-        headers.put("Sec-Fetch-Site", "none");
-        headers.put("Sec-Fetch-User", "?1");
-        headers.put("Referer", "https://www.google.com/");
-        headers.put("DNT", "1");
-        headers.put("Accept-Encoding", "gzip, deflate, br");
-        headers.put("User-Agent", getRandomUserAgent());
-        headers.put("Sec-CH-UA", "\"Chromium\";v=\"94\", \"Google Chrome\";v=\"94\", \";Not A Brand\";v=\"99\"");
+        headers.put("cache-control", "private, must-revalidate");
+        headers.put("content-encoding", "gzip");
+        headers.put("content-security-policy", "upgrade-insecure-requests;");
+        headers.put("content-type", "text/html; charset=UTF-8");
+
+        // Генерируем реальную дату в формате "Wed, 17 Sep 2025 06:30:04 GMT"
+
+        headers.put("date", getCurrentDate());
+
+        headers.put("expires", "-1");
+        headers.put("pragma", "no-cache");
+        headers.put("server", "ddos-guard");
+        headers.put("vary", "Accept-Encoding, Accept-Encoding, Origin");
+        headers.put("x-xss-protection", "1; mode=block, 1; mode=block");
+
+        headers.put("Sec-CH-UA", "\"Google Chrome\";v=\"131\", \"Chromium\";v=\"131\", \"Not_A Brand\";v=\"24\"");
         headers.put("Sec-CH-UA-Mobile", "?1");
         headers.put("Sec-CH-UA-Platform", "\"Android\"");
+        headers.put("Upgrade-Insecure-Requests", "1");
+
+        headers.put("User-Agent", getRandomUserAgent());
+
         return headers;
     }
 

@@ -33,6 +33,8 @@
         <item name="android:windowBackground">@color/dt_header_color</item>
         <item name="android:navigationBarColor">@color/dt_primary_color</item>
 
+        <item name="android:iconTint">@color/dt_primary_color</item>
+
         <!-- Global font family -->
         <item name="android:fontFamily">@font/open_sans</item>
         <item name="fontFamily">@font/open_sans</item>
