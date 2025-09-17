@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
@@ -83,6 +84,22 @@ public class MainActivity extends AppCompatActivity {
         // Initialize API service
         apiService = new ApiService(this);
 
+        // Clear WebView cache to avoid Chromium errors
+        try {
+            android.webkit.WebView tempWebView = new android.webkit.WebView(this);
+            tempWebView.clearCache(true);
+            tempWebView.clearHistory();
+            tempWebView.destroy();
+        } catch (Exception e) {
+            Log.w("MainActivity", "Failed to clear WebView cache", e);
+        }
+        
+        // Включаем аппаратное ускорение для всего приложения
+        getWindow().setFlags(
+            WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+            WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
+        );
+
         // Load and apply theme
         loadAndApplyTheme();
 
@@ -90,10 +107,13 @@ public class MainActivity extends AppCompatActivity {
         setupRefreshLayout();
         setupBackPressHandler();
 
-//         ТЕСТОВЫЙ РЕЖИМ - раскомментируйте строку ниже для тестирования плеера
-//        startTestPlayer();
-
         checkAndLoadUrl();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+//        startTestPlayer();
     }
 
     private void loadAndApplyTheme() {
@@ -162,15 +182,14 @@ public class MainActivity extends AppCompatActivity {
                                 Toast.LENGTH_LONG).show();
                         Log.d("ApiCheck", "URL updated to: " + newUrl);
                     } else {
-                        // Показываем обычное сообщение
-                        Toast.makeText(MainActivity.this, message, Toast.LENGTH_LONG).show();
+                        Log.d("checkApiForToast", message);
                     }
                 });
             }
 
             @Override
             public void onError(String error) {
-                runOnUiThread(() -> Toast.makeText(MainActivity.this, error, Toast.LENGTH_SHORT).show());
+                Log.d("checkApiForToast", error);
             }
         });
     }
@@ -186,6 +205,11 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webSettings.setLoadWithOverviewMode(true);
         webSettings.setUseWideViewPort(true);
+        
+        // Современные настройки кэширования
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
+        }
         webSettings.setAllowFileAccess(true);
         webSettings.setAllowContentAccess(true);
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
@@ -193,11 +217,29 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setGeolocationEnabled(true);
         webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         webSettings.setUserAgentString(getRandomUserAgent());
+        
+        // Улучшение качества рендера
+        webSettings.setRenderPriority(WebSettings.RenderPriority.HIGH);
+        webSettings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING);
+        webSettings.setLoadsImagesAutomatically(true);
+        webSettings.setBlockNetworkImage(false);
+        webSettings.setBlockNetworkLoads(false);
+        webSettings.setPluginState(WebSettings.PluginState.OFF);
+        webSettings.setAllowFileAccessFromFileURLs(false);
+        webSettings.setAllowUniversalAccessFromFileURLs(false);
+        webSettings.setSaveFormData(false);
+        webSettings.setSavePassword(false);
 
         webSettings.setSupportZoom(false);
         webSettings.setBuiltInZoomControls(false);
         webSettings.setDisplayZoomControls(false);
 
+        // Оптимизация рендера
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        webView.setDrawingCacheEnabled(true);
+        webView.setDrawingCacheQuality(View.DRAWING_CACHE_QUALITY_HIGH);
+        
+        // Включаем аппаратное ускорение
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
 
         CookieManager.getInstance().setAcceptCookie(true);
@@ -218,6 +260,12 @@ public class MainActivity extends AppCompatActivity {
 
         Map<String, String> headers = getStringStringMap();
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        
+        // Оптимизация скроллинга
+        webView.setScrollBarStyle(View.SCROLLBARS_OUTSIDE_OVERLAY);
+        webView.setScrollbarFadingEnabled(true);
+        webView.setVerticalScrollBarEnabled(true);
+        webView.setHorizontalScrollBarEnabled(false);
 
         webView.setWebViewClient(new WebViewClient() {
             @OptIn(markerClass = UnstableApi.class)
@@ -387,10 +435,10 @@ public class MainActivity extends AppCompatActivity {
 
     private String getRandomUserAgent() {
         String[] userAgents = {
-                "Mozilla/5.0 (Linux; Android 10; SM-G975F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Mobile Safari/537.36",
-                "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Mobile Safari/537.36",
-                "Mozilla/5.0 (Linux; Android 12; SM-A525F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.62 Mobile Safari/537.36",
-                "Mozilla/5.0 (Linux; Android 13; SM-N986B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.71 Mobile Safari/537.36"
+                "Mozilla/5.0 (Linux; Android 14; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
+                "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
+                "Mozilla/5.0 (Linux; Android 14; SM-S928B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
+                "Mozilla/5.0 (Linux; Android 14; SM-A546B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36"
         };
         return userAgents[new Random().nextInt(userAgents.length)];
     }
@@ -419,9 +467,9 @@ public class MainActivity extends AppCompatActivity {
         headers.put("vary", "Accept-Encoding, Accept-Encoding, Origin");
         headers.put("x-xss-protection", "1; mode=block, 1; mode=block");
 
-        headers.put("Sec-CH-UA", "\"Not)A;Brand\";v=\"8\", \"Chromium\";v=\"138\", \"YaBrowser\";v=\"25.8\", \"Yowser\";v=\"2.5\"");
-        headers.put("Sec-CH-UA-Mobile", "?0");
-        headers.put("Sec-CH-UA-Platform", "Android");
+        headers.put("Sec-CH-UA", "\"Google Chrome\";v=\"131\", \"Chromium\";v=\"131\", \"Not_A Brand\";v=\"24\"");
+        headers.put("Sec-CH-UA-Mobile", "?1");
+        headers.put("Sec-CH-UA-Platform", "\"Android\"");
         headers.put("Upgrade-Insecure-Requests", "1");
 
         headers.put("User-Agent", getRandomUserAgent());

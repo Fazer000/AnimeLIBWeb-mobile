@@ -88,19 +88,18 @@ public class ApiService {
                 .url(url)
                 .addHeader("Authorization", "Bearer " + CDNLIBS_BEARER_TOKEN)
                 .addHeader("Accept", "*/*")
-                .addHeader("Accept-Encoding", "gzip, deflate, br, zstd")
                 .addHeader("Accept-Language", "ru,en;q=0.9,de;q=0.8,zh;q=0.7")
                 .addHeader("Content-Type", "application/json")
                 .addHeader("Origin", siteUrl)
                 .addHeader("Referer", siteUrl + "/")
-                .addHeader("Sec-Ch-Ua", "\"Not)A;Brand\";v=\"8\", \"Chromium\";v=\"138\", \"YaBrowser\";v=\"25.8\", \"Yowser\";v=\"2.5\"")
-                .addHeader("Sec-Ch-Ua-Mobile", "?0")
-                .addHeader("Sec-Ch-Ua-Platform", "\"Windows\"")
+                .addHeader("Sec-Ch-Ua", "\"Google Chrome\";v=\"131\", \"Chromium\";v=\"131\", \"Not_A Brand\";v=\"24\"")
+                .addHeader("Sec-Ch-Ua-Mobile", "?1")
+                .addHeader("Sec-Ch-Ua-Platform", "\"Android\"")
                 .addHeader("Sec-Fetch-Dest", "empty")
                 .addHeader("Sec-Fetch-Mode", "cors")
                 .addHeader("Sec-Fetch-Site", "cross-site")
                 .addHeader("Site-Id", "5")
-                .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 YaBrowser/25.8.0.0 Safari/537.36")
+                .addHeader("User-Agent", "Mozilla/5.0 (Linux; Android 14; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36")
                 .addHeader("Client-Time-Zone", "Europe/Samara")
                 .addHeader("Priority", "u=1, i");
     }
@@ -785,31 +784,40 @@ public class ApiService {
                             String responseBody = response.body().string();
                             Log.d("AnimeApiService", "Toast API Response: " + responseBody);
 
-                            ApiResponse apiResponse = gson.fromJson(responseBody, ApiResponse.class);
+                            // Проверяем, что ответ является валидным JSON объектом
+                            if (responseBody.trim().startsWith("{") && responseBody.trim().endsWith("}")) {
+                                ApiResponse apiResponse = gson.fromJson(responseBody, ApiResponse.class);
 
-                            if (apiResponse != null && apiResponse.getData() != null
-                                && apiResponse.getData().getToast() != null
-                                && apiResponse.getData().getToast().getButtons() != null
-                                && !apiResponse.getData().getToast().getButtons().isEmpty()) {
+                                if (apiResponse != null && apiResponse.getData() != null
+                                    && apiResponse.getData().getToast() != null
+                                    && apiResponse.getData().getToast().getButtons() != null
+                                    && !apiResponse.getData().getToast().getButtons().isEmpty()) {
 
-                                com.example.animelib.data.ButtonData button = apiResponse.getData().getToast().getButtons().get(0);
-                                String message = button.getText();
+                                    com.example.animelib.data.ButtonData button = apiResponse.getData().getToast().getButtons().get(0);
+                                    String message = button.getText();
 
-                                if (message != null && message.contains("Перейти на зеркало")) {
-                                    // Извлекаем новый URL из href
-                                    String newUrl = button.getHref();
-                                    if (newUrl != null && !newUrl.isEmpty()) {
-                                        callback.onToastReceived(message, newUrl);
-                                        Log.d("AnimeApiService", "Mirror URL found: " + newUrl);
+                                    if (message != null && message.contains("Перейти на зеркало")) {
+                                        // Извлекаем новый URL из href
+                                        String newUrl = button.getHref();
+                                        if (newUrl != null && !newUrl.isEmpty()) {
+                                            callback.onToastReceived(message, newUrl);
+                                            Log.d("AnimeApiService", "Mirror URL found: " + newUrl);
+                                        } else {
+                                            callback.onError("Хуй там нет URL");
+                                        }
+                                    } else if (message != null) {
+                                        // Показываем обычное сообщение
+                                        callback.onToastReceived(message, null);
                                     } else {
-                                        callback.onError("Хуй там нет URL");
+                                        callback.onError("Хуй там нет текста");
                                     }
-                                } else if (message != null) {
-                                    // Показываем обычное сообщение
-                                    callback.onToastReceived(message, null);
                                 } else {
                                     callback.onError("Хуй там нет текста");
                                 }
+                            } else {
+                                // Ответ не является JSON объектом
+                                Log.w("AnimeApiService", "Toast API returned non-JSON response: " + responseBody);
+                                callback.onError("Неверный формат ответа API");
                             }
                         } else {
                             Log.e("AnimeApiService", "Toast API request failed with code: " + response.code());

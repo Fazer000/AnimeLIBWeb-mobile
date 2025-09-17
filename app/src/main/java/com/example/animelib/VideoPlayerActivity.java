@@ -156,6 +156,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
     private int menuWidth = 300; // dp
 
     private final int controllerShowTimeoutMs = 4000;
+    private boolean shouldAutoHideControls = true; // Контроль автоматического скрытия
 
     public static void startFromAnimePage(Activity context, String animeUrl) {
         Intent intent = new Intent(context, VideoPlayerActivity.class);
@@ -177,9 +178,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
         loadingOverlay = findViewById(R.id.loadingOverlay);
 
         // Configure PlayerView to show controls for shorter time
-        playerView.setControllerShowTimeoutMs(controllerShowTimeoutMs); // Show for 2 seconds instead of default 3
-        playerView.setControllerAutoShow(true);
-        playerView.setControllerHideOnTouch(true);
+        updateControllerAutoHide();
         
         // Disable ExoPlayer's default controller animations to use our custom alpha animation
         playerView.setControllerAnimationEnabled(false);
@@ -193,6 +192,12 @@ public class VideoPlayerActivity extends AppCompatActivity {
         
         // Initialize episodes manager
         episodesManager = new EpisodesManager(this, apiService);
+        
+        // Устанавливаем callback для управления автоматическим скрытием контроллера
+        episodesManager.setPlayerControlsCallback(shouldAutoHide -> {
+            shouldAutoHideControls = shouldAutoHide;
+            updateControllerAutoHide();
+        });
         
         // Initialize players manager
         playersManager = new PlayersManager(this, apiService);
@@ -221,7 +226,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
 
         // Initialize HTTP data source with custom headers for video requests
         httpDataSourceFactory = new DefaultHttpDataSource.Factory()
-                .setUserAgent("Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1")
+                .setUserAgent("Mozilla/5.0 (Linux; Android 14; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36")
                 .setDefaultRequestProperties(Map.of(
                         "Referer", "https://v3.animelib.org/",
                         "Accept", "video/mp4,video/*,*/*",
@@ -296,6 +301,27 @@ public class VideoPlayerActivity extends AppCompatActivity {
             enterPictureInPictureMode(params);
         } catch (Exception e) {
             Log.e("VideoPlayer", "Failed to enter Picture-in-Picture mode", e);
+        }
+    }
+
+    /**
+     * Обновление настроек автоматического скрытия контроллера
+     */
+    private void updateControllerAutoHide() {
+        if (playerView != null) {
+            if (shouldAutoHideControls) {
+                // Включаем автоматическое скрытие
+                playerView.setControllerShowTimeoutMs(controllerShowTimeoutMs);
+                playerView.setControllerAutoShow(true);
+                playerView.setControllerHideOnTouch(true);
+                Log.d("VideoPlayer", "Controller auto-hide enabled");
+            } else {
+                // Отключаем автоматическое скрытие
+                playerView.setControllerShowTimeoutMs(0); // Никогда не скрывать
+                playerView.setControllerAutoShow(false);
+                playerView.setControllerHideOnTouch(false);
+                Log.d("VideoPlayer", "Controller auto-hide disabled");
+            }
         }
     }
 
@@ -1137,9 +1163,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
 
         // Ensure controller is properly configured for play/pause buttons
         playerView.setUseController(true);
-        playerView.setControllerShowTimeoutMs(controllerShowTimeoutMs);
-        playerView.setControllerAutoShow(true);
-        playerView.setControllerHideOnTouch(true);
+        updateControllerAutoHide();
 
         Log.d("PlayerInit", "ExoPlayer bound to PlayerView with controller enabled");
         
@@ -1528,9 +1552,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
 
         // Ensure controller is properly configured for play/pause buttons
         playerView.setUseController(true);
-        playerView.setControllerShowTimeoutMs(controllerShowTimeoutMs);
-        playerView.setControllerAutoShow(true);
-        playerView.setControllerHideOnTouch(true);
+        updateControllerAutoHide();
 
         Log.d("HlsPlayerInit", "HLS ExoPlayer bound to PlayerView with controller enabled");
 

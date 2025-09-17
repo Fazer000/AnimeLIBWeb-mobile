@@ -69,9 +69,14 @@ public class EpisodesManager {
         void onEpisodesError(String error);
     }
 
+    public interface PlayerControlsCallback {
+        void onPlayerControlsAutoHideChanged(boolean shouldAutoHide);
+    }
+
     private EpisodeSelectionCallback episodeSelectionCallback;
     private EpisodesVisibilityCallback visibilityCallback;
     private EpisodesDataCallback dataCallback;
+    private PlayerControlsCallback playerControlsCallback;
 
     public EpisodesManager(Context context, ApiService apiService) {
         this.context = context;
@@ -187,6 +192,11 @@ public class EpisodesManager {
         Log.d(TAG, "Showing episodes horizontal list - lifting playersControlBar");
         isEpisodesMenuVisible = true;
 
+        // Отключаем автоматическое скрытие интерфейса плеера
+        if (playerControlsCallback != null) {
+            playerControlsCallback.onPlayerControlsAutoHideChanged(false);
+        }
+
         // Сначала показываем RecyclerView с анимацией появления
         episodesRecyclerView.setVisibility(View.VISIBLE);
         episodesRecyclerView.setAlpha(0f);
@@ -225,6 +235,11 @@ public class EpisodesManager {
 
         Log.d(TAG, "Hiding episodes horizontal list - lowering playersControlBar");
         isEpisodesMenuVisible = false;
+
+        // Включаем автоматическое скрытие интерфейса плеера
+        if (playerControlsCallback != null) {
+            playerControlsCallback.onPlayerControlsAutoHideChanged(true);
+        }
 
         // Анимация исчезновения списка эпизодов
         episodesRecyclerView.animate()
@@ -571,6 +586,13 @@ public class EpisodesManager {
     }
 
     /**
+     * Установка callback для управления автоматическим скрытием плеера
+     */
+    public void setPlayerControlsCallback(PlayerControlsCallback callback) {
+        this.playerControlsCallback = callback;
+    }
+
+    /**
      * Очистка ресурсов
      */
     public void cleanup() {
@@ -579,5 +601,6 @@ public class EpisodesManager {
         episodeSelectionCallback = null;
         visibilityCallback = null;
         dataCallback = null;
+        playerControlsCallback = null;
     }
 }
