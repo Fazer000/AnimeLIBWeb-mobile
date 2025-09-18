@@ -9,7 +9,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.webkit.CookieManager;
-import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -28,6 +27,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.example.animelib.data.AppSettings;
 import com.example.animelib.ui.UrlInputDialog;
+import com.example.animelib.ui.PlayerButtonHandler;
 import com.example.animelib.viewmodel.AppSettingsViewModel;
 import com.example.animelib.util.ThemeUtils;
 import com.example.animelib.api.ApiService;
@@ -61,6 +61,7 @@ public class MainActivity extends AppCompatActivity {
     private Gson gson;
     private AppSettingsViewModel viewModel;
     private ApiService apiService;
+    private PlayerButtonHandler playerButtonHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,6 +84,9 @@ public class MainActivity extends AppCompatActivity {
 
         // Initialize API service
         apiService = new ApiService(this);
+        
+        // Initialize player button handler
+        playerButtonHandler = new PlayerButtonHandler(this);
 
         // Clear WebView cache to avoid Chromium errors
         try {
@@ -199,64 +203,90 @@ public class MainActivity extends AppCompatActivity {
     private void setupWebView() {
         WebSettings webSettings = webView.getSettings();
 
+        // Основные настройки JavaScript и DOM
         webSettings.setJavaScriptEnabled(true);
+        webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
         webSettings.setDomStorageEnabled(true);
         webSettings.setDatabaseEnabled(true);
+        
+        // Улучшенные настройки кэширования
         webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
+//        webSettings.setAppCacheEnabled(true);
+//        webSettings.setAppCachePath(getCacheDir().getAbsolutePath());
+//        webSettings.setAppCacheMaxSize(50 * 1024 * 1024); // 50MB
+        
+        // Оптимизация viewport и масштабирования
         webSettings.setLoadWithOverviewMode(true);
         webSettings.setUseWideViewPort(true);
+        webSettings.setBuiltInZoomControls(false);
+        webSettings.setDisplayZoomControls(false);
+        webSettings.setSupportZoom(false);
         
-        // Современные настройки кэширования
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-            webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
-        }
+        // Улучшение качества текста и изображений
+        webSettings.setTextZoom(100);
+        webSettings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING);
+
+        // Современные настройки безопасности и контента
+        webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         webSettings.setAllowFileAccess(true);
         webSettings.setAllowContentAccess(true);
-        webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
+        webSettings.setAllowFileAccessFromFileURLs(false);
+        webSettings.setAllowUniversalAccessFromFileURLs(false);
+        
+        // Медиа и геолокация
         webSettings.setMediaPlaybackRequiresUserGesture(false);
         webSettings.setGeolocationEnabled(true);
-        webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        
+        // Улучшенный User Agent
         webSettings.setUserAgentString(getRandomUserAgent());
         
-        // Улучшение качества рендера
-        webSettings.setRenderPriority(WebSettings.RenderPriority.HIGH);
-        webSettings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING);
+        // Дополнительные настройки производительности
+        webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+
+        // Настройки для лучшего отображения
+        webSettings.setNeedInitialFocus(false);
+        webSettings.setSaveFormData(false);
+        
+        // Оптимизация загрузки ресурсов
         webSettings.setLoadsImagesAutomatically(true);
         webSettings.setBlockNetworkImage(false);
         webSettings.setBlockNetworkLoads(false);
-        webSettings.setPluginState(WebSettings.PluginState.OFF);
-        webSettings.setAllowFileAccessFromFileURLs(false);
-        webSettings.setAllowUniversalAccessFromFileURLs(false);
-        webSettings.setSaveFormData(false);
-        webSettings.setSavePassword(false);
-
-        webSettings.setSupportZoom(false);
-        webSettings.setBuiltInZoomControls(false);
-        webSettings.setDisplayZoomControls(false);
-
-        // Оптимизация рендера
-        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-        webView.setDrawingCacheEnabled(true);
-        webView.setDrawingCacheQuality(View.DRAWING_CACHE_QUALITY_HIGH);
         
-        // Включаем аппаратное ускорение
+        // Дополнительные оптимизации для современных устройств
+        // Включаем предварительное кэширование для плавной прокрутки
+        webSettings.setSafeBrowsingEnabled(true);
+
+        // Принудительная темная тема для WebView (если поддерживается)
+        webSettings.setForceDark(WebSettings.FORCE_DARK_AUTO);
+
+        // Современная оптимизация рендера и производительности
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        
+        // Включаем рендеринг вне основного потока для лучшей производительности
+        webSettings.setOffscreenPreRaster(true);
+
+        // Отключаем отладку в production для лучшей производительности
+        WebView.setWebContentsDebuggingEnabled(false);
+
+        // Дополнительные оптимизации WebView
+        webView.setScrollBarStyle(View.SCROLLBARS_OUTSIDE_OVERLAY);
+        webView.setScrollbarFadingEnabled(true);
+        webView.setVerticalScrollBarEnabled(true);
+        webView.setHorizontalScrollBarEnabled(false);
+        webView.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
+        
+        // Оптимизация памяти и производительности
+        webView.setInitialScale(0);
+        webView.getSettings().setMinimumFontSize(8);
+        webView.getSettings().setMinimumLogicalFontSize(8);
+        webView.getSettings().setDefaultFontSize(16);
+        webView.getSettings().setDefaultFixedFontSize(13);
 
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
 
         // Add JavaScript interface for video detection
-        webView.addJavascriptInterface(new Object() {
-            @OptIn(markerClass = UnstableApi.class)
-            @JavascriptInterface
-            public void onPlayerButtonClicked(String buttonHref) {
-                runOnUiThread(() -> {
-                    Log.d("JSInterface", "Player button clicked: " + buttonHref);
-                    Log.d("PlayerHandler", "Starting VideoPlayerActivity for URL: " + buttonHref);
-                    VideoPlayerActivity.startFromAnimePage(MainActivity.this, buttonHref);
-                });
-            }
-        }, "AndroidInterface");
+        playerButtonHandler.addJavaScriptInterface(webView);
 
         Map<String, String> headers = getStringStringMap();
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
@@ -272,10 +302,58 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
+                Log.d("WebView", "Checking URL for redirect: " + url);
+                
+                // Проверяем на 404 и другие ошибочные страницы
+                if (url.contains("/404") || url.contains("/error") || url.contains("/not-found") || 
+                    url.contains("404.html") || url.contains("error.html")) {
+                    Log.w("WebView", "Blocked redirect to error page: " + url);
+
+                    return true; // Блокируем переход
+                }
 
                 // Allow other URLs to load normally
                 view.loadUrl(url, headers);
                 return true;
+            }
+            
+            @Override
+            public android.webkit.WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                String url = request.getUrl().toString();
+                
+                // Перехватываем запросы к страницам ошибок ДО их загрузки
+                if (url.contains("/404") || url.contains("/error") || url.contains("/not-found") || 
+                    url.contains("404.html") || url.contains("error.html")) {
+                    Log.w("WebView", "Intercepted request to error page: " + url);
+
+                    // Возвращаем пустой ответ чтобы заблокировать загрузку
+                    return new android.webkit.WebResourceResponse("text/html", "UTF-8", null);
+                }
+                
+                return super.shouldInterceptRequest(view, request);
+            }
+            
+            @Override
+            public void onReceivedHttpError(WebView view, WebResourceRequest request, android.webkit.WebResourceResponse errorResponse) {
+                super.onReceivedHttpError(view, request, errorResponse);
+                
+                String url = request.getUrl().toString();
+                int statusCode = errorResponse.getStatusCode();
+                
+                Log.w("WebView", "HTTP Error " + statusCode + " for URL: " + url);
+                
+                if (statusCode == 404) {
+                    runOnUiThread(() -> {
+                        // Возвращаемся на предыдущую страницу если возможно
+                        if (webView.canGoBack()) {
+                            webView.goBack();
+                        }
+                    });
+                } else if (statusCode >= 400) {
+                    runOnUiThread(() -> {
+                        Toast.makeText(MainActivity.this, "Ошибка загрузки: " + statusCode, Toast.LENGTH_SHORT).show();
+                    });
+                }
             }
 
             @Override
@@ -289,7 +367,7 @@ public class MainActivity extends AppCompatActivity {
 
                 // Always setup listeners - let JavaScript determine if it's needed
                 Log.d("WebView", "Setting up player button listeners for SPA");
-                setupPlayerButtonListeners(view);
+                playerButtonHandler.setupPlayerButtonListeners(view);
             }
 
             @Override
@@ -304,8 +382,9 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
-                Log.e("WebView", "Error: " + errorCode + " - " + description + " - URL: " + failingUrl);
+            public void onReceivedError(WebView view, WebResourceRequest request, android.webkit.WebResourceError error) {
+                super.onReceivedError(view, request, error);
+
                 spinner.setVisibility(View.GONE);
                 spinnerBackground.setVisibility(View.GONE);
                 swipeRefreshLayout.setRefreshing(false);
@@ -349,78 +428,6 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void setupPlayerButtonListeners(WebView webView) {
-        Log.d("WebView", "Setting up SPA-aware player button listeners");
-
-        // First test basic JavaScript
-        webView.evaluateJavascript("'test'", value -> {
-            Log.d("WebView", "Basic JS test: " + value);
-        });
-
-        // Simple and working JavaScript code
-        webView.evaluateJavascript(
-                "console.log('[AnimeLIB] Test log'); " +
-                        "window.animelibTest = 'working'; " +
-                        "'basic_test_ok'",
-                value -> Log.d("WebView", "Basic test result: " + value)
-        );
-
-        // Simplified working JavaScript
-        String jsCode =
-                "try {" +
-                        "  console.log('[AnimeLIB] Starting simple setup');" +
-                        "  " +
-                        "  if (window.animelibSetup) {" +
-                        "    console.log('[AnimeLIB] Already setup');" +
-                        "  } else {" +
-                        "    window.animelibSetup = true;" +
-                        "    " +
-                        "    document.addEventListener('click', function(e) {" +
-                        "      console.log('[AnimeLIB] Click detected on: ' + e.target.tagName);" +
-                        "      " +
-                        "      var el = e.target;" +
-                        "      for (var i = 0; i < 5 && el; i++) {" +
-                        "        if (el.tagName === 'A') {" +
-                        "          var href = el.href || el.getAttribute('href') || '';" +
-                        "          console.log('[AnimeLIB] Link found: ' + href);" +
-                        "          " +
-                        "          if (href.includes('/watch') || href.includes('episode')) {" +
-                        "            console.log('[AnimeLIB] Player button clicked: ' + href);" +
-                        "            e.preventDefault();" +
-                        "            e.stopPropagation();" +
-                        "            AndroidInterface.onPlayerButtonClicked(href);" +
-                        "            break;" +
-                        "          }" +
-                        "        }" +
-                        "        el = el.parentElement;" +
-                        "      }" +
-                        "    }, true);" +
-                        "    " +
-                        "    console.log('[AnimeLIB] Simple setup complete');" +
-                        "  }" +
-                        "  'setup_ok';" +
-                        "} catch (e) {" +
-                        "  console.error('[AnimeLIB] Error: ' + e.message);" +
-                        "  'error: ' + e.message;" +
-                        "}";
-
-        // Execute the simplified JavaScript
-        webView.evaluateJavascript(jsCode, value -> {
-            Log.d("WebView", "Simple setup result: " + value);
-            if (value == null || "null".equals(value)) {
-                Log.e("WebView", "JavaScript returned null - syntax error!");
-            }
-        });
-
-        // Also test with delay
-        webView.postDelayed(() -> {
-            Log.d("WebView", "Running delayed simple setup");
-            webView.evaluateJavascript(
-                    "console.log('[AnimeLIB] Delayed test at: ' + window.location.href); 'delayed_ok'",
-                    value -> Log.d("WebView", "Delayed test result: " + value)
-            );
-        }, 2000);
-    }
 
     private void setupRefreshLayout() {
         swipeRefreshLayout.setOnRefreshListener(() -> {
@@ -435,10 +442,15 @@ public class MainActivity extends AppCompatActivity {
 
     private String getRandomUserAgent() {
         String[] userAgents = {
+                // Современные Chrome на Android
                 "Mozilla/5.0 (Linux; Android 14; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
-                "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
+                "Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
                 "Mozilla/5.0 (Linux; Android 14; SM-S928B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
-                "Mozilla/5.0 (Linux; Android 14; SM-A546B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36"
+                "Mozilla/5.0 (Linux; Android 13; SM-A546B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36",
+                // Samsung Internet
+                "Mozilla/5.0 (Linux; Android 14; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/23.0 Chrome/115.0.0.0 Mobile Safari/537.36",
+                // Edge Mobile
+                "Mozilla/5.0 (Linux; Android 14; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36 EdgA/131.0.0.0"
         };
         return userAgents[new Random().nextInt(userAgents.length)];
     }
@@ -452,28 +464,36 @@ public class MainActivity extends AppCompatActivity {
     @NonNull
     private Map<String, String> getStringStringMap() {
         Map<String, String> headers = new HashMap<>();
-        headers.put("cache-control", "private, must-revalidate");
-        headers.put("content-encoding", "gzip");
-        headers.put("content-security-policy", "upgrade-insecure-requests;");
-        headers.put("content-type", "text/html; charset=UTF-8");
-
-        // Генерируем реальную дату в формате "Wed, 17 Sep 2025 06:30:04 GMT"
-
-        headers.put("date", getCurrentDate());
-
-        headers.put("expires", "-1");
-        headers.put("pragma", "no-cache");
-        headers.put("server", "ddos-guard");
-        headers.put("vary", "Accept-Encoding, Accept-Encoding, Origin");
-        headers.put("x-xss-protection", "1; mode=block, 1; mode=block");
-
+        
+        // Основные заголовки
+        headers.put("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8");
+        headers.put("Accept-Language", "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7");
+        headers.put("Accept-Encoding", "gzip, deflate, br");
+        headers.put("Cache-Control", "max-age=0");
+        headers.put("Connection", "keep-alive");
+        
+        // Современные заголовки безопасности
+        headers.put("Sec-Fetch-Dest", "document");
+        headers.put("Sec-Fetch-Mode", "navigate");
+        headers.put("Sec-Fetch-Site", "none");
+        headers.put("Sec-Fetch-User", "?1");
+        headers.put("Upgrade-Insecure-Requests", "1");
+        
+        // Client Hints для лучшей оптимизации
         headers.put("Sec-CH-UA", "\"Google Chrome\";v=\"131\", \"Chromium\";v=\"131\", \"Not_A Brand\";v=\"24\"");
         headers.put("Sec-CH-UA-Mobile", "?1");
         headers.put("Sec-CH-UA-Platform", "\"Android\"");
-        headers.put("Upgrade-Insecure-Requests", "1");
-
+        headers.put("Sec-CH-UA-Platform-Version", "\"14.0.0\"");
+        headers.put("Sec-CH-UA-Arch", "\"arm\"");
+        headers.put("Sec-CH-UA-Bitness", "\"64\"");
+        headers.put("Sec-CH-UA-Model", "\"SM-G998B\"");
+        
+        // Динамический User-Agent
         headers.put("User-Agent", getRandomUserAgent());
-
+        
+        // Дата для кэширования
+        headers.put("Date", getCurrentDate());
+        
         return headers;
     }
 
@@ -486,8 +506,9 @@ public class MainActivity extends AppCompatActivity {
                 } else if (webView.canGoBack()) {
                     webView.goBack();
                 } else {
+                    // Современный способ закрытия активности
                     setEnabled(false);
-                    MainActivity.super.onBackPressed();
+                    getOnBackPressedDispatcher().onBackPressed();
                 }
             }
         });

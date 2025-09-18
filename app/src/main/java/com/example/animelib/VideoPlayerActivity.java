@@ -794,14 +794,67 @@ public class VideoPlayerActivity extends AppCompatActivity {
             public void onEpisodesLoaded(List<EpisodesListResponse.EpisodeItem> episodes) {
                 Log.d("VideoPlayer", "Episodes loaded: " + episodes.size());
                 
-                episodesManager.findAndSetCurrentEpisodeFromUrl(animeUrl);
-                
+                // Сначала пытаемся загрузить сохраненный эпизод из базы данных
+                if (currentAnimeId != null) {
+                    Log.d("VideoPlayer", "Trying to load saved episode for anime: " + currentAnimeId);
+                    apiService.loadCurrentEpisode(currentAnimeId, new ApiService.CurrentEpisodeCallback() {
+                        @Override
+                        public void onCurrentEpisodeReceived(EpisodesListResponse.EpisodeItem savedEpisode) {
+                            Log.d("VideoPlayer", "Found saved episode: " + savedEpisode.getNumber());
+                            // Ищем этот эпизод в загруженном списке
+                            EpisodesListResponse.EpisodeItem matchingEpisode = null;
+                            for (EpisodesListResponse.EpisodeItem episode : episodes) {
+                                if (episode.getId() == savedEpisode.getId() || 
+                                    (episode.getNumber() != null && episode.getNumber().equals(savedEpisode.getNumber()))) {
+                                    matchingEpisode = episode;
+                                    break;
+                                }
+                            }
+                            
+                            if (matchingEpisode != null) {
+                                Log.d("VideoPlayer", "Setting saved episode as current: " + matchingEpisode.getNumber());
+                                episodesManager.setCurrentEpisode(matchingEpisode);
+                                commentsManager.setCurrentEpisode(matchingEpisode);
+                                playersManager.loadPlayersForEpisode(matchingEpisode.getId());
+                            } else {
+                                Log.d("VideoPlayer", "Saved episode not found in current list, falling back to URL detection");
+                                fallbackToUrlDetection();
+                            }
+                        }
+                        
+                        @Override
+                        public void onError(String error) {
+                            if ("NO_SAVED".equals(error)) {
+                                Log.d("VideoPlayer", "No saved episode found, falling back to URL detection");
+                            } else if ("SAVED_NOT_IN_LIST".equals(error)) {
+                                Log.d("VideoPlayer", "Saved episode not in current list, falling back to URL detection");
+                            } else {
+                                Log.d("VideoPlayer", "Error loading saved episode: " + error + ", falling back to URL detection");
+                            }
+                            fallbackToUrlDetection();
+                        }
+                        
+                        private void fallbackToUrlDetection() {
+                            episodesManager.findAndSetCurrentEpisodeFromUrl(animeUrl);
                 EpisodesListResponse.EpisodeItem currentEpisode = episodesManager.getCurrentEpisode();
                 if (currentEpisode != null) {
                     commentsManager.setCurrentEpisode(currentEpisode);
                     playersManager.loadPlayersForEpisode(currentEpisode.getId());
                 } else {
                     initializeMenuWithoutAutoPlay();
+                            }
+                        }
+                    });
+                } else {
+                    // Нет anime ID, используем URL detection
+                    episodesManager.findAndSetCurrentEpisodeFromUrl(animeUrl);
+                    EpisodesListResponse.EpisodeItem currentEpisode = episodesManager.getCurrentEpisode();
+                    if (currentEpisode != null) {
+                        commentsManager.setCurrentEpisode(currentEpisode);
+                        playersManager.loadPlayersForEpisode(currentEpisode.getId());
+                    } else {
+                        initializeMenuWithoutAutoPlay();
+                    }
                 }
             }
             
@@ -1285,6 +1338,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
         // Store all players data in PlayersManager
         playersManager.setPlayersData(players);
         currentAnimeId = apiService.extractAnimeId(animeUrl);
+        Log.d("VideoPlayer", "Extracted anime ID: " + currentAnimeId + " from URL: " + animeUrl);
 
         // Load episodes only if not loaded yet; otherwise init menu with currentEpisode
         if (episodesManager.getEpisodes().isEmpty() && currentAnimeId != null) {

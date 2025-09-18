@@ -1,6 +1,6 @@
 package com.example.animelib.api;
 
-import com.example.animelib.data.ToastData;
+import com.example.animelib.models.ToastData;
 
 public class ApiData {
     private ToastData toast;

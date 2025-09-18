@@ -435,6 +435,9 @@ public class EpisodesManager {
      */
     public void updateEpisodesRecyclerView() {
         if (episodesRecyclerView != null) {
+            Log.d(TAG, "Updating episodes RecyclerView with current episode: " + 
+                (currentEpisode != null ? currentEpisode.getNumber() + " (ID: " + currentEpisode.getId() + ")" : "null"));
+            
             HorizontalEpisodesAdapter adapter = new HorizontalEpisodesAdapter(episodes, currentEpisode, episode -> {
                 if (episodeSelectionCallback != null) {
                     episodeSelectionCallback.onEpisodeSelected(episode);
@@ -443,6 +446,35 @@ public class EpisodesManager {
             });
             episodesRecyclerView.setAdapter(adapter);
             episodesAdapter = adapter;
+            
+            // Прокручиваем к текущему эпизоду если он есть
+            if (currentEpisode != null) {
+                scrollToCurrentEpisode();
+            }
+        }
+    }
+    
+    /**
+     * Прокрутка к текущему эпизоду в списке
+     */
+    private void scrollToCurrentEpisode() {
+        if (episodesRecyclerView == null || currentEpisode == null || episodes.isEmpty()) {
+            return;
+        }
+        
+        int currentIndex = -1;
+        for (int i = 0; i < episodes.size(); i++) {
+            EpisodesListResponse.EpisodeItem episode = episodes.get(i);
+            if (episode.getId() == currentEpisode.getId() || 
+                (episode.getNumber() != null && episode.getNumber().equals(currentEpisode.getNumber()))) {
+                currentIndex = i;
+                break;
+            }
+        }
+        
+        if (currentIndex >= 0) {
+            Log.d(TAG, "Scrolling to current episode at position: " + currentIndex);
+            episodesRecyclerView.scrollToPosition(currentIndex);
         }
     }
 
@@ -460,10 +492,19 @@ public class EpisodesManager {
      * Установка текущего эпизода
      */
     public void setCurrentEpisode(EpisodesListResponse.EpisodeItem episode) {
-        Log.d(TAG, "Setting current episode: " + (episode != null ? episode.getNumber() : "null"));
+        Log.d(TAG, "Setting current episode: " + (episode != null ? episode.getNumber() + " (ID: " + episode.getId() + ")" : "null"));
         this.currentEpisode = episode;
-        updateEpisodesRecyclerView();
-        updateEpisodeNavigationButtonsVisibility();
+        
+        // Обновляем UI на главном потоке
+        if (context instanceof android.app.Activity) {
+            ((android.app.Activity) context).runOnUiThread(() -> {
+                updateEpisodesRecyclerView();
+                updateEpisodeNavigationButtonsVisibility();
+            });
+        } else {
+            updateEpisodesRecyclerView();
+            updateEpisodeNavigationButtonsVisibility();
+        }
     }
 
     /**
