@@ -39,6 +39,15 @@
         <item name="android:fontFamily">@font/open_sans</item>
         <item name="fontFamily">@font/open_sans</item>
         <item name="android:textColor">@color/dt_primary_text_color</item>
+
+
+    </style>
+
+    <style name="SplashScreenTheme" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/dt_header_color</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/animelib_logo</item>
+        <item name="windowSplashScreenIconBackgroundColor">@android:color/transparent</item> <!-- Цвет круга behind иконки -->
+        <item name="postSplashScreenTheme">@style/Theme.AnimeLIB</item>
     </style>
 
     <style name="CustomSpinnerShapeAppearance" parent="ShapeAppearance.MaterialComponents.SmallComponent">
@@ -57,7 +66,6 @@
         <!-- Цвета текста -->
         <item name="android:textColorPrimary">@android:color/white</item>
         <item name="android:textColorSecondary">@color/dt_accent_text_color</item>
-
         <!-- Радиус скругления -->
         <item name="cornerRadius">16dp</item>
     </style>

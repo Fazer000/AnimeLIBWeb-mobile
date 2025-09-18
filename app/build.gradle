@@ -48,4 +48,5 @@ dependencies {
     implementation libs.media3.common
     implementation libs.media3.datasource.okhttp
     implementation libs.jsoup
+    implementation libs.core.splashscreen
 }

@@ -19,8 +19,6 @@
         <item name="secondaryTextColor">@color/lt_secondary_text_color</item>
         <item name="accentTextColor">@color/lt_accent_text_color</item>
 
-
-
         <!-- System Color -->
         <item name="colorPrimary">@color/lt_primary_color</item>
         <item name="colorPrimaryVariant">@color/lt_alpha_primary_color</item>
@@ -39,6 +37,13 @@
         <item name="android:fontFamily">@font/open_sans</item>
         <item name="fontFamily">@font/open_sans</item>
         <item name="android:textColor">@color/dt_primary_text_color</item>
+    </style>
+
+    <style name="SplashScreenTheme" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/lt_header_color</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/animelib_logo_light</item>
+        <item name="windowSplashScreenIconBackgroundColor">@android:color/transparent</item> <!-- Цвет круга behind иконки -->
+        <item name="postSplashScreenTheme">@style/Theme.AnimeLIB</item>
     </style>
 
     <style name="CustomSpinnerShapeAppearance" parent="ShapeAppearance.MaterialComponents.SmallComponent">

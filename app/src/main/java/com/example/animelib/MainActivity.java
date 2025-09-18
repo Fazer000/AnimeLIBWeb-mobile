@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.view.WindowManager;
 import android.webkit.CookieManager;
 import android.webkit.WebChromeClient;
@@ -21,6 +22,7 @@ import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.annotation.OptIn;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.splashscreen.SplashScreen;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.media3.common.util.UnstableApi;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -56,6 +58,9 @@ public class MainActivity extends AppCompatActivity {
     private View customView;
     private WebChromeClient.CustomViewCallback customViewCallback;
     private boolean isFirstLoad = true;
+    private String currentDomain = null;
+    private long lastBackPressTime = 0;
+    private static final int BACK_PRESS_INTERVAL = 2000; // 2 секунды
     private OkHttpClient httpClient;
     private Executor executor;
     private Gson gson;
@@ -65,6 +70,8 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        SplashScreen.installSplashScreen(this);
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -156,6 +163,11 @@ public class MainActivity extends AppCompatActivity {
     private void loadUrl(String url) {
         if (!url.startsWith("http://") && !url.startsWith("https://")) {
             url = "https://" + url;
+        }
+
+        // Сохраняем домен первой загрузки
+        if (currentDomain == null) {
+            currentDomain = extractDomain(url);
         }
 
         Map<String, String> headers = getStringStringMap();
@@ -306,7 +318,8 @@ public class MainActivity extends AppCompatActivity {
                 
                 // Проверяем на 404 и другие ошибочные страницы
                 if (url.contains("/404") || url.contains("/error") || url.contains("/not-found") || 
-                    url.contains("404.html") || url.contains("error.html")) {
+                    url.contains("404.html") || url.contains("error.html") ||
+                    url.contains("404") || url.contains("error") || url.contains("not-found")) {
                     Log.w("WebView", "Blocked redirect to error page: " + url);
 
                     return true; // Блокируем переход
@@ -323,11 +336,13 @@ public class MainActivity extends AppCompatActivity {
                 
                 // Перехватываем запросы к страницам ошибок ДО их загрузки
                 if (url.contains("/404") || url.contains("/error") || url.contains("/not-found") || 
-                    url.contains("404.html") || url.contains("error.html")) {
+                    url.contains("404.html") || url.contains("error.html") ||
+                    url.contains("404") || url.contains("error") || url.contains("not-found")) {
                     Log.w("WebView", "Intercepted request to error page: " + url);
 
                     // Возвращаем пустой ответ чтобы заблокировать загрузку
-                    return new android.webkit.WebResourceResponse("text/html", "UTF-8", null);
+                    return new android.webkit.WebResourceResponse("text/html", "UTF-8", 
+                        new java.io.ByteArrayInputStream("".getBytes()));
                 }
                 
                 return super.shouldInterceptRequest(view, request);
@@ -342,27 +357,32 @@ public class MainActivity extends AppCompatActivity {
                 
                 Log.w("WebView", "HTTP Error " + statusCode + " for URL: " + url);
                 
+                // Автоматически возвращаемся назад при 404 ошибке
                 if (statusCode == 404) {
                     runOnUiThread(() -> {
-                        // Возвращаемся на предыдущую страницу если возможно
                         if (webView.canGoBack()) {
                             webView.goBack();
+                            Log.d("WebView", "Auto-back from 404 error");
                         }
-                    });
-                } else if (statusCode >= 400) {
-                    runOnUiThread(() -> {
-                        Toast.makeText(MainActivity.this, "Ошибка загрузки: " + statusCode, Toast.LENGTH_SHORT).show();
                     });
                 }
             }
 
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
-                if (isFirstLoad && spinner.getVisibility() != View.VISIBLE) {
+                String newDomain = extractDomain(url);
+                
+                // Показываем спиннер если это первая загрузка или переход на другой домен
+                if (isFirstLoad || (currentDomain != null && !currentDomain.equals(newDomain))) {
                     spinner.setVisibility(View.VISIBLE);
                     spinnerBackground.setVisibility(View.VISIBLE);
-                    Log.d("WebView", "First load, spinner shown: " + url);
+                    Log.d("WebView", "Spinner shown - First load: " + isFirstLoad + 
+                          ", Domain changed: " + (currentDomain != null && !currentDomain.equals(newDomain)) + 
+                          ", URL: " + url);
                 }
+                
+                // Обновляем текущий домен
+                currentDomain = newDomain;
                 swipeRefreshLayout.setRefreshing(false);
 
                 // Always setup listeners - let JavaScript determine if it's needed
@@ -502,16 +522,48 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void handleOnBackPressed() {
                 if (customView != null) {
+                    // Выход из полноэкранного режима
                     Objects.requireNonNull(webView.getWebChromeClient()).onHideCustomView();
                 } else if (webView.canGoBack()) {
+                    // Возврат в WebView
                     webView.goBack();
                 } else {
-                    // Современный способ закрытия активности
-                    setEnabled(false);
-                    getOnBackPressedDispatcher().onBackPressed();
+                    // Двойное нажатие для выхода из приложения
+                    long currentTime = System.currentTimeMillis();
+                    if (currentTime - lastBackPressTime < BACK_PRESS_INTERVAL) {
+                        // Второе нажатие - выходим из приложения
+                        setEnabled(false);
+                        getOnBackPressedDispatcher().onBackPressed();
+                    } else {
+                        // Первое нажатие - показываем сообщение
+                        lastBackPressTime = currentTime;
+                        Toast.makeText(MainActivity.this, "Нажмите еще раз для выхода", Toast.LENGTH_SHORT).show();
+                    }
                 }
             }
         });
+    }
+
+    /**
+     * Извлекает домен из URL
+     */
+    private String extractDomain(String url) {
+        try {
+            if (url == null || url.isEmpty()) {
+                return null;
+            }
+            
+            // Добавляем протокол если его нет
+            if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                url = "https://" + url;
+            }
+            
+            java.net.URL urlObj = new java.net.URL(url);
+            return urlObj.getHost();
+        } catch (Exception e) {
+            Log.w("MainActivity", "Failed to extract domain from URL: " + url, e);
+            return null;
+        }
     }
 
     @Override
