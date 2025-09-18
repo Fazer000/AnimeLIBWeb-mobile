@@ -6,7 +6,6 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
-import com.example.animelib.data.AppSettings;
 import com.example.animelib.models.*;
 import com.google.gson.Gson;
 import java.io.IOException;
@@ -69,15 +68,15 @@ public class ApiService {
     private final ExecutorService executor;
     private final Context context;
 
-    // Room DB (uses existing data/ AppDatabase)
-    private final com.example.animelib.data.AppDatabase db;
+    // Database manager for all DB operations
+    private final com.example.animelib.data.DatabaseManager databaseManager;
 
     public ApiService(Context context) {
         this.context = context.getApplicationContext();
         this.httpClient = new OkHttpClient();
         this.gson = new Gson();
         this.executor = Executors.newSingleThreadExecutor();
-        this.db = com.example.animelib.data.AppDatabase.getDatabase(this.context);
+        this.databaseManager = new com.example.animelib.data.DatabaseManager(this.context);
     }
 
     private Request.Builder buildApiRequest(String url) {
@@ -105,25 +104,7 @@ public class ApiService {
     }
 
     private String getSiteUrlFromDb() {
-        try {
-            AppSettings settings = db.appSettingsDao().getSettingsSync();
-            if (settings != null && settings.getSiteUrl() != null) {
-                String url = settings.getSiteUrl();
-                // Убираем trailing slash если есть
-                if (url.endsWith("/")) {
-                    url = url.substring(0, url.length() - 1);
-                }
-                // Добавляем https:// если нет протокола
-                if (!url.startsWith("http://") && !url.startsWith("https://")) {
-                    url = "https://" + url;
-                }
-                return url;
-            }
-        } catch (Exception e) {
-            Log.e("AnimeApiService", "Failed to get site URL from DB", e);
-        }
-        // Fallback на дефолтный URL
-        return "https://v3.animelib.org";
+        return databaseManager.getSiteUrl();
     }
 
     public void fetchAnimeInfo(String animeSlugOrId, AnimeInfoCallback callback) {
@@ -571,7 +552,7 @@ public class ApiService {
                     
                     if (foundEpisode != null) {
                         // Сохраняем в Room
-                        saveCurrentEpisodeToDb(animeId, foundEpisode);
+                        databaseManager.saveCurrentEpisode(animeId, foundEpisode);
                         callback.onCurrentEpisodeReceived(foundEpisode);
                         Log.d("AnimeApiService", "Successfully saved episode " + episodeNumber + " for anime " + animeId);
                     } else {
@@ -602,7 +583,7 @@ public class ApiService {
             public void onEpisodesReceived(EpisodesListResponse response) {
                 if (response.getData() != null && !response.getData().isEmpty()) {
                     // Пытаемся загрузить сохраненный эпизод из Room
-                    EpisodesListResponse.EpisodeItem savedEpisode = loadCurrentEpisodeFromDb(animeId);
+                    EpisodesListResponse.EpisodeItem savedEpisode = databaseManager.loadCurrentEpisode(animeId);
                     if (savedEpisode != null) {
                         // Проверяем, существует ли этот эпизод в актуальном списке
                         for (EpisodesListResponse.EpisodeItem episode : response.getData()) {
@@ -631,137 +612,37 @@ public class ApiService {
         });
     }
     
-    private void saveCurrentEpisodeToDb(String animeId, EpisodesListResponse.EpisodeItem episode) {
-        try {
-            com.example.animelib.data.CurrentEpisodeEntity entity = new com.example.animelib.data.CurrentEpisodeEntity(
-                    animeId,
-                    episode.getId(),
-                    episode.getNumber(),
-                    System.currentTimeMillis()
-            );
-            db.currentEpisodeDao().upsert(entity);
-            Log.d("AnimeApiService", "Saved current episode to DB: " + episode.getNumber());
-        } catch (Exception e) {
-            Log.e("AnimeApiService", "DB save error", e);
-        }
-    }
-
-    private EpisodesListResponse.EpisodeItem loadCurrentEpisodeFromDb(String animeId) {
-        try {
-            com.example.animelib.data.CurrentEpisodeEntity entity = db.currentEpisodeDao().getByAnimeId(animeId);
-            if (entity == null) return null;
-            EpisodesListResponse.EpisodeItem item = new EpisodesListResponse.EpisodeItem();
-            item.setId(entity.episodeId);
-            item.setNumber(entity.episodeNumber);
-            return item;
-        } catch (Exception e) {
-            Log.e("AnimeApiService", "DB load error", e);
-            return null;
-        }
-    }
 
     public void save4KSetting(boolean enable4K) {
-        executor.execute(() -> {
-            try {
-                AppSettings settings = db.appSettingsDao().getSettingsSync();
-                if (settings == null) {
-                    settings = new AppSettings();
-                }
-                settings.setEnable4K(enable4K);
-                db.appSettingsDao().upsert(settings);
-                Log.d("AnimeApiService", "Saved 4K setting: " + enable4K);
-            } catch (Exception e) {
-                Log.e("AnimeApiService", "Failed to save 4K setting", e);
-            }
-        });
+        databaseManager.save4KSetting(enable4K);
     }
     
     public boolean load4KSetting() {
-        try {
-            AppSettings settings = db.appSettingsDao().getSettingsSync();
-            return settings != null && settings.isEnable4K();
-        } catch (Exception e) {
-            Log.e("AnimeApiService", "Failed to load 4K setting", e);
-            return false;
-        }
+        return databaseManager.load4KSetting();
     }
     
     public void saveAutoPlaySetting(boolean autoPlay) {
-        executor.execute(() -> {
-            try {
-                AppSettings settings = db.appSettingsDao().getSettingsSync();
-                if (settings == null) {
-                    settings = new AppSettings();
-                }
-                settings.setAutoPlay(autoPlay);
-                db.appSettingsDao().upsert(settings);
-                Log.d("AnimeApiService", "Saved autoPlay setting: " + autoPlay);
-            } catch (Exception e) {
-                Log.e("AnimeApiService", "Failed to save autoPlay setting", e);
-            }
-        });
+        databaseManager.saveAutoPlaySetting(autoPlay);
     }
     
     public boolean loadAutoPlaySetting() {
-        try {
-            AppSettings settings = db.appSettingsDao().getSettingsSync();
-            return settings != null && settings.isAutoPlay();
-        } catch (Exception e) {
-            Log.e("AnimeApiService", "Failed to load autoPlay setting", e);
-            return true; // Default to true
-        }
+        return databaseManager.loadAutoPlaySetting();
     }
     
     public void saveLongSkipDurationSetting(int duration) {
-        executor.execute(() -> {
-            try {
-                AppSettings settings = db.appSettingsDao().getSettingsSync();
-                if (settings == null) {
-                    settings = new AppSettings();
-                }
-                settings.setLongSkipDuration(duration);
-                db.appSettingsDao().upsert(settings);
-                Log.d("AnimeApiService", "Saved longSkipDuration setting: " + duration);
-            } catch (Exception e) {
-                Log.e("AnimeApiService", "Failed to save longSkipDuration setting", e);
-            }
-        });
+        databaseManager.saveLongSkipDurationSetting(duration);
     }
     
     public int loadLongSkipDurationSetting() {
-        try {
-            AppSettings settings = db.appSettingsDao().getSettingsSync();
-            return settings != null ? settings.getLongSkipDuration() : 85; // Default to 85 seconds
-        } catch (Exception e) {
-            Log.e("AnimeApiService", "Failed to load longSkipDuration setting", e);
-            return 85; // Default to 85 seconds
-        }
+        return databaseManager.loadLongSkipDurationSetting();
     }
     
     public void saveThemeSetting(int themeMode) {
-        executor.execute(() -> {
-            try {
-                AppSettings settings = db.appSettingsDao().getSettingsSync();
-                if (settings == null) {
-                    settings = new AppSettings();
-                }
-                settings.setThemeMode(themeMode);
-                db.appSettingsDao().upsert(settings);
-                Log.d("AnimeApiService", "Saved theme setting: " + themeMode);
-            } catch (Exception e) {
-                Log.e("AnimeApiService", "Failed to save theme setting", e);
-            }
-        });
+        databaseManager.saveThemeSetting(themeMode);
     }
     
     public int loadThemeSetting() {
-        try {
-            AppSettings settings = db.appSettingsDao().getSettingsSync();
-            return settings != null ? settings.getThemeMode() : 0; // Default to system theme
-        } catch (Exception e) {
-            Log.e("AnimeApiService", "Failed to load theme setting", e);
-            return 0; // Default to system theme
-        }
+        return databaseManager.loadThemeSetting();
     }
 
     public void checkApiForToast(ToastCheckCallback callback) {
@@ -793,7 +674,7 @@ public class ApiService {
                                     && apiResponse.getData().getToast().getButtons() != null
                                     && !apiResponse.getData().getToast().getButtons().isEmpty()) {
 
-                                    com.example.animelib.data.ButtonData button = apiResponse.getData().getToast().getButtons().get(0);
+                                    ToastData.ButtonData button = apiResponse.getData().getToast().getButtons().get(0);
                                     String message = button.getText();
 
                                     if (message != null && message.contains("Перейти на зеркало")) {
@@ -835,6 +716,9 @@ public class ApiService {
     public void shutdown() {
         if (executor != null && !executor.isShutdown()) {
             executor.shutdown();
+        }
+        if (databaseManager != null) {
+            databaseManager.shutdown();
         }
     }
 }

@@ -93,7 +93,7 @@ public class HorizontalEpisodesAdapter extends RecyclerView.Adapter<HorizontalEp
             holder.itemView.setBackgroundResource(R.drawable.episode_item_selected);
         } else {
             holder.episodeText.setTextColor(holder.itemView.getContext().getResources().getColor(R.color.gray_color));
-
+            holder.itemView.setBackgroundResource(R.drawable.episode_item_normal);
         }
 
         // Set click listener
