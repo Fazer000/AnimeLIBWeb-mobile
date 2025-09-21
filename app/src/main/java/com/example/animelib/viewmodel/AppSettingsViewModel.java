@@ -34,7 +34,8 @@ public class AppSettingsViewModel extends AndroidViewModel {
         isLoading.setValue(true);
         new Thread(() -> {
             try {
-                AppSettings settings = new AppSettings(siteUrl);
+                AppSettings settings = new AppSettings();
+                settings.setSiteUrl(siteUrl);
                 appSettingsDao.insert(settings);
                 isLoading.postValue(false);
             } catch (Exception e) {
@@ -52,7 +53,8 @@ public class AppSettingsViewModel extends AndroidViewModel {
                     currentSettings.setSiteUrl(siteUrl);
                     appSettingsDao.update(currentSettings);
                 } else {
-                    AppSettings newSettings = new AppSettings(siteUrl);
+                    AppSettings newSettings = new AppSettings();
+                    newSettings.setSiteUrl(siteUrl);
                     appSettingsDao.insert(newSettings);
                 }
                 isLoading.postValue(false);

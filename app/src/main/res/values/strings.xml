@@ -1,4 +1,5 @@
 <resources>
+    <dimen name="dialog_margin">10dp</dimen>
     <string name="app_name">AnimeLIB</string>
     <string name="site_url">v2.animelib.org</string>
     <dimen name="line_height">0.5dp</dimen>

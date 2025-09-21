@@ -53,13 +53,19 @@ public class ApiService {
         void onError(String error);
     }
 
-    public interface CurrentEpisodeCallback {
-        void onCurrentEpisodeReceived(EpisodesListResponse.EpisodeItem episode);
-        void onError(String error);
-    }
 
     public interface ToastCheckCallback {
         void onToastReceived(String message, String newUrl);
+        void onError(String error);
+    }
+    
+    public interface BookmarkCallback {
+        void onSuccess(String message);
+        void onError(String error);
+    }
+    
+    public interface AnimeBookmarkCallback {
+        void onBookmarkReceived(AnimeBookmarkResponse response);
         void onError(String error);
     }
 
@@ -72,11 +78,11 @@ public class ApiService {
     private final com.example.animelib.data.DatabaseManager databaseManager;
 
     public ApiService(Context context) {
-        this.context = context.getApplicationContext();
+        this.context = context; // Сохраняем оригинальный context для runOnUiThread
         this.httpClient = new OkHttpClient();
         this.gson = new Gson();
         this.executor = Executors.newSingleThreadExecutor();
-        this.databaseManager = new com.example.animelib.data.DatabaseManager(this.context);
+        this.databaseManager = new com.example.animelib.data.DatabaseManager(context.getApplicationContext());
     }
 
     private Request.Builder buildApiRequest(String url) {
@@ -529,88 +535,6 @@ public class ApiService {
         });
     }
 
-    /**
-     * Сохраняет текущий эпизод для аниме через API-подобный подход
-     * Получает список эпизодов из API и находит эпизод по номеру
-     */
-    public void saveCurrentEpisode(String animeId, String episodeNumber, CurrentEpisodeCallback callback) {
-        Log.d("AnimeApiService", "Saving current episode " + episodeNumber + " for anime " + animeId);
-        
-        // Сначала получаем список эпизодов из API
-        fetchEpisodesList(animeId, new EpisodesCallback() {
-            @Override
-            public void onEpisodesReceived(EpisodesListResponse response) {
-                if (response.getData() != null) {
-                    // Ищем эпизод по номеру
-                    EpisodesListResponse.EpisodeItem foundEpisode = null;
-                    for (EpisodesListResponse.EpisodeItem episode : response.getData()) {
-                        if (episode.getNumber() != null && episode.getNumber().equals(episodeNumber)) {
-                            foundEpisode = episode;
-                            break;
-                        }
-                    }
-                    
-                    if (foundEpisode != null) {
-                        // Сохраняем в Room
-                        databaseManager.saveCurrentEpisode(animeId, foundEpisode);
-                        callback.onCurrentEpisodeReceived(foundEpisode);
-                        Log.d("AnimeApiService", "Successfully saved episode " + episodeNumber + " for anime " + animeId);
-                    } else {
-                        callback.onError("Эпизод с номером " + episodeNumber + " не найден");
-                    }
-                } else {
-                    callback.onError("Не удалось получить список эпизодов");
-                }
-            }
-            
-            @Override
-            public void onError(String error) {
-                callback.onError("Ошибка при получении эпизодов: " + error);
-            }
-        });
-    }
-    
-    /**
-     * Загружает текущий эпизод для аниме через API
-     * Сначала проверяет локальное хранилище, затем получает актуальные данные из API
-     */
-    public void loadCurrentEpisode(String animeId, CurrentEpisodeCallback callback) {
-        Log.d("AnimeApiService", "Loading current episode for anime " + animeId);
-        
-        // Получаем список эпизодов из API
-        fetchEpisodesList(animeId, new EpisodesCallback() {
-            @Override
-            public void onEpisodesReceived(EpisodesListResponse response) {
-                if (response.getData() != null && !response.getData().isEmpty()) {
-                    // Пытаемся загрузить сохраненный эпизод из Room
-                    EpisodesListResponse.EpisodeItem savedEpisode = databaseManager.loadCurrentEpisode(animeId);
-                    if (savedEpisode != null) {
-                        // Проверяем, существует ли этот эпизод в актуальном списке
-                        for (EpisodesListResponse.EpisodeItem episode : response.getData()) {
-                            if (episode.getId() == savedEpisode.getId() ||
-                                    (episode.getNumber() != null && episode.getNumber().equals(savedEpisode.getNumber()))) {
-                                callback.onCurrentEpisodeReceived(episode);
-                                Log.d("AnimeApiService", "Loaded saved episode " + episode.getNumber() + " for anime " + animeId);
-                                return;
-                            }
-                        }
-                        // Сохраненный не найден в актуальном списке
-                        callback.onError("SAVED_NOT_IN_LIST");
-                        return;
-                    }
-                    // Нет сохранённого эпизода
-                    callback.onError("NO_SAVED");
-                } else {
-                    callback.onError("Список эпизодов пуст");
-                }
-            }
-            
-            @Override
-            public void onError(String error) {
-                callback.onError("Ошибка при загрузке эпизодов: " + error);
-            }
-        });
-    }
     
 
     public void save4KSetting(boolean enable4K) {
@@ -643,6 +567,18 @@ public class ApiService {
     
     public int loadThemeSetting() {
         return databaseManager.loadThemeSetting();
+    }
+    
+    public com.example.animelib.data.DatabaseManager getDatabaseManager() {
+        return databaseManager;
+    }
+    
+    public OkHttpClient getHttpClient() {
+        return httpClient;
+    }
+    
+    public Gson getGson() {
+        return gson;
     }
 
     public void checkApiForToast(ToastCheckCallback callback) {
@@ -710,6 +646,296 @@ public class ApiService {
                     }
                 }
             });
+        });
+    }
+
+    /**
+     * Добавляет серию в закладки
+     * @param mediaSlug Слаг медиа (например: "23811--kaijuu-8-gou-2nd-season-anime")
+     * @param episodeId ID эпизода
+     * @param teamId ID команды перевода
+     * @param episodeNumber Номер эпизода
+     * @param currentTimecode Текущее время в формате "12:01"
+     * @param callback Колбэк для результата операции
+     */
+    public void addBookmark(String mediaSlug, int episodeId, int teamId, int episodeNumber, 
+                           String currentTimecode, BookmarkCallback callback) {
+        
+        Log.d("ApiService", "Adding bookmark - mediaSlug: " + mediaSlug + 
+                   ", episodeId: " + episodeId + 
+                   ", teamId: " + teamId + 
+                   ", episodeNumber: " + episodeNumber + 
+                   ", timecode: " + currentTimecode);
+        
+        executor.execute(() -> {
+            try {
+                // Создаем JSON объект для запроса
+                com.google.gson.JsonObject requestBody = createBookmarkRequestBody(
+                    mediaSlug, episodeId, teamId, episodeNumber, currentTimecode
+                );
+                
+                String jsonString = gson.toJson(requestBody);
+                Log.d("ApiService", "Request body: " + jsonString);
+                
+                // Создаем HTTP запрос
+                okhttp3.RequestBody body = okhttp3.RequestBody.create(jsonString, okhttp3.MediaType.get("application/json; charset=utf-8"));
+                Request request = new Request.Builder()
+                    .url("https://api.cdnlibs.org/api/bookmarks")
+                    .post(body)
+                    .addHeader("Authorization", "Bearer " + CDNLIBS_BEARER_TOKEN)
+                    .addHeader("Accept", "*/*")
+                    .addHeader("Accept-Language", "ru,en;q=0.9,de;q=0.8,zh;q=0.7")
+                    .addHeader("Content-Type", "application/json")
+                    .addHeader("Origin", getSiteUrlFromDb())
+                    .addHeader("Referer", getSiteUrlFromDb() + "/")
+                    .addHeader("Sec-Ch-Ua", "\"Google Chrome\";v=\"131\", \"Chromium\";v=\"131\", \"Not_A Brand\";v=\"24\"")
+                    .addHeader("Sec-Ch-Ua-Mobile", "?1")
+                    .addHeader("Sec-Ch-Ua-Platform", "\"Android\"")
+                    .addHeader("Sec-Fetch-Dest", "empty")
+                    .addHeader("Sec-Fetch-Mode", "cors")
+                    .addHeader("Sec-Fetch-Site", "cross-site")
+                    .addHeader("Site-Id", "5")
+                    .addHeader("User-Agent", "Mozilla/5.0 (Linux; Android 14; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36")
+                    .addHeader("Client-Time-Zone", "Europe/Samara")
+                    .addHeader("Priority", "u=1, i")
+                    .build();
+                
+                // Выполняем запрос
+                httpClient.newCall(request).enqueue(new Callback() {
+                    @Override
+                    public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                        Log.e("ApiService", "Bookmark request failed", e);
+                        // Вызываем колбэк в главном потоке
+                        if (context instanceof android.app.Activity) {
+                            ((android.app.Activity) context).runOnUiThread(() -> 
+                                callback.onError("Ошибка сети: " + e.getMessage())
+                            );
+                        } else {
+                            callback.onError("Ошибка сети: " + e.getMessage());
+                        }
+                    }
+                    
+                    @Override
+                    public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                        try (response) {
+                            if (response.isSuccessful()) {
+                                String responseBody = response.body() != null ? response.body().string() : "";
+                                Log.d("ApiService", "Bookmark added successfully: " + responseBody);
+                                // Вызываем колбэк в главном потоке
+                                if (context instanceof android.app.Activity) {
+                                    ((android.app.Activity) context).runOnUiThread(() -> 
+                                        callback.onSuccess("Закладка добавлена успешно")
+                                    );
+                                } else {
+                                    callback.onSuccess("Закладка добавлена успешно");
+                                }
+                            } else {
+                                String errorBody = response.body() != null ? response.body().string() : "";
+                                Log.e("ApiService", "Failed to add bookmark. Code: " + response.code() + ", Body: " + errorBody);
+                                // Вызываем колбэк в главном потоке
+                                if (context instanceof android.app.Activity) {
+                                    ((android.app.Activity) context).runOnUiThread(() -> 
+                                        callback.onError("Ошибка при добавлении закладки: " + response.code())
+                                    );
+                                } else {
+                                    callback.onError("Ошибка при добавлении закладки: " + response.code());
+                                }
+                            }
+                        } catch (Exception e) {
+                            Log.e("ApiService", "Error processing bookmark response", e);
+                            // Вызываем колбэк в главном потоке
+                            if (context instanceof android.app.Activity) {
+                                ((android.app.Activity) context).runOnUiThread(() -> 
+                                    callback.onError("Ошибка обработки ответа: " + e.getMessage())
+                                );
+                            } else {
+                                callback.onError("Ошибка обработки ответа: " + e.getMessage());
+                            }
+                        }
+                    }
+                });
+                
+            } catch (Exception e) {
+                Log.e("ApiService", "Unexpected error while adding bookmark", e);
+                // Вызываем колбэк в главном потоке
+                if (context instanceof android.app.Activity) {
+                    ((android.app.Activity) context).runOnUiThread(() -> 
+                        callback.onError("Неожиданная ошибка: " + e.getMessage())
+                    );
+                } else {
+                    callback.onError("Неожиданная ошибка: " + e.getMessage());
+                }
+            }
+        });
+    }
+    
+    /**
+     * Создает JSON объект для запроса добавления закладки
+     */
+    private com.google.gson.JsonObject createBookmarkRequestBody(String mediaSlug, int episodeId, int teamId, 
+                                               int episodeNumber, String currentTimecode) {
+        
+        com.google.gson.JsonObject requestBody = new com.google.gson.JsonObject();
+        requestBody.addProperty("media_type", "anime");
+        requestBody.addProperty("media_slug", mediaSlug);
+        
+        // Создаем объект bookmark
+        com.google.gson.JsonObject bookmark = new com.google.gson.JsonObject();
+        bookmark.addProperty("item_id", episodeId);
+        bookmark.addProperty("status", 21);
+        bookmark.addProperty("progress", currentTimecode);
+        requestBody.add("bookmark", bookmark);
+        
+        // Создаем объект meta
+        com.google.gson.JsonObject meta = new com.google.gson.JsonObject();
+        meta.addProperty("team", teamId);
+        meta.addProperty("translation_type", 2);
+        meta.addProperty("player", "Animelib");
+        meta.addProperty("item_number", episodeNumber);
+        requestBody.add("meta", meta);
+        
+        return requestBody;
+    }
+    
+    /**
+     * Извлекает media_slug из URL аниме
+     * @param animeUrl URL аниме
+     * @return media_slug или null если не удалось извлечь
+     */
+    public static String extractMediaSlugFromUrl(String animeUrl) {
+        if (animeUrl == null || animeUrl.isEmpty()) {
+            return null;
+        }
+        
+        try {
+            // Ищем паттерн /anime/{slug} в URL
+            String pattern = "/anime/([^/\\?]+)";
+            java.util.regex.Pattern regex = java.util.regex.Pattern.compile(pattern);
+            java.util.regex.Matcher matcher = regex.matcher(animeUrl);
+            
+            if (matcher.find()) {
+                String slug = matcher.group(1);
+                Log.d("ApiService", "Extracted media slug: " + slug);
+                return slug;
+            }
+            
+            Log.w("ApiService", "Could not extract media slug from URL: " + animeUrl);
+            return null;
+            
+        } catch (Exception e) {
+            Log.e("ApiService", "Error extracting media slug from URL: " + animeUrl, e);
+            return null;
+        }
+    }
+    
+    /**
+     * Форматирует время в формат "MM:SS"
+     * @param milliseconds Время в миллисекундах
+     * @return Отформатированное время
+     */
+    public static String formatTimecode(long milliseconds) {
+        if (milliseconds < 0) {
+            return "00:00";
+        }
+        
+        long totalSeconds = milliseconds / 1000;
+        long minutes = totalSeconds / 60;
+        long seconds = totalSeconds % 60;
+        
+        return String.format("%02d:%02d", minutes, seconds);
+    }
+    
+    /**
+     * Получает закладку аниме
+     * @param mediaSlug Слаг медиа (например: "23811--kaijuu-8-gou-2nd-season-anime")
+     * @param callback Колбэк для результата операции
+     */
+    public void fetchAnimeBookmark(String mediaSlug, AnimeBookmarkCallback callback) {
+        Log.d("ApiService", "Fetching anime bookmark for mediaSlug: " + mediaSlug);
+        
+        executor.execute(() -> {
+            try {
+                String apiUrl = "https://api.cdnlibs.org/api/anime/" + mediaSlug + "/bookmark";
+                Request request = buildApiRequest(apiUrl).build();
+                
+                httpClient.newCall(request).enqueue(new Callback() {
+                    @Override
+                    public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                        Log.e("ApiService", "Anime bookmark request failed", e);
+                        // Вызываем колбэк в главном потоке
+                        if (context instanceof android.app.Activity) {
+                            ((android.app.Activity) context).runOnUiThread(() -> 
+                                callback.onError("Ошибка сети: " + e.getMessage())
+                            );
+                        } else {
+                            callback.onError("Ошибка сети: " + e.getMessage());
+                        }
+                    }
+                    
+                    @Override
+                    public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                        try (response) {
+                            if (response.isSuccessful()) {
+                                String responseBody = response.body() != null ? response.body().string() : "";
+                                Log.d("ApiService", "Anime bookmark response: " + responseBody);
+                                
+                                AnimeBookmarkResponse bookmarkResponse = gson.fromJson(responseBody, AnimeBookmarkResponse.class);
+                                if (bookmarkResponse != null) {
+                                    // Вызываем колбэк в главном потоке (даже если data == null, это нормально - нет закладки)
+                                    if (context instanceof android.app.Activity) {
+                                        ((android.app.Activity) context).runOnUiThread(() -> 
+                                            callback.onBookmarkReceived(bookmarkResponse)
+                                        );
+                                    } else {
+                                        callback.onBookmarkReceived(bookmarkResponse);
+                                    }
+                                } else {
+                                    // Вызываем колбэк в главном потоке
+                                    if (context instanceof android.app.Activity) {
+                                        ((android.app.Activity) context).runOnUiThread(() -> 
+                                            callback.onError("Неверный формат ответа закладки")
+                                        );
+                                    } else {
+                                        callback.onError("Неверный формат ответа закладки");
+                                    }
+                                }
+                            } else {
+                                String errorBody = response.body() != null ? response.body().string() : "";
+                                Log.e("ApiService", "Failed to fetch anime bookmark. Code: " + response.code() + ", Body: " + errorBody);
+                                // Вызываем колбэк в главном потоке
+                                if (context instanceof android.app.Activity) {
+                                    ((android.app.Activity) context).runOnUiThread(() -> 
+                                        callback.onError("Ошибка при получении закладки: " + response.code())
+                                    );
+                                } else {
+                                    callback.onError("Ошибка при получении закладки: " + response.code());
+                                }
+                            }
+                        } catch (Exception e) {
+                            Log.e("ApiService", "Error processing anime bookmark response", e);
+                            // Вызываем колбэк в главном потоке
+                            if (context instanceof android.app.Activity) {
+                                ((android.app.Activity) context).runOnUiThread(() -> 
+                                    callback.onError("Ошибка обработки ответа: " + e.getMessage())
+                                );
+                            } else {
+                                callback.onError("Ошибка обработки ответа: " + e.getMessage());
+                            }
+                        }
+                    }
+                });
+                
+            } catch (Exception e) {
+                Log.e("ApiService", "Unexpected error while fetching anime bookmark", e);
+                // Вызываем колбэк в главном потоке
+                if (context instanceof android.app.Activity) {
+                    ((android.app.Activity) context).runOnUiThread(() -> 
+                        callback.onError("Неожиданная ошибка: " + e.getMessage())
+                    );
+                } else {
+                    callback.onError("Неожиданная ошибка: " + e.getMessage());
+                }
+            }
         });
     }
 

@@ -1,5 +1,7 @@
 package com.example.animelib.adapters;
 
+import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.res.Resources;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
@@ -8,6 +10,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.animelib.R;
@@ -18,8 +21,9 @@ import java.util.List;
 public class HorizontalEpisodesAdapter extends RecyclerView.Adapter<HorizontalEpisodesAdapter.EpisodeViewHolder> {
 
     private final List<EpisodesListResponse.EpisodeItem> episodes;
-    private final EpisodesListResponse.EpisodeItem currentEpisode;
+    private EpisodesListResponse.EpisodeItem currentEpisode;
     private final OnEpisodeSelectedListener listener;
+    private com.example.animelib.models.AnimeBookmarkResponse.BookmarkData animeBookmark;
 
     public interface OnEpisodeSelectedListener {
         void onEpisodeSelected(EpisodesListResponse.EpisodeItem episode);
@@ -31,6 +35,20 @@ public class HorizontalEpisodesAdapter extends RecyclerView.Adapter<HorizontalEp
         this.episodes = episodes;
         this.currentEpisode = currentEpisode;
         this.listener = listener;
+    }
+    
+    @SuppressLint("NotifyDataSetChanged")
+    public void setAnimeBookmark(com.example.animelib.models.AnimeBookmarkResponse.BookmarkData bookmark) {
+        this.animeBookmark = bookmark;
+        notifyDataSetChanged();
+    }
+    
+    @SuppressLint("NotifyDataSetChanged")
+    public void setCurrentEpisode(EpisodesListResponse.EpisodeItem currentEpisode) {
+        this.currentEpisode = currentEpisode;
+        notifyDataSetChanged();
+        android.util.Log.d("EpisodesAdapter", "Current episode updated to: " + 
+            (currentEpisode != null ? currentEpisode.getNumber() + " (ID: " + currentEpisode.getId() + ")" : "null"));
     }
 
     @NonNull
@@ -48,6 +66,23 @@ public class HorizontalEpisodesAdapter extends RecyclerView.Adapter<HorizontalEp
         // Set episode number + "серия"
         String episodeText = episode.getNumber() + " серия";
         holder.episodeText.setText(episodeText);
+        
+        // Check if this episode has a bookmark
+        boolean hasBookmark = false;
+        String bookmarkProgress = null;
+        if (animeBookmark != null && animeBookmark.getItemId() == episode.getId()) {
+            hasBookmark = true;
+            bookmarkProgress = animeBookmark.getProgress();
+        }
+
+        Context context = holder.itemView.getContext();
+        // Show/hide bookmark icon
+        if (holder.bookmarkIcon != null) {
+            holder.bookmarkIcon.setVisibility(hasBookmark ? android.view.View.VISIBLE : android.view.View.GONE);
+            if (hasBookmark) {
+                holder.bookmarkIcon.setColorFilter(ContextCompat.getColor(context, R.color.bookmark_color)); // Красный цвет
+            }
+        }
 
         // Check if this is the current episode
         boolean isCurrentEpisode = false;
@@ -111,10 +146,12 @@ public class HorizontalEpisodesAdapter extends RecyclerView.Adapter<HorizontalEp
 
     public static class EpisodeViewHolder extends RecyclerView.ViewHolder {
         TextView episodeText;
+        android.widget.ImageView bookmarkIcon;
 
         EpisodeViewHolder(@NonNull View itemView) {
             super(itemView);
             episodeText = itemView.findViewById(R.id.episodeText);
+            bookmarkIcon = itemView.findViewById(R.id.bookmarkIcon);
         }
     }
 }

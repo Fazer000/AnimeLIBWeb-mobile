@@ -2,7 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
+    android:orientation="horizontal"
     android:paddingVertical="10dp"
     android:paddingHorizontal="24dp"
     android:layout_marginEnd="12dp"
@@ -21,5 +21,15 @@
         android:textStyle="bold"
         android:gravity="center"
         android:text="1 серия" />
+    
+    <ImageView
+        android:id="@+id/bookmarkIcon"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_gravity="center"
+        android:layout_marginStart="10dp"
+        android:src="@drawable/ic_bookmark"
+        android:visibility="gone"
+        android:scaleType="fitCenter" />
 
 </LinearLayout>

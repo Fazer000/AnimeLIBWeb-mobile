@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.swiperefreshlayout.widget.SwipeRefreshLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/swipeRefreshLayout"
     android:background="?attr/statusBarColor"
     android:fitsSystemWindows="true"
@@ -10,27 +10,29 @@
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:fitsSystemWindows="false" >
+        android:fitsSystemWindows="true" >
 
         <WebView
             android:id="@+id/webView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:fitsSystemWindows="false" />
+            android:fitsSystemWindows="true" />
 
         <FrameLayout
             android:id="@+id/spinnerBackground"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:fitsSystemWindows="false"
-            android:background="@color/dt_alpha_primary_color"
+            android:fitsSystemWindows="true"
+            android:background="?attr/alphaPrimaryColor"
             android:visibility="gone">
 
             <com.google.android.material.progressindicator.CircularProgressIndicator
                 android:id="@+id/spinner"
+                style="@style/CustomProgressIndicator"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fitsSystemWindows="false"
+                android:fitsSystemWindows="true"
+                app:trackCornerRadius="20dp"
                 android:layout_gravity="center"
                 android:indeterminate="true"
                 android:visibility="gone" />
@@ -41,8 +43,9 @@
             android:id="@+id/fullscreenContainer"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:fitsSystemWindows="false"
+            android:fitsSystemWindows="true"
             android:visibility="gone" />
+
 
     </FrameLayout>
 

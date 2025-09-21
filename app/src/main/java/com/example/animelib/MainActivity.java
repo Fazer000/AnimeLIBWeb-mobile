@@ -7,7 +7,6 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewTreeObserver;
 import android.view.WindowManager;
 import android.webkit.CookieManager;
 import android.webkit.WebChromeClient;
@@ -17,6 +16,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.Toast;
+import com.example.animelib.managers.ThemeManager;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
@@ -27,11 +27,9 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.media3.common.util.UnstableApi;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
-import com.example.animelib.data.AppSettings;
 import com.example.animelib.ui.UrlInputDialog;
 import com.example.animelib.ui.PlayerButtonHandler;
 import com.example.animelib.viewmodel.AppSettingsViewModel;
-import com.example.animelib.util.ThemeUtils;
 import com.example.animelib.api.ApiService;
 import com.google.android.material.progressindicator.CircularProgressIndicator;
 
@@ -67,6 +65,7 @@ public class MainActivity extends AppCompatActivity {
     private AppSettingsViewModel viewModel;
     private ApiService apiService;
     private PlayerButtonHandler playerButtonHandler;
+    private ThemeManager themeManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -91,9 +90,12 @@ public class MainActivity extends AppCompatActivity {
 
         // Initialize API service
         apiService = new ApiService(this);
-        
+
         // Initialize player button handler
         playerButtonHandler = new PlayerButtonHandler(this);
+
+        // Initialize theme manager
+        themeManager = new ThemeManager(this, apiService);
 
         // Clear WebView cache to avoid Chromium errors
         try {
@@ -104,7 +106,7 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             Log.w("MainActivity", "Failed to clear WebView cache", e);
         }
-        
+
         // Включаем аппаратное ускорение для всего приложения
         getWindow().setFlags(
             WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
@@ -129,11 +131,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void loadAndApplyTheme() {
         executor.execute(() -> {
-            int themeMode = apiService.loadThemeSetting();
-            runOnUiThread(() -> {
-                ThemeUtils.applyTheme(themeMode);
-                Log.d("MainActivity", "Theme applied: " + themeMode);
-            });
+            themeManager.loadAndApplyTheme();
         });
     }
 
@@ -220,20 +218,17 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
         webSettings.setDomStorageEnabled(true);
         webSettings.setDatabaseEnabled(true);
-        
+
         // Улучшенные настройки кэширования
         webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
-//        webSettings.setAppCacheEnabled(true);
-//        webSettings.setAppCachePath(getCacheDir().getAbsolutePath());
-//        webSettings.setAppCacheMaxSize(50 * 1024 * 1024); // 50MB
-        
+
         // Оптимизация viewport и масштабирования
         webSettings.setLoadWithOverviewMode(true);
         webSettings.setUseWideViewPort(true);
         webSettings.setBuiltInZoomControls(false);
         webSettings.setDisplayZoomControls(false);
         webSettings.setSupportZoom(false);
-        
+
         // Улучшение качества текста и изображений
         webSettings.setTextZoom(100);
         webSettings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING);
@@ -244,28 +239,26 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setAllowContentAccess(true);
         webSettings.setAllowFileAccessFromFileURLs(false);
         webSettings.setAllowUniversalAccessFromFileURLs(false);
-        
+
         // Медиа и геолокация
         webSettings.setMediaPlaybackRequiresUserGesture(false);
         webSettings.setGeolocationEnabled(true);
-        
+
         // Улучшенный User Agent
         webSettings.setUserAgentString(getRandomUserAgent());
-        
+
         // Дополнительные настройки производительности
         webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
 
         // Настройки для лучшего отображения
         webSettings.setNeedInitialFocus(false);
-        webSettings.setSaveFormData(false);
-        
+
         // Оптимизация загрузки ресурсов
         webSettings.setLoadsImagesAutomatically(true);
         webSettings.setBlockNetworkImage(false);
         webSettings.setBlockNetworkLoads(false);
-        
+
         // Дополнительные оптимизации для современных устройств
-        // Включаем предварительное кэширование для плавной прокрутки
         webSettings.setSafeBrowsingEnabled(true);
 
         // Принудительная темная тема для WebView (если поддерживается)
@@ -273,7 +266,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Современная оптимизация рендера и производительности
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-        
+
         // Включаем рендеринг вне основного потока для лучшей производительности
         webSettings.setOffscreenPreRaster(true);
 
@@ -286,7 +279,7 @@ public class MainActivity extends AppCompatActivity {
         webView.setVerticalScrollBarEnabled(true);
         webView.setHorizontalScrollBarEnabled(false);
         webView.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
-        
+
         // Оптимизация памяти и производительности
         webView.setInitialScale(0);
         webView.getSettings().setMinimumFontSize(8);
@@ -294,15 +287,47 @@ public class MainActivity extends AppCompatActivity {
         webView.getSettings().setDefaultFontSize(16);
         webView.getSettings().setDefaultFixedFontSize(13);
 
-        CookieManager.getInstance().setAcceptCookie(true);
-        CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
+        // Настройки cookies для лучшей совместимости
+        CookieManager cookieManager = CookieManager.getInstance();
+        cookieManager.setAcceptCookie(true);
+        cookieManager.setAcceptThirdPartyCookies(webView, true);
+
+        // Дополнительные настройки для работы с cookies
+        cookieManager.flush();
+
+        // Включаем cookies для всех доменов
+        CookieManager.setAcceptFileSchemeCookies(true);
 
         // Add JavaScript interface for video detection
         playerButtonHandler.addJavaScriptInterface(webView);
 
+        // Добавляем JavaScript для работы с cookies
+        webView.addJavascriptInterface(new Object() {
+            @android.webkit.JavascriptInterface
+            public void setCookie(String name, String value, String domain) {
+                CookieManager.getInstance().setCookie(domain, name + "=" + value);
+            }
+
+            @android.webkit.JavascriptInterface
+            public String getCookie(String name, String domain) {
+                String cookies = CookieManager.getInstance().getCookie(domain);
+                if (cookies != null) {
+                    String[] cookieArray = cookies.split(";");
+                    for (String cookie : cookieArray) {
+                        String[] parts = cookie.trim().split("=");
+                        if (parts.length == 2 && parts[0].equals(name)) {
+                            return parts[1];
+                        }
+                    }
+                }
+                return null;
+            }
+        }, "CookieManager");
+
+
         Map<String, String> headers = getStringStringMap();
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
-        
+
         // Оптимизация скроллинга
         webView.setScrollBarStyle(View.SCROLLBARS_OUTSIDE_OVERLAY);
         webView.setScrollbarFadingEnabled(true);
@@ -315,48 +340,28 @@ public class MainActivity extends AppCompatActivity {
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
                 Log.d("WebView", "Checking URL for redirect: " + url);
-                
-                // Проверяем на 404 и другие ошибочные страницы
-                if (url.contains("/404") || url.contains("/error") || url.contains("/not-found") || 
-                    url.contains("404.html") || url.contains("error.html") ||
-                    url.contains("404") || url.contains("error") || url.contains("not-found")) {
-                    Log.w("WebView", "Blocked redirect to error page: " + url);
 
-                    return true; // Блокируем переход
+                // Проверяем переход на другой домен
+                String newDomain = extractDomain(url);
+                if (newDomain != null && currentDomain != null && !currentDomain.equals(newDomain)) {
+                    Log.d("WebView", "Domain change detected in shouldOverrideUrlLoading: " + currentDomain + " -> " + newDomain);
+                    showDomainChangeSpinner();
                 }
 
                 // Allow other URLs to load normally
                 view.loadUrl(url, headers);
                 return true;
             }
-            
-            @Override
-            public android.webkit.WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-                String url = request.getUrl().toString();
-                
-                // Перехватываем запросы к страницам ошибок ДО их загрузки
-                if (url.contains("/404") || url.contains("/error") || url.contains("/not-found") || 
-                    url.contains("404.html") || url.contains("error.html") ||
-                    url.contains("404") || url.contains("error") || url.contains("not-found")) {
-                    Log.w("WebView", "Intercepted request to error page: " + url);
 
-                    // Возвращаем пустой ответ чтобы заблокировать загрузку
-                    return new android.webkit.WebResourceResponse("text/html", "UTF-8", 
-                        new java.io.ByteArrayInputStream("".getBytes()));
-                }
-                
-                return super.shouldInterceptRequest(view, request);
-            }
-            
             @Override
             public void onReceivedHttpError(WebView view, WebResourceRequest request, android.webkit.WebResourceResponse errorResponse) {
                 super.onReceivedHttpError(view, request, errorResponse);
-                
+
                 String url = request.getUrl().toString();
                 int statusCode = errorResponse.getStatusCode();
-                
+
                 Log.w("WebView", "HTTP Error " + statusCode + " for URL: " + url);
-                
+
                 // Автоматически возвращаемся назад при 404 ошибке
                 if (statusCode == 404) {
                     runOnUiThread(() -> {
@@ -371,16 +376,16 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
                 String newDomain = extractDomain(url);
-                
+
                 // Показываем спиннер если это первая загрузка или переход на другой домен
                 if (isFirstLoad || (currentDomain != null && !currentDomain.equals(newDomain))) {
                     spinner.setVisibility(View.VISIBLE);
                     spinnerBackground.setVisibility(View.VISIBLE);
-                    Log.d("WebView", "Spinner shown - First load: " + isFirstLoad + 
-                          ", Domain changed: " + (currentDomain != null && !currentDomain.equals(newDomain)) + 
+                    Log.d("WebView", "Spinner shown - First load: " + isFirstLoad +
+                          ", Domain changed: " + (currentDomain != null && !currentDomain.equals(newDomain)) +
                           ", URL: " + url);
                 }
-                
+
                 // Обновляем текущий домен
                 currentDomain = newDomain;
                 swipeRefreshLayout.setRefreshing(false);
@@ -394,6 +399,10 @@ public class MainActivity extends AppCompatActivity {
             public void onPageFinished(WebView view, String url) {
                 spinner.setVisibility(View.GONE);
                 spinnerBackground.setVisibility(View.GONE);
+                
+                // Скрываем спиннер домена через JavaScript интерфейс
+                hideDomainChangeSpinner();
+                
                 if (isFirstLoad) {
                     isFirstLoad = false;
                 }
@@ -484,21 +493,21 @@ public class MainActivity extends AppCompatActivity {
     @NonNull
     private Map<String, String> getStringStringMap() {
         Map<String, String> headers = new HashMap<>();
-        
+
         // Основные заголовки
         headers.put("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8");
         headers.put("Accept-Language", "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7");
         headers.put("Accept-Encoding", "gzip, deflate, br");
         headers.put("Cache-Control", "max-age=0");
         headers.put("Connection", "keep-alive");
-        
+
         // Современные заголовки безопасности
         headers.put("Sec-Fetch-Dest", "document");
         headers.put("Sec-Fetch-Mode", "navigate");
         headers.put("Sec-Fetch-Site", "none");
         headers.put("Sec-Fetch-User", "?1");
         headers.put("Upgrade-Insecure-Requests", "1");
-        
+
         // Client Hints для лучшей оптимизации
         headers.put("Sec-CH-UA", "\"Google Chrome\";v=\"131\", \"Chromium\";v=\"131\", \"Not_A Brand\";v=\"24\"");
         headers.put("Sec-CH-UA-Mobile", "?1");
@@ -507,13 +516,13 @@ public class MainActivity extends AppCompatActivity {
         headers.put("Sec-CH-UA-Arch", "\"arm\"");
         headers.put("Sec-CH-UA-Bitness", "\"64\"");
         headers.put("Sec-CH-UA-Model", "\"SM-G998B\"");
-        
+
         // Динамический User-Agent
         headers.put("User-Agent", getRandomUserAgent());
-        
+
         // Дата для кэширования
         headers.put("Date", getCurrentDate());
-        
+
         return headers;
     }
 
@@ -545,6 +554,78 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
+     * Показывает диалог выбора темы
+     */
+    public void showThemeDialog() {
+        themeManager.showThemeDialog();
+    }
+
+    /**
+     * Показывает кастомный диалог выбора для HTML select элементов
+     */
+    public void showCustomSelectDialog(String dialogDataJson) {
+        try {
+            // Парсим JSON данные
+            Gson gson = new Gson();
+            SelectDialogData dialogData = gson.fromJson(dialogDataJson, SelectDialogData.class);
+
+            if (dialogData == null || dialogData.options == null || dialogData.values == null) {
+                Log.e("MainActivity", "Invalid dialog data received");
+                return;
+            }
+
+            // Создаем и показываем диалог
+            com.example.animelib.dialogs.CustomSelectDialog dialog =
+                new com.example.animelib.dialogs.CustomSelectDialog(this);
+
+            dialog.show(
+                dialogData.title,
+                dialogData.options,
+                dialogData.values,
+                dialogData.currentValue,
+                (value, text) -> {
+                    // Обновляем кнопку в WebView
+                    updateSelectButton(dialogData.selectId, value, text);
+                }
+            );
+
+            Log.d("MainActivity", "Custom select dialog shown for: " + dialogData.selectId);
+
+        } catch (Exception e) {
+            Log.e("MainActivity", "Error showing custom select dialog", e);
+        }
+    }
+
+    /**
+     * Обновляет кнопку select в WebView после выбора опции
+     */
+    public void updateSelectButton(String selectId, String selectedValue, String selectedText) {
+        if (webView != null) {
+            String jsCode = String.format(
+                "if (window.customSelectHandler) { " +
+                "  window.customSelectHandler.updateButtonAfterSelection('%s', '%s', '%s'); " +
+                "}",
+                selectId, selectedValue, selectedText
+            );
+
+            webView.evaluateJavascript(jsCode, result -> {
+                Log.d("MainActivity", "Select button updated: " + selectId + " = " + selectedText);
+            });
+        }
+    }
+
+    /**
+     * Класс для парсинга данных диалога select
+     */
+    private static class SelectDialogData {
+        public String title;
+        public java.util.List<String> options;
+        public java.util.List<String> values;
+        public String currentValue;
+        public String selectId; // ID кнопки
+    }
+
+    /**
      * Извлекает домен из URL
      */
     private String extractDomain(String url) {
@@ -552,18 +633,76 @@ public class MainActivity extends AppCompatActivity {
             if (url == null || url.isEmpty()) {
                 return null;
             }
-            
+
             // Добавляем протокол если его нет
             if (!url.startsWith("http://") && !url.startsWith("https://")) {
                 url = "https://" + url;
             }
-            
+
             java.net.URL urlObj = new java.net.URL(url);
             return urlObj.getHost();
         } catch (Exception e) {
             Log.w("MainActivity", "Failed to extract domain from URL: " + url, e);
             return null;
         }
+    }
+
+    /**
+     * Показывает спиннер при смене домена
+     */
+    public void showDomainChangeSpinner() {
+        runOnUiThread(() -> {
+            Log.d("MainActivity", "Showing domain change spinner");
+            if (spinnerBackground != null) {
+                spinnerBackground.setVisibility(View.VISIBLE);
+                spinnerBackground.setAlpha(0f);
+                spinnerBackground.animate()
+                        .alpha(1f)
+                        .setDuration(200)
+                        .setInterpolator(new android.view.animation.DecelerateInterpolator())
+                        .start();
+            }
+            if (spinner != null) {
+                spinner.setVisibility(View.VISIBLE);
+                spinner.setAlpha(0f);
+                spinner.setScaleX(0.8f);
+                spinner.setScaleY(0.8f);
+                spinner.animate()
+                        .alpha(1f)
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setDuration(300)
+                        .setInterpolator(new android.view.animation.OvershootInterpolator(0.6f))
+                        .start();
+            }
+        });
+    }
+
+    /**
+     * Скрывает спиннер при смене домена
+     */
+    public void hideDomainChangeSpinner() {
+        runOnUiThread(() -> {
+            Log.d("MainActivity", "Hiding domain change spinner");
+            if (spinner != null) {
+                spinner.animate()
+                        .alpha(0f)
+                        .scaleX(0.8f)
+                        .scaleY(0.8f)
+                        .setDuration(200)
+                        .setInterpolator(new android.view.animation.AccelerateInterpolator())
+                        .withEndAction(() -> spinner.setVisibility(View.GONE))
+                        .start();
+            }
+            if (spinnerBackground != null) {
+                spinnerBackground.animate()
+                        .alpha(0f)
+                        .setDuration(200)
+                        .setInterpolator(new android.view.animation.AccelerateInterpolator())
+                        .withEndAction(() -> spinnerBackground.setVisibility(View.GONE))
+                        .start();
+            }
+        });
     }
 
     @Override

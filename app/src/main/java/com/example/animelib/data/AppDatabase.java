@@ -5,12 +5,11 @@ import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
 
-@Database(entities = {AppSettings.class, CurrentEpisodeEntity.class}, version = 7, exportSchema = false)
+@Database(entities = {AppSettings.class}, version = 8, exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
     private static volatile AppDatabase INSTANCE;
 
     public abstract AppSettingsDao appSettingsDao();
-    public abstract CurrentEpisodeDao currentEpisodeDao();
 
     public static AppDatabase getDatabase(final Context context) {
         if (INSTANCE == null) {

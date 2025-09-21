@@ -171,56 +171,15 @@ public class DatabaseManager {
     public int loadThemeSetting() {
         try {
             AppSettings settings = db.appSettingsDao().getSettingsSync();
-            return settings != null ? settings.getThemeMode() : 0; // Default to system theme
+            return settings != null ? settings.getThemeMode() : 0; // Default to light theme (0)
         } catch (Exception e) {
             Log.e(TAG, "Failed to load theme setting", e);
-            return 0; // Default to system theme
+            return 0; // Default to light theme (0)
         }
     }
     
     // ========== CurrentEpisode операции ==========
     
-    /**
-     * Сохраняет текущий эпизод для аниме
-     */
-    public void saveCurrentEpisode(String animeId, EpisodesListResponse.EpisodeItem episode) {
-        try {
-            CurrentEpisodeEntity entity = new CurrentEpisodeEntity(
-                    animeId,
-                    episode.getId(),
-                    episode.getNumber(),
-                    System.currentTimeMillis()
-            );
-            db.currentEpisodeDao().upsert(entity);
-            Log.d(TAG, "Saved current episode to DB: animeId=" + animeId + ", episodeId=" + episode.getId() + ", episodeNumber=" + episode.getNumber());
-        } catch (Exception e) {
-            Log.e(TAG, "DB save error for animeId=" + animeId + ", episode=" + episode.getNumber(), e);
-        }
-    }
-    
-    /**
-     * Загружает текущий эпизод для аниме
-     */
-    public EpisodesListResponse.EpisodeItem loadCurrentEpisode(String animeId) {
-        try {
-            Log.d(TAG, "Loading current episode for animeId: " + animeId);
-            CurrentEpisodeEntity entity = db.currentEpisodeDao().getByAnimeId(animeId);
-            if (entity == null) {
-                Log.d(TAG, "No saved episode found for animeId: " + animeId);
-                return null;
-            }
-            
-            Log.d(TAG, "Found saved episode: episodeId=" + entity.episodeId + ", episodeNumber=" + entity.episodeNumber + ", updatedAt=" + entity.updatedAt);
-            
-            EpisodesListResponse.EpisodeItem item = new EpisodesListResponse.EpisodeItem();
-            item.setId(entity.episodeId);
-            item.setNumber(entity.episodeNumber);
-            return item;
-        } catch (Exception e) {
-            Log.e(TAG, "DB load error for animeId=" + animeId, e);
-            return null;
-        }
-    }
     
     /**
      * Закрывает executor при завершении работы

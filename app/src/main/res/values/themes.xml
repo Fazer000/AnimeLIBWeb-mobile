@@ -25,18 +25,21 @@
         <item name="colorOnPrimary">@color/lt_secondary_color</item>
         <item name="colorSecondary">@color/white_color</item>
 
-        <item name="android:statusBarColor">@color/lt_header_color</item>
-        <item name="android:windowLightStatusBar">false</item>
-
         <item name="android:windowBackground">@color/lt_header_color</item>
         <item name="android:navigationBarColor">@color/lt_primary_color</item>
 
         <item name="android:iconTint">@color/lt_primary_color</item>
 
+        <!-- Status Bar -->
+        <item name="android:statusBarColor">@color/lt_header_color</item>
+        <item name="android:windowLightStatusBar">false</item>
+
         <!-- Global font family -->
         <item name="android:fontFamily">@font/open_sans</item>
         <item name="fontFamily">@font/open_sans</item>
         <item name="android:textColor">@color/dt_primary_text_color</item>
+
+        <item name="android:fitsSystemWindows">true</item>
     </style>
 
     <style name="SplashScreenTheme" parent="Theme.SplashScreen">
@@ -98,5 +101,13 @@
     <style name="SpinnerTextStyle" parent="Widget.AppCompat.Spinner">
         <item name="android:textColor">@color/lt_primary_text_color</item>
         <item name="android:gravity">center</item>
+    </style>
+
+    <!-- Кастомный стиль для спиннера -->
+    <style name="CustomProgressIndicator" parent="Widget.Material3.CircularProgressIndicator">
+        <item name="indicatorColor">?attr/secondaryColor</item>
+        <item name="trackColor">?attr/alphaPrimaryColor</item>
+        <item name="trackThickness">4dp</item>
+        <item name="indicatorSize">48dp</item>
     </style>
 </resources>

@@ -11,14 +11,11 @@ public class AppSettings {
     private boolean enable4K = false;
     private boolean autoPlay = true;
     private int longSkipDuration = 85; // seconds
-    private int themeMode = 0; // 0 = system, 1 = light, 2 = dark
+    private int themeMode = 0; // 0 = light, 1 = dark, 2 = system
 
     public AppSettings() {
     }
 
-    public AppSettings(String siteUrl) {
-        this.siteUrl = siteUrl;
-    }
 
     public int getId() {
         return id;

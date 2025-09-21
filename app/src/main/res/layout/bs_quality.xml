@@ -24,13 +24,12 @@
 
         <ImageButton
             android:id="@+id/backButton"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:scaleX="0.8"
-            android:scaleY="0.8"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
             app:tint="?attr/primaryTextColor"
             android:background="@drawable/button_ripple_effect"
             android:src="@drawable/ic_next"
+            android:scaleType="fitCenter"
             android:rotation="180"
             android:contentDescription="Back"/>
 
@@ -41,7 +40,7 @@
             android:textColor="?attr/primaryTextColor"
             android:textStyle="bold"
             android:textSize="18sp"
-            android:layout_marginStart="8dp"/>
+            android:layout_marginStart="12dp"/>
     </LinearLayout>
 
     <View

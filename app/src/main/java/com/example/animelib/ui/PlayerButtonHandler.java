@@ -45,6 +45,10 @@ public class PlayerButtonHandler {
         // Загружаем и выполняем JavaScript файлы
         loadAndExecuteJS(webView, "js/license-button-listener.js", "License button listener");
         loadAndExecuteJS(webView, "js/player-button-listener.js", "Player button listener");
+        loadAndExecuteJS(webView, "js/theme-button-listener.js", "Theme button listener");
+        loadAndExecuteJS(webView, "js/custom-select-handler.js", "Custom select handler");
+        loadAndExecuteJS(webView, "js/domain-change-handler.js", "Domain change handler");
+        loadAndExecuteJS(webView, "js/back-button-handler.js", "Back button handler");
         loadAndExecuteJS(webView, "js/debug-info.js", "Debug info");
         loadAndExecuteJS(webView, "js/button-checker.js", "Button checker");
 
@@ -85,12 +89,95 @@ public class PlayerButtonHandler {
         public void onPlayerButtonClicked(String buttonHref) {
             if (context instanceof android.app.Activity) {
                 ((android.app.Activity) context).runOnUiThread(() -> {
-                    Log.d(TAG, "Player button clicked: " + buttonHref);
                     Log.d("PlayerHandler", "Starting VideoPlayerActivity for URL: " + buttonHref);
                     VideoPlayerActivity.startFromAnimePage((android.app.Activity) context, buttonHref);
                 });
             } else {
                 Log.e(TAG, "Context is not an Activity, cannot start VideoPlayerActivity");
+            }
+        }
+        
+        @JavascriptInterface
+        public void onThemeButtonClicked() {
+            if (context instanceof android.app.Activity) {
+                ((android.app.Activity) context).runOnUiThread(() -> {
+                    Log.d("PlayerHandler", "Theme button clicked, showing theme dialog");
+                    if (context instanceof com.example.animelib.MainActivity) {
+                        ((com.example.animelib.MainActivity) context).showThemeDialog();
+                    }
+                });
+            } else {
+                Log.e(TAG, "Context is not an Activity, cannot show theme dialog");
+            }
+        }
+        
+        @JavascriptInterface
+        public void showCustomSelectDialog(String dialogDataJson) {
+            if (context instanceof android.app.Activity) {
+                ((android.app.Activity) context).runOnUiThread(() -> {
+                    Log.d("PlayerHandler", "Custom select dialog requested with data: " + dialogDataJson);
+                    if (context instanceof com.example.animelib.MainActivity) {
+                        ((com.example.animelib.MainActivity) context).showCustomSelectDialog(dialogDataJson);
+                    }
+                });
+            } else {
+                Log.e(TAG, "Context is not an Activity, cannot show custom select dialog");
+            }
+        }
+        
+        @JavascriptInterface
+        public void updateSelectButton(String selectId, String selectedValue, String selectedText) {
+            if (context instanceof android.app.Activity) {
+                ((android.app.Activity) context).runOnUiThread(() -> {
+                    Log.d("PlayerHandler", "Updating select button: " + selectId + " = " + selectedText);
+                    if (context instanceof com.example.animelib.MainActivity) {
+                        ((com.example.animelib.MainActivity) context).updateSelectButton(selectId, selectedValue, selectedText);
+                    }
+                });
+            } else {
+                Log.e(TAG, "Context is not an Activity, cannot update select button");
+            }
+        }
+        
+        @JavascriptInterface
+        public void showDomainChangeSpinner() {
+            if (context instanceof android.app.Activity) {
+                ((android.app.Activity) context).runOnUiThread(() -> {
+                    Log.d("PlayerHandler", "Showing domain change spinner");
+                    if (context instanceof com.example.animelib.MainActivity) {
+                        ((com.example.animelib.MainActivity) context).showDomainChangeSpinner();
+                    }
+                });
+            } else {
+                Log.e(TAG, "Context is not an Activity, cannot show domain change spinner");
+            }
+        }
+        
+        @JavascriptInterface
+        public void hideDomainChangeSpinner() {
+            if (context instanceof android.app.Activity) {
+                ((android.app.Activity) context).runOnUiThread(() -> {
+                    Log.d("PlayerHandler", "Hiding domain change spinner");
+                    if (context instanceof com.example.animelib.MainActivity) {
+                        ((com.example.animelib.MainActivity) context).hideDomainChangeSpinner();
+                    }
+                });
+            } else {
+                Log.e(TAG, "Context is not an Activity, cannot hide domain change spinner");
+            }
+        }
+        
+        @JavascriptInterface
+        public void handleOnBackPressed() {
+            if (context instanceof android.app.Activity) {
+                ((android.app.Activity) context).runOnUiThread(() -> {
+                    Log.d("PlayerHandler", "Back button pressed from WebView");
+                    if (context instanceof com.example.animelib.MainActivity) {
+                        ((com.example.animelib.MainActivity) context).onBackPressed();
+                    }
+                });
+            } else {
+                Log.e(TAG, "Context is not an Activity, cannot handle back press");
             }
         }
     }

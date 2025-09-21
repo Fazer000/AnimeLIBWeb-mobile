@@ -22,6 +22,17 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+    
+    // Настройка именования APK файлов
+    applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            def buildType = variant.buildType.name
+            def versionName = variant.versionName
+            def outputFileName = "AnimeLib-${versionName}-${buildType}.apk"
+            outputFileName = outputFileName.replace("debug", "debug").replace("release", "release")
+            output.outputFileName = outputFileName
+        }
+    }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11

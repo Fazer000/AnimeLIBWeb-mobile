@@ -32,6 +32,7 @@ public class EpisodesManager {
     // Контекст и зависимости
     private final Context context;
     private final ApiService apiService;
+    private final BookmarkManager bookmarkManager;
     private DensityUtils densityUtils;
 
     // UI компоненты
@@ -48,6 +49,7 @@ public class EpisodesManager {
     private boolean isEpisodesMenuVisible = false;
     private final List<EpisodesListResponse.EpisodeItem> episodes = new ArrayList<>();
     private EpisodesListResponse.EpisodeItem currentEpisode;
+    private com.example.animelib.models.AnimeBookmarkResponse.BookmarkData animeBookmark;
     private HorizontalEpisodesAdapter episodesAdapter;
 
     // Смещение в dp (понятное значение)
@@ -81,6 +83,7 @@ public class EpisodesManager {
     public EpisodesManager(Context context, ApiService apiService) {
         this.context = context;
         this.apiService = apiService;
+        this.bookmarkManager = new BookmarkManager(context, apiService);
     }
 
     /**
@@ -121,6 +124,7 @@ public class EpisodesManager {
         if (playersControlBar == null) return;
 
         // Изначально опускаем playersControlBar вниз на вычисленное смещение в px
+        Log.d(TAG, "EpisodesManager: Setting playersControlBar translationY to: " + totalOffsetPx + "px");
         playersControlBar.setTranslationY(totalOffsetPx);
 
         Log.d(TAG, "Initialized playersControlBar position with offset: " + totalOffsetPx + "px (" + totalOffsetDp + "dp)");
@@ -204,6 +208,7 @@ public class EpisodesManager {
         episodesRecyclerView.setScaleY(0.95f);
 
         // Анимация для playersControlBar - подъем с "пружинным" эффектом
+        Log.d(TAG, "EpisodesManager: Animating playersControlBar translationY to: 0px");
         playersControlBar.animate()
                 .translationY(0)
                 .setDuration(300)
@@ -251,6 +256,7 @@ public class EpisodesManager {
                 .start();
 
         // Анимация для playersControlBar - опускание с "антиципацией"
+        Log.d(TAG, "EpisodesManager: Animating playersControlBar translationY to: " + totalOffsetPx + "px");
         playersControlBar.animate()
                 .translationY(totalOffsetPx)
                 .setDuration(250)
@@ -429,6 +435,43 @@ public class EpisodesManager {
             }
         });
     }
+    
+    /**
+     * Загружает эпизоды и закладку аниме
+     * @param animeId ID аниме
+     * @param mediaSlug Слаг медиа для получения закладки
+     */
+    public void loadEpisodesWithBookmark(String animeId, String mediaSlug) {
+        Log.d(TAG, "Loading episodes and bookmark for anime ID: " + animeId + ", mediaSlug: " + mediaSlug);
+        
+        // Загружаем эпизоды
+        loadEpisodes(animeId);
+        
+        // Загружаем закладку
+        if (mediaSlug != null && !mediaSlug.isEmpty()) {
+            bookmarkManager.fetchAnimeBookmark(mediaSlug, new BookmarkManager.AnimeBookmarkCallback() {
+                @Override
+                public void onBookmarkReceived(com.example.animelib.models.AnimeBookmarkResponse response) {
+                    ((android.app.Activity) context).runOnUiThread(() -> {
+                        if (response != null && response.getData() != null) {
+                            animeBookmark = response.getData();
+                            Log.d(TAG, "Anime bookmark loaded: episode " + animeBookmark.getItemId() + 
+                                       ", progress: " + animeBookmark.getProgress());
+                            
+                            // Обновляем RecyclerView с информацией о закладке
+                            updateEpisodesRecyclerView();
+                        }
+                    });
+                }
+                
+                @Override
+                public void onError(String error) {
+                    Log.e(TAG, "Error loading anime bookmark: " + error);
+                    // Не критично, продолжаем без закладки
+                }
+            });
+        }
+    }
 
     /**
      * Обновление RecyclerView эпизодов
@@ -438,14 +481,24 @@ public class EpisodesManager {
             Log.d(TAG, "Updating episodes RecyclerView with current episode: " + 
                 (currentEpisode != null ? currentEpisode.getNumber() + " (ID: " + currentEpisode.getId() + ")" : "null"));
             
-            HorizontalEpisodesAdapter adapter = new HorizontalEpisodesAdapter(episodes, currentEpisode, episode -> {
-                if (episodeSelectionCallback != null) {
-                    episodeSelectionCallback.onEpisodeSelected(episode);
-                }
-                hideEpisodesMenu();
-            });
-            episodesRecyclerView.setAdapter(adapter);
-            episodesAdapter = adapter;
+            if (episodesAdapter == null) {
+                // Создаем новый адаптер только если его нет
+                episodesAdapter = new HorizontalEpisodesAdapter(episodes, currentEpisode, episode -> {
+                    if (episodeSelectionCallback != null) {
+                        episodeSelectionCallback.onEpisodeSelected(episode);
+                    }
+                    hideEpisodesMenu();
+                });
+                episodesRecyclerView.setAdapter(episodesAdapter);
+            } else {
+                // Обновляем существующий адаптер
+                episodesAdapter.setCurrentEpisode(currentEpisode);
+            }
+            
+            // Передаем закладку в адаптер
+            if (animeBookmark != null) {
+                episodesAdapter.setAnimeBookmark(animeBookmark);
+            }
             
             // Прокручиваем к текущему эпизоду если он есть
             if (currentEpisode != null) {
@@ -567,6 +620,23 @@ public class EpisodesManager {
     public EpisodesListResponse.EpisodeItem getCurrentEpisode() {
         return currentEpisode;
     }
+    
+    /**
+     * Получает BookmarkManager
+     */
+    public BookmarkManager getBookmarkManager() {
+        return bookmarkManager;
+    }
+    
+    /**
+     * Обновляет закладку в адаптере
+     */
+    public void updateBookmarkInAdapter(com.example.animelib.models.AnimeBookmarkResponse.BookmarkData bookmark) {
+        animeBookmark = bookmark;
+        if (episodesAdapter != null) {
+            episodesAdapter.setAnimeBookmark(bookmark);
+        }
+    }
 
     /**
      * Получение списка эпизодов
@@ -595,6 +665,20 @@ public class EpisodesManager {
         if (nextEpisodeButton != null) {
             nextEpisodeButton.setVisibility(View.GONE);
         }
+    }
+
+    /**
+     * Скрытие UI элементов эпизодов для PiP режима (НЕ трогаем playersControlBar)
+     */
+    public void hideEpisodesUIForPiP() {
+        Log.d(TAG, "EpisodesManager: Hiding episodes UI for PiP (keeping playersControlBar)");
+        if (prevEpisodeButton != null) {
+            prevEpisodeButton.setVisibility(View.GONE);
+        }
+        if (nextEpisodeButton != null) {
+            nextEpisodeButton.setVisibility(View.GONE);
+        }
+        // НЕ трогаем playersControlBar - оставляем его в текущей позиции
     }
 
     /**

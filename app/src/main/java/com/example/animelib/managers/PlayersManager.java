@@ -359,7 +359,10 @@ public class PlayersManager {
         EpisodeResponse.PlayerData preferredPlayer = findPreferredPlayer();
         if (preferredPlayer != null) {
             Log.d(TAG, "Auto-selecting preferred player: " + preferredPlayer.getPlayer());
-            onPlayerSelected(preferredPlayer);
+            // Добавляем небольшую задержку чтобы пользователь мог увидеть меню
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                onPlayerSelected(preferredPlayer);
+            }, 500);
         } else {
             // Show menu for user to select player manually
             showMenu();

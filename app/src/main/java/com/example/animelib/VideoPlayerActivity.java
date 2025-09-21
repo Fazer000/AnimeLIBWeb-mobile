@@ -40,6 +40,7 @@ import com.example.animelib.models.AnimeInfoResponse;
 
 import com.example.animelib.api.ApiService;
 import com.example.animelib.settings.SettingsBottomSheet;
+import com.example.animelib.managers.BookmarkManager;
 import com.example.animelib.managers.CommentsManager;
 import com.example.animelib.managers.EpisodesManager;
 import com.example.animelib.managers.PlayersManager;
@@ -106,6 +107,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
     private ImageButton pipButton;
     private RecyclerView episodesHorizontalRecyclerView;
     private ImageButton commentsButton;
+    private ImageButton bookmarkButton;
 
     // Comments manager
     private CommentsManager commentsManager;
@@ -144,6 +146,9 @@ public class VideoPlayerActivity extends AppCompatActivity {
     // Player data is now managed by PlayersManager
     private KodikResponse currentKodikResponse;
     private String currentAnimeId;
+    private long bookmarkTimecode = 0; // Таймкод из закладки в миллисекундах
+    private long savedPlayerPosition = 0; // Сохраненная позиция при смене плеера
+    private boolean autoBookmarkSaved = false; // Флаг для предотвращения дублирования автосохранения
 
     // User preferences are now managed by PlayersManager
     private String preferredQuality; // preferred quality (e.g., "720", "480", etc.)
@@ -290,6 +295,8 @@ public class VideoPlayerActivity extends AppCompatActivity {
         super.onUserLeaveHint();
         // Enter PiP mode when user presses home button
         if (player != null && player.isPlaying() && !isInPictureInPictureMode) {
+            // Автоматически сохраняем закладку перед переходом в PiP
+            autoSaveBookmark();
             enterPictureInPictureMode();
         }
     }
@@ -342,7 +349,8 @@ public class VideoPlayerActivity extends AppCompatActivity {
         }
         // Episodes are now managed by EpisodesManager
         if (episodesManager != null) {
-            episodesManager.hideAllEpisodesUI();
+            // НЕ скрываем playersControlBar в PiP режиме, только остальные элементы
+            episodesManager.hideEpisodesUIForPiP();
         }
         
         // Players are now managed by PlayersManager
@@ -514,6 +522,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
         // Episode list component
         RecyclerView episodesHorizontalRecyclerView = controllerView.findViewById(R.id.episodesHorizontalRecyclerView);
         ImageButton commentsButton = controllerView.findViewById(R.id.commentsButton);
+        bookmarkButton = controllerView.findViewById(R.id.bookmarkButton);
         
         // Store for manager initialization
         this.episodesHorizontalRecyclerView = episodesHorizontalRecyclerView;
@@ -544,6 +553,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
         menuWidth = (int) (menuWidth * density);
         playersManager.setMenuWidth(menuWidth);
     }
+    
 
     /**
      * Настройка всех event listeners
@@ -674,15 +684,40 @@ public class VideoPlayerActivity extends AppCompatActivity {
         }
         
         if (pipButton != null) {
-            pipButton.setOnClickListener(v -> enterPictureInPictureMode());
+            pipButton.setOnClickListener(v -> {
+                // Автоматически сохраняем закладку перед переходом в PiP
+                autoSaveBookmark();
+                enterPictureInPictureMode();
+            });
         }
         
         if (ibClosePlayer != null) {
-            ibClosePlayer.setOnClickListener(v -> finish());
+            ibClosePlayer.setOnClickListener(v -> {
+                // Автоматически сохраняем закладку перед закрытием
+                autoSaveBookmark();
+                finish();
+            });
         }
         
         if (episodesMenuButton != null) {
             episodesMenuButton.setOnClickListener(v -> toggleEpisodesInController());
+        }
+        
+        if (bookmarkButton != null) {
+            Log.d("VideoPlayer", "Bookmark button found, visibility: " + bookmarkButton.getVisibility() + 
+                               ", enabled: " + bookmarkButton.isEnabled() + 
+                               ", clickable: " + bookmarkButton.isClickable());
+            
+            // Изначально отключаем кнопку до готовности плеера
+            bookmarkButton.setEnabled(false);
+            bookmarkButton.setClickable(false);
+            
+            bookmarkButton.setOnClickListener(v -> {
+                Log.d("VideoPlayer", "Bookmark button clicked!");
+                addBookmark();
+            });
+        } else {
+            Log.e("VideoPlayer", "Bookmark button is null!");
         }
         
         // Setup player control buttons
@@ -794,67 +829,50 @@ public class VideoPlayerActivity extends AppCompatActivity {
             public void onEpisodesLoaded(List<EpisodesListResponse.EpisodeItem> episodes) {
                 Log.d("VideoPlayer", "Episodes loaded: " + episodes.size());
                 
-                // Сначала пытаемся загрузить сохраненный эпизод из базы данных
+                // Сначала пытаемся загрузить эпизод из закладки
                 if (currentAnimeId != null) {
-                    Log.d("VideoPlayer", "Trying to load saved episode for anime: " + currentAnimeId);
-                    apiService.loadCurrentEpisode(currentAnimeId, new ApiService.CurrentEpisodeCallback() {
-                        @Override
-                        public void onCurrentEpisodeReceived(EpisodesListResponse.EpisodeItem savedEpisode) {
-                            Log.d("VideoPlayer", "Found saved episode: " + savedEpisode.getNumber());
-                            // Ищем этот эпизод в загруженном списке
-                            EpisodesListResponse.EpisodeItem matchingEpisode = null;
-                            for (EpisodesListResponse.EpisodeItem episode : episodes) {
-                                if (episode.getId() == savedEpisode.getId() || 
-                                    (episode.getNumber() != null && episode.getNumber().equals(savedEpisode.getNumber()))) {
-                                    matchingEpisode = episode;
-                                    break;
+                    Log.d("VideoPlayer", "Trying to load episode from bookmark for anime: " + currentAnimeId);
+                    
+                    // Получаем media_slug для закладки
+                    String animeUrl = getIntent().getStringExtra("anime_url");
+                    String mediaSlug = null;
+                    if (animeUrl != null && !animeUrl.isEmpty()) {
+                        mediaSlug = ApiService.extractMediaSlugFromUrl(animeUrl);
+                    }
+                    
+                    if (mediaSlug != null) {
+                        episodesManager.getBookmarkManager().getLastEpisodeFromBookmark(mediaSlug, episodes, 
+                            new BookmarkManager.LastEpisodeCallback() {
+                                @Override
+                                public void onLastEpisodeFound(EpisodesListResponse.EpisodeItem episode, String progress) {
+                                    Log.d("VideoPlayer", "Found bookmarked episode: " + episode.getNumber() + 
+                                                         ", progress: " + progress);
+                                    
+                                    // Сохраняем таймкод из закладки
+                                    bookmarkTimecode = episodesManager.getBookmarkManager().parseTimecodeToMilliseconds(progress);
+                                    Log.d("VideoPlayer", "Parsed bookmark timecode: " + progress + " -> " + bookmarkTimecode + "ms");
+                                    
+                                    // Устанавливаем красный цвет кнопки для эпизода с закладкой
+                                    updateBookmarkButtonColor(true);
+                                    
+                                    episodesManager.setCurrentEpisode(episode);
+                                    commentsManager.setCurrentEpisode(episode);
+                                    playersManager.loadPlayersForEpisode(episode.getId());
                                 }
-                            }
-                            
-                            if (matchingEpisode != null) {
-                                Log.d("VideoPlayer", "Setting saved episode as current: " + matchingEpisode.getNumber());
-                                episodesManager.setCurrentEpisode(matchingEpisode);
-                                commentsManager.setCurrentEpisode(matchingEpisode);
-                                playersManager.loadPlayersForEpisode(matchingEpisode.getId());
-                            } else {
-                                Log.d("VideoPlayer", "Saved episode not found in current list, falling back to URL detection");
-                                fallbackToUrlDetection();
-                            }
-                        }
-                        
-                        @Override
-                        public void onError(String error) {
-                            if ("NO_SAVED".equals(error)) {
-                                Log.d("VideoPlayer", "No saved episode found, falling back to URL detection");
-                            } else if ("SAVED_NOT_IN_LIST".equals(error)) {
-                                Log.d("VideoPlayer", "Saved episode not in current list, falling back to URL detection");
-                            } else {
-                                Log.d("VideoPlayer", "Error loading saved episode: " + error + ", falling back to URL detection");
-                            }
-                            fallbackToUrlDetection();
-                        }
-                        
-                        private void fallbackToUrlDetection() {
-                            episodesManager.findAndSetCurrentEpisodeFromUrl(animeUrl);
-                EpisodesListResponse.EpisodeItem currentEpisode = episodesManager.getCurrentEpisode();
-                if (currentEpisode != null) {
-                    commentsManager.setCurrentEpisode(currentEpisode);
-                    playersManager.loadPlayersForEpisode(currentEpisode.getId());
-                } else {
-                    initializeMenuWithoutAutoPlay();
-                            }
-                        }
-                    });
+                                
+                                @Override
+                                public void onNoBookmarkFound() {
+                                    Log.d("VideoPlayer", "No bookmark found, loading first episode");
+                                    loadFirstEpisode();
+                                }
+                            });
+                    } else {
+                        Log.d("VideoPlayer", "No media slug available, falling back to URL detection");
+                        fallbackToUrlDetection();
+                    }
                 } else {
                     // Нет anime ID, используем URL detection
-                    episodesManager.findAndSetCurrentEpisodeFromUrl(animeUrl);
-                    EpisodesListResponse.EpisodeItem currentEpisode = episodesManager.getCurrentEpisode();
-                    if (currentEpisode != null) {
-                        commentsManager.setCurrentEpisode(currentEpisode);
-                        playersManager.loadPlayersForEpisode(currentEpisode.getId());
-                    } else {
-                        initializeMenuWithoutAutoPlay();
-                    }
+                    fallbackToUrlDetection();
                 }
             }
             
@@ -971,6 +989,12 @@ public class VideoPlayerActivity extends AppCompatActivity {
     private void onPlayerSelected(EpisodeResponse.PlayerData playerData) {
         Log.d("VideoPlayer", "Player selected: " + playerData.getPlayer());
 
+        // Сохраняем текущую позицию перед сменой плеера
+        if (player != null) {
+            savedPlayerPosition = player.getCurrentPosition();
+            Log.d("VideoPlayer", "Saved player position: " + savedPlayerPosition + "ms before switching to: " + playerData.getPlayer());
+        }
+
         // Stop current playback before starting new one
         stopCurrentPlayback();
 
@@ -995,12 +1019,18 @@ public class VideoPlayerActivity extends AppCompatActivity {
 
         // Don't hide menu automatically - let user control it
         Log.d("VideoPlayer", "Player selected, keeping menu visible for user control");
+        
+        // Включаем кнопку закладки когда плеер выбран
+        enableBookmarkButton();
 
-        // Route to appropriate player handler (start from beginning for new player)
+        // Route to appropriate player handler (use bookmark timecode if available, otherwise saved position)
+        long startPosition = bookmarkTimecode > 0 ? bookmarkTimecode : savedPlayerPosition;
+        Log.d("VideoPlayer", "Starting player with position: " + startPosition + "ms (bookmark: " + bookmarkTimecode + "ms, saved: " + savedPlayerPosition + "ms)");
+        
         if (playerData.getPlayer() != null && "animelib".equalsIgnoreCase(playerData.getPlayer())) {
-            handleAnimelibPlayer(playerData, 0);
+            handleAnimelibPlayer(playerData, startPosition);
         } else if (playerData.getPlayer() != null && "kodik".equalsIgnoreCase(playerData.getPlayer())) {
-            handleKodikPlayer(playerData, 0);
+            handleKodikPlayer(playerData, startPosition);
         }
 
         updateAnimeInfoHeader();
@@ -1008,6 +1038,21 @@ public class VideoPlayerActivity extends AppCompatActivity {
 
     private void onEpisodeSelected(EpisodesListResponse.EpisodeItem episode) {
         Log.d("VideoPlayer", "Episode selected: " + episode.getName());
+
+        // Reset bookmark timecode for new episode selection
+        bookmarkTimecode = 0;
+        Log.d("VideoPlayer", "Reset bookmark timecode for new episode");
+        
+        // Reset saved player position for new episode
+        savedPlayerPosition = 0;
+        Log.d("VideoPlayer", "Reset saved player position for new episode");
+        
+        // Reset auto-bookmark flag for new episode
+        autoBookmarkSaved = false;
+        Log.d("VideoPlayer", "Reset auto-bookmark flag for new episode");
+        
+        // Reset bookmark button color for new episode
+        updateBookmarkButtonColor(false);
 
         // Stop current playback if playing
         stopCurrentPlayback();
@@ -1020,20 +1065,8 @@ public class VideoPlayerActivity extends AppCompatActivity {
         commentsManager.setCurrentEpisode(episode);
         commentsManager.resetCommentsOnEpisodeChange(true);
 
-        // Save current episode through API
-        if (currentAnimeId != null && episode.getNumber() != null) {
-            apiService.saveCurrentEpisode(currentAnimeId, episode.getNumber(), new ApiService.CurrentEpisodeCallback() {
-                @Override
-                public void onCurrentEpisodeReceived(EpisodesListResponse.EpisodeItem episode) {
-                    Log.d("EpisodeMemory", "Successfully saved current episode via API");
-                }
-
-                @Override
-                public void onError(String error) {
-                    Log.e("EpisodeMemory", "Failed to save current episode via API: " + error);
-                }
-            });
-        }
+        // Эпизод теперь сохраняется автоматически через закладки при добавлении
+        Log.d("EpisodeMemory", "Episode " + episode.getNumber() + " is now current episode");
 
         // Update navigation buttons visibility
         episodesManager.updateEpisodeNavigationButtonsVisibility();
@@ -1479,14 +1512,251 @@ public class VideoPlayerActivity extends AppCompatActivity {
     private void loadEpisodes(String animeId) {
         Log.d("EpisodesAPI", "Loading episodes for anime_id: " + animeId);
         
-        // Use EpisodesManager to load episodes
-        episodesManager.loadEpisodes(animeId);
+        // Получаем media_slug из URL аниме для загрузки закладки
+        String animeUrl = getIntent().getStringExtra("anime_url");
+        String mediaSlug = null;
+        if (animeUrl != null && !animeUrl.isEmpty()) {
+            mediaSlug = ApiService.extractMediaSlugFromUrl(animeUrl);
+        }
+        
+        // Use EpisodesManager to load episodes with bookmark
+        if (mediaSlug != null) {
+            episodesManager.loadEpisodesWithBookmark(animeId, mediaSlug);
+        } else {
+            episodesManager.loadEpisodes(animeId);
+        }
+    }
+
+    /**
+     * Загружает первый эпизод когда нет закладки
+     */
+    private void loadFirstEpisode() {
+        // Reset bookmark timecode when loading first episode
+        bookmarkTimecode = 0;
+        Log.d("VideoPlayer", "Reset bookmark timecode for first episode");
+        
+        // Reset saved player position when loading first episode
+        savedPlayerPosition = 0;
+        Log.d("VideoPlayer", "Reset saved player position for first episode");
+        
+        // Reset auto-bookmark flag when loading first episode
+        autoBookmarkSaved = false;
+        Log.d("VideoPlayer", "Reset auto-bookmark flag for first episode");
+        
+        // Reset bookmark button color for first episode
+        updateBookmarkButtonColor(false);
+        
+        // Получаем первый эпизод из списка
+        List<EpisodesListResponse.EpisodeItem> episodes = episodesManager.getEpisodes();
+        if (episodes != null && !episodes.isEmpty()) {
+            EpisodesListResponse.EpisodeItem firstEpisode = episodes.get(0);
+            Log.d("VideoPlayer", "Loading first episode: " + firstEpisode.getNumber());
+            
+            episodesManager.setCurrentEpisode(firstEpisode);
+            commentsManager.setCurrentEpisode(firstEpisode);
+            playersManager.loadPlayersForEpisode(firstEpisode.getId());
+        } else {
+            Log.d("VideoPlayer", "No episodes available, initializing menu without auto play");
+            initializeMenuWithoutAutoPlay();
+        }
+    }
+    
+    private void fallbackToUrlDetection() {
+        // Reset bookmark timecode when falling back to URL detection
+        bookmarkTimecode = 0;
+        Log.d("VideoPlayer", "Reset bookmark timecode for URL detection fallback");
+        
+        // Reset saved player position when falling back to URL detection
+        savedPlayerPosition = 0;
+        Log.d("VideoPlayer", "Reset saved player position for URL detection fallback");
+        
+        // Reset auto-bookmark flag when falling back to URL detection
+        autoBookmarkSaved = false;
+        Log.d("VideoPlayer", "Reset auto-bookmark flag for URL detection fallback");
+        
+        // Reset bookmark button color for URL detection fallback
+        updateBookmarkButtonColor(false);
+        
+        String animeUrl = getIntent().getStringExtra("anime_url");
+        episodesManager.findAndSetCurrentEpisodeFromUrl(animeUrl);
+        EpisodesListResponse.EpisodeItem currentEpisode = episodesManager.getCurrentEpisode();
+        if (currentEpisode != null) {
+            commentsManager.setCurrentEpisode(currentEpisode);
+            playersManager.loadPlayersForEpisode(currentEpisode.getId());
+        } else {
+            // Если не найден эпизод по URL, загружаем первый
+            loadFirstEpisode();
+        }
+    }
+
+    /**
+     * Включает кнопку закладки когда плеер готов
+     */
+    private void enableBookmarkButton() {
+        if (bookmarkButton != null) {
+            bookmarkButton.setEnabled(true);
+            bookmarkButton.setClickable(true);
+            Log.d("VideoPlayer", "Bookmark button enabled");
+        }
+    }
+    
+    /**
+     * Автоматически сохраняет закладку с текущим таймкодом
+     */
+    private void autoSaveBookmark() {
+        // Проверяем что закладка еще не сохранена
+        if (autoBookmarkSaved) {
+            Log.d("VideoPlayer", "Auto-bookmark already saved, skipping");
+            return;
+        }
+        
+        Log.d("VideoPlayer", "Auto-saving bookmark on exit");
+        
+        // Получаем текущие данные эпизода
+        EpisodeResponse.PlayerData currentPlayer = playersManager.getCurrentPlayerData();
+        EpisodesListResponse.EpisodeItem currentEpisode = episodesManager.getCurrentEpisode();
+        
+        // Проверяем что данные готовы
+        if (currentPlayer == null || currentEpisode == null) {
+            Log.d("VideoPlayer", "Cannot auto-save bookmark - player or episode not ready");
+            return;
+        }
+        
+        // Получаем media_slug из URL аниме
+        String animeUrl = getIntent().getStringExtra("anime_url");
+        String mediaSlug = null;
+        if (animeUrl != null && !animeUrl.isEmpty()) {
+            mediaSlug = ApiService.extractMediaSlugFromUrl(animeUrl);
+        }
+        
+        if (mediaSlug == null) {
+            Log.d("VideoPlayer", "Cannot auto-save bookmark - media slug not available");
+            return;
+        }
+        
+        // Получаем текущее время воспроизведения и длительность
+        long currentPosition = player != null ? player.getCurrentPosition() : 0;
+        long duration = player != null ? player.getDuration() : 0;
+        
+        // Проверяем что позиция больше 10 секунд (чтобы не сохранять случайные клики)
+        if (currentPosition < 10000) {
+            Log.d("VideoPlayer", "Position too small for auto-save: " + currentPosition + "ms");
+            return;
+        }
+        
+        // Проверяем что просмотрено минимум 20% эпизода
+        if (duration > 0) {
+            double watchedPercentage = (double) currentPosition / duration * 100;
+            if (watchedPercentage < 20.0) {
+                Log.d("VideoPlayer", "Watched percentage too low for auto-save: " + 
+                    String.format("%.1f", watchedPercentage) + "% (minimum 20%)");
+                return;
+            }
+            Log.d("VideoPlayer", "Watched percentage: " + String.format("%.1f", watchedPercentage) + "%");
+        } else {
+            Log.d("VideoPlayer", "Duration not available, using position-based check only");
+        }
+        
+        Log.d("VideoPlayer", "Auto-saving bookmark with data:");
+        Log.d("VideoPlayer", "  - mediaSlug: " + mediaSlug);
+        Log.d("VideoPlayer", "  - episodeId: " + currentEpisode.getId());
+        Log.d("VideoPlayer", "  - episodeNumber: " + currentEpisode.getNumber());
+        Log.d("VideoPlayer", "  - teamId: " + (currentPlayer.getTeam() != null ? currentPlayer.getTeam().getId() : "null"));
+        Log.d("VideoPlayer", "  - currentPosition: " + currentPosition + "ms");
+        Log.d("VideoPlayer", "  - duration: " + duration + "ms");
+        
+        // Используем BookmarkManager для добавления закладки (без UI обновлений)
+        episodesManager.getBookmarkManager().addBookmark(
+            mediaSlug,
+            currentPlayer,
+            currentEpisode,
+            currentPosition,
+            new BookmarkManager.BookmarkAddCallback() {
+                @Override
+                public void onBookmarkAdded(int episodeId) {
+                    Log.d("VideoPlayer", "Auto-bookmark saved successfully for episode: " + episodeId);
+                    autoBookmarkSaved = true; // Устанавливаем флаг что закладка сохранена
+                }
+                
+                @Override
+                public void onBookmarkError(String error) {
+                    Log.e("VideoPlayer", "Failed to auto-save bookmark: " + error);
+                    // Не устанавливаем флаг при ошибке, чтобы можно было повторить попытку
+                }
+            },
+            false // Не показываем Toast при успехе для автосохранения
+        );
+    }
+    
+    /**
+     * Обновляет цвет кнопки закладки
+     * @param isBookmarked true если закладка добавлена, false если нет
+     */
+    private void updateBookmarkButtonColor(boolean isBookmarked) {
+        if (bookmarkButton != null) {
+            runOnUiThread(() -> {
+                if (isBookmarked) {
+                    // Красный цвет для добавленной закладки
+                    bookmarkButton.setColorFilter(getResources().getColor(R.color.bookmark_color));
+                    Log.d("VideoPlayer", "Bookmark button color changed to red");
+                } else {
+                    // Белый цвет для обычного состояния
+                    bookmarkButton.setColorFilter(getResources().getColor(R.color.white_color));
+                    Log.d("VideoPlayer", "Bookmark button color changed to white");
+                }
+            });
+        }
+    }
+    
+    /**
+     * Обновляет список эпизодов после добавления закладки
+     */
+    private void updateEpisodesListAfterBookmark() {
+        runOnUiThread(() -> {
+            // Получаем media_slug для обновления закладки
+            String animeUrl = getIntent().getStringExtra("anime_url");
+            String mediaSlug = null;
+            if (animeUrl != null && !animeUrl.isEmpty()) {
+                mediaSlug = ApiService.extractMediaSlugFromUrl(animeUrl);
+            }
+            
+            if (mediaSlug != null) {
+                // Обновляем закладку в EpisodesManager
+                episodesManager.getBookmarkManager().fetchAnimeBookmark(mediaSlug, 
+                    new BookmarkManager.AnimeBookmarkCallback() {
+                        @Override
+                        public void onBookmarkReceived(com.example.animelib.models.AnimeBookmarkResponse response) {
+                            runOnUiThread(() -> {
+                                if (response != null && response.getData() != null) {
+                                    // Обновляем закладку в адаптере
+                                    episodesManager.updateBookmarkInAdapter(response.getData());
+                                    Log.d("VideoPlayer", "Episodes list updated with new bookmark");
+                                }
+                            });
+                        }
+                        
+                        @Override
+                        public void onError(String error) {
+                            Log.e("VideoPlayer", "Failed to update bookmark in episodes list: " + error);
+                        }
+                    });
+            }
+        });
     }
 
     private void initializeMenuWithoutAutoPlay() {
         // Players are now managed by PlayersManager
         episodesManager.updateEpisodeNavigationButtonsVisibility();
         episodesManager.updateEpisodesRecyclerView(); // Call this last to ensure currentEpisode is set
+
+        // Загружаем плееры для текущего эпизода
+        EpisodesListResponse.EpisodeItem currentEpisode = episodesManager.getCurrentEpisode();
+        if (currentEpisode != null) {
+            Log.d("VideoPlayer", "Loading players for episode in initializeMenuWithoutAutoPlay: " + currentEpisode.getNumber());
+            playersManager.loadPlayersForEpisode(currentEpisode.getId());
+        } else {
+            Log.d("VideoPlayer", "No current episode available for loading players");
+        }
 
         // PlayersManager handles auto-selection and menu display
         // Ensure loading overlay is hidden once players are available
@@ -1811,6 +2081,78 @@ public class VideoPlayerActivity extends AppCompatActivity {
             }
         }
     }
+    
+    /**
+     * Добавляет текущую серию в закладки
+     */
+    private void addBookmark() {
+        Log.d("VideoPlayer", "Add bookmark method called");
+
+        // Получаем текущие данные эпизода
+        EpisodeResponse.PlayerData currentPlayer = playersManager.getCurrentPlayerData();
+        EpisodesListResponse.EpisodeItem currentEpisode = episodesManager.getCurrentEpisode();
+        
+        // Проверяем что данные готовы
+        if (currentPlayer == null) {
+            Log.e("VideoPlayer", "Current player is null, cannot add bookmark");
+            Toast.makeText(this, "Сначала выберите озвучку", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        if (currentEpisode == null) {
+            Log.e("VideoPlayer", "Current episode is null, cannot add bookmark");
+            Toast.makeText(this, "Эпизод не выбран", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        // Получаем media_slug из URL аниме
+        String animeUrl = getIntent().getStringExtra("anime_url");
+        String mediaSlug = null;
+        if (animeUrl != null && !animeUrl.isEmpty()) {
+            mediaSlug = ApiService.extractMediaSlugFromUrl(animeUrl);
+        }
+        
+        if (mediaSlug == null) {
+            Log.e("VideoPlayer", "Media slug is null, cannot add bookmark");
+            Toast.makeText(this, "Не удалось определить аниме", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Получаем текущее время воспроизведения
+        long currentPosition = player.getCurrentPosition();
+        
+        Log.d("VideoPlayer", "Adding bookmark with data:");
+        Log.d("VideoPlayer", "  - mediaSlug: " + mediaSlug);
+        Log.d("VideoPlayer", "  - episodeId: " + currentEpisode.getId());
+        Log.d("VideoPlayer", "  - episodeNumber: " + currentEpisode.getNumber());
+        Log.d("VideoPlayer", "  - teamId: " + (currentPlayer.getTeam() != null ? currentPlayer.getTeam().getId() : "null"));
+        Log.d("VideoPlayer", "  - currentPosition: " + currentPosition + "ms");
+
+        // Используем BookmarkManager для добавления закладки
+        episodesManager.getBookmarkManager().addBookmark(
+            mediaSlug,
+            currentPlayer,
+            currentEpisode,
+            currentPosition,
+            new BookmarkManager.BookmarkAddCallback() {
+                @Override
+                public void onBookmarkAdded(int episodeId) {
+                    // Меняем цвет кнопки на красный
+                    updateBookmarkButtonColor(true);
+                    
+                    // Обновляем список эпизодов
+                    updateEpisodesListAfterBookmark();
+                }
+                
+                @Override
+                public void onBookmarkError(String error) {
+                    // Кнопка остается белой при ошибке
+                    updateBookmarkButtonColor(false);
+                }
+            },
+            true // Показываем Toast при успехе для ручного добавления
+        );
+    }
 
     @Override
     protected void onStart() {
@@ -1829,8 +2171,25 @@ public class VideoPlayerActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onPause() {
+        super.onPause();
+        
+        // Автоматически сохраняем закладку при сворачивании приложения
+        autoSaveBookmark();
+        
+        // Pause playback
+        if (player != null && player.isPlaying()) {
+            player.pause();
+        }
+    }
+    
+    @Override
     protected void onDestroy() {
         super.onDestroy();
+        
+        // Автоматически сохраняем закладку при закрытии плеера
+        autoSaveBookmark();
+        
         // Clear screen keep flag
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
@@ -1859,10 +2218,15 @@ public class VideoPlayerActivity extends AppCompatActivity {
     public void onBackPressed() {
         // If video is playing and not in PiP mode, enter PiP instead of closing
         if (player != null && player.isPlaying() && !isInPictureInPictureMode) {
+            // Автоматически сохраняем закладку перед переходом в PiP
+            autoSaveBookmark();
             enterPictureInPictureMode();
             return;
         }
 
+        // Автоматически сохраняем закладку перед закрытием
+        autoSaveBookmark();
+        
         // Otherwise, close the activity
         super.onBackPressed();
     }
