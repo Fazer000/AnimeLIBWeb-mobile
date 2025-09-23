@@ -63,8 +63,17 @@ public class CommentHtmlProcessor {
         container.removeAllViews();
         
         try {
-            // Очищаем HTML от экранированных кавычек
-            String cleanedHtml = htmlContent.replace("\\\"", "\"");
+            // Агрессивная очистка HTML от лишних пробелов и переносов
+            String cleanedHtml = htmlContent
+                .replace("\\\"", "\"")
+                .replaceAll("\\s+$", "")           // Убираем все пробелы в конце
+                .replaceAll("^\\s+", "")           // Убираем все пробелы в начале
+                .replaceAll("\\n\\s*\\n+", "\n")   // Убираем множественные переносы строк
+                .replaceAll("\\s+\\n", "\n")        // Убираем пробелы перед переносами
+                .replaceAll("\\n\\s+", "\n")        // Убираем пробелы после переносов
+                .replaceAll("\\s{2,}", " ")         // Заменяем множественные пробелы на один
+                .trim();                           // Финальная очистка
+            
             Log.d("CommentHtmlProcessor", "Cleaned HTML: " + cleanedHtml);
             
             // Парсим HTML с помощью Jsoup
@@ -136,13 +145,7 @@ public class CommentHtmlProcessor {
      */
     private void processParagraph(Element element, LinearLayout container) {
         if (element.text().trim().isEmpty()) {
-            // Пустой параграф - добавляем отступ
-            View spacer = new View(context);
-            spacer.setLayoutParams(new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 
-                dpToPx(8)
-            ));
-            container.addView(spacer);
+            // Пустой параграф - пропускаем его, не добавляем отступ
             return;
         }
         
@@ -253,7 +256,7 @@ public class CommentHtmlProcessor {
             new com.example.animelib.ui.SpoilerView(context);
         
         String title = !spoilerText.isEmpty() ? spoilerText : "Спойлер";
-        
+
         Log.d("CommentHtmlProcessor", "Creating spoiler with title: '" + title + "', content: '" + content + "'");
         spoilerView.setSpoilerData(title, content);
         container.addView(spoilerView);
@@ -287,9 +290,12 @@ public class CommentHtmlProcessor {
         
         for (Node node : element.childNodes()) {
             if (node instanceof TextNode) {
-                // Обычный текст
+                // Обычный текст - очищаем от лишних пробелов
                 TextNode textNode = (TextNode) node;
-                builder.append(textNode.text());
+                String text = textNode.text();
+                // Убираем лишние пробелы в начале и конце, но сохраняем внутренние
+                text = text.replaceAll("^\\s+", "").replaceAll("\\s+$", "");
+                builder.append(text);
             } else if (node instanceof Element) {
                 Element childElement = (Element) node;
                 String tagName = childElement.tagName().toLowerCase();
@@ -299,24 +305,28 @@ public class CommentHtmlProcessor {
                 switch (tagName) {
                     case "strong":
                     case "b":
-                        builder.append(childElement.text());
+                        String boldText = childElement.text().trim();
+                        builder.append(boldText);
                         builder.setSpan(new StyleSpan(android.graphics.Typeface.BOLD), 
                                       start, builder.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
                         break;
                     case "em":
                     case "i":
-                        builder.append(childElement.text());
+                        String italicText = childElement.text().trim();
+                        builder.append(italicText);
                         builder.setSpan(new StyleSpan(android.graphics.Typeface.ITALIC), 
                                       start, builder.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
                         break;
                     case "u":
-                        builder.append(childElement.text());
+                        String underlineText = childElement.text().trim();
+                        builder.append(underlineText);
                         builder.setSpan(new UnderlineSpan(), 
                                       start, builder.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
                         break;
                     case "strike":
                     case "s":
-                        builder.append(childElement.text());
+                        String strikeText = childElement.text().trim();
+                        builder.append(strikeText);
                         builder.setSpan(new StrikethroughSpan(), 
                                       start, builder.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
                         break;
@@ -332,7 +342,27 @@ public class CommentHtmlProcessor {
             }
         }
         
-        return builder;
+        // Финальная очистка результата от лишних пробелов
+        String result = builder.toString();
+        result = result.replaceAll("\\s+$", "").replaceAll("^\\s+", "").trim();
+        
+        // Создаем новый SpannableStringBuilder с очищенным текстом
+        SpannableStringBuilder cleanedBuilder = new SpannableStringBuilder(result);
+        
+        // Копируем все spans из оригинального builder, но с учетом смещения
+        Object[] spans = builder.getSpans(0, builder.length(), Object.class);
+        for (Object span : spans) {
+            int start = builder.getSpanStart(span);
+            int end = builder.getSpanEnd(span);
+            int flags = builder.getSpanFlags(span);
+            
+            // Корректируем позиции spans если текст был обрезан
+            if (start < result.length() && end <= result.length()) {
+                cleanedBuilder.setSpan(span, start, end, flags);
+            }
+        }
+        
+        return cleanedBuilder;
     }
     
     /**
@@ -348,7 +378,7 @@ public class CommentHtmlProcessor {
             LinearLayout.LayoutParams.MATCH_PARENT, 
             LinearLayout.LayoutParams.WRAP_CONTENT
         );
-        params.setMargins(0, dpToPx(4), 0, dpToPx(4));
+        params.setMargins(0, dpToPx(4), 0, 0); // Убираем нижний отступ
         textView.setLayoutParams(params);
         
         return textView;

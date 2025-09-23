@@ -113,8 +113,12 @@ public class ThemeSelectionBottomSheet extends BottomSheetDialog {
             currentTheme = themeMode;
             updateThemeSelection();
             
-            // Применяем тему
-            ThemeUtils.applyTheme(themeMode);
+            // Применяем тему без перезагрузки активности
+            if (getContext() instanceof android.app.Activity) {
+                ThemeUtils.applyThemeToActivity((android.app.Activity) getContext(), themeMode);
+            } else {
+                ThemeUtils.applyTheme(themeMode);
+            }
             // Сохранение в Room базу данных будет выполнено в VideoPlayerActivity
             
             // Уведомляем слушателя

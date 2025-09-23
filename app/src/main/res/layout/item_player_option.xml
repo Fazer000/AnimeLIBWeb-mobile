@@ -44,7 +44,7 @@
             android:textStyle="bold"
             android:textSize="10sp"
             android:textColor="?attr/blueColor"
-            android:visibility="visible"
+            android:visibility="gone"
             android:layout_marginEnd="10dp"/>
 
         <TextView
@@ -55,6 +55,20 @@
             android:paddingVertical="4dp"
             android:background="@drawable/tag_fhd_background"
             android:text="FHD"
+            android:textStyle="bold"
+            android:textSize="10sp"
+            android:textColor="?attr/secondaryTextColor"
+            android:visibility="gone"
+            android:layout_marginEnd="10dp"/>
+
+        <TextView
+            android:id="@+id/fourKTag"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="4dp"
+            android:background="@drawable/tag_fhd_background"
+            android:text="4K"
             android:textStyle="bold"
             android:textSize="10sp"
             android:textColor="?attr/secondaryTextColor"

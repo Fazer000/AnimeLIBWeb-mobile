@@ -299,7 +299,7 @@ public class PlayersManager {
         apiService.fetchEpisodeData(episodeId, new ApiService.EpisodeDataCallback() {
             @Override
             public void onEpisodeDataReceived(EpisodeResponse response) {
-                ((android.app.Activity) context).runOnUiThread(() -> {
+                safeRunOnUiThread(() -> {
                     hideLoading();
                     
                     if (response.getData() != null && response.getData().getPlayers() != null) {
@@ -319,7 +319,7 @@ public class PlayersManager {
 
             @Override
             public void onError(String error) {
-                ((android.app.Activity) context).runOnUiThread(() -> {
+                safeRunOnUiThread(() -> {
                     hideLoading();
                     Log.e(TAG, "Error loading players: " + error);
                     
@@ -577,6 +577,27 @@ public class PlayersManager {
     /**
      * Очистка ресурсов
      */
+    /**
+     * Безопасно вызывает код в главном потоке
+     */
+    private void safeRunOnUiThread(Runnable runnable) {
+        try {
+            if (context instanceof android.app.Activity) {
+                ((android.app.Activity) context).runOnUiThread(runnable);
+            } else {
+                runnable.run();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error calling UI thread", e);
+            // Fallback - вызываем в текущем потоке
+            try {
+                runnable.run();
+            } catch (Exception ex) {
+                Log.e(TAG, "Error in fallback callback", ex);
+            }
+        }
+    }
+
     public void cleanup() {
         allPlayers.clear();
         animelibPlayers.clear();

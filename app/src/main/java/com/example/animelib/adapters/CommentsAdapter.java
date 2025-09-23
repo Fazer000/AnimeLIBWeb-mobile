@@ -1,5 +1,6 @@
 package com.example.animelib.adapters;
 
+import android.annotation.SuppressLint;
 import android.text.Html;
 import android.text.Spanned;
 import android.util.Log;
@@ -100,6 +101,10 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
         flat.add(new DisplayItem(node, level));
         List<CommentsResponse.CommentItem> kids = childrenByParentId.get(node.getId());
         if (kids == null) return;
+        
+        // Ограничиваем глубину дерева до 1 уровня (level 0 и 1)
+        if (level >= 1) return;
+        
         for (CommentsResponse.CommentItem child : kids) {
             addWithChildren(child, level + 1);
         }
@@ -112,12 +117,36 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
         return new CommentVH(v);
     }
 
+    @SuppressLint("SetTextI18n")
     @Override
     public void onBindViewHolder(@NonNull CommentVH holder, int position) {
         DisplayItem di = flat.get(position);
         CommentsResponse.CommentItem item = di.item;
 
-        holder.usernameView.setText(item.getUser() != null ? item.getUser().getUsername() : "");
+        // Показываем имя пользователя
+        String username = item.getUser() != null ? item.getUser().getUsername() : "";
+        holder.usernameView.setText(username);
+        
+        // Показываем кому отвечают (если это ответ)
+        if (di.level > 0) {
+            // Это ответ - нужно найти родительский комментарий
+            Long parentId = item.getParent_comment() != null ? item.getParent_comment() : item.getRoot_id();
+            if (parentId != null) {
+                CommentsResponse.CommentItem parentComment = allById.get(parentId);
+                if (parentComment != null && parentComment.getUser() != null) {
+                    String parentUsername = parentComment.getUser().getUsername();
+                    holder.replyToView.setText(parentUsername);
+                    holder.replyToView.setVisibility(View.VISIBLE);
+                } else {
+                    holder.replyToView.setVisibility(View.GONE);
+                }
+            } else {
+                holder.replyToView.setVisibility(View.GONE);
+            }
+        } else {
+            // Это корневой комментарий - скрываем replyToView
+            holder.replyToView.setVisibility(View.GONE);
+        }
         String commentText = item.getComment() != null ? item.getComment() : "";
 
         // Используем новый HTML процессор для обработки комментария
@@ -130,7 +159,7 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
         Log.d("CommentsAdapter", "Contains strong: " + commentText.contains("<strong>"));
         
         // Проверяем есть ли спойлеры или сложное форматирование
-        if (commentText.contains("spoiler-node") || 
+        if (commentText.contains("spoiler-node") ||
             commentText.contains("<blockquote>") || 
             commentText.contains("<strong>") || 
             commentText.contains("<em>") || 
@@ -141,17 +170,38 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
             holder.commentHtmlView.setVisibility(View.GONE);
             holder.spoilerContainer.setVisibility(View.VISIBLE);
             
+            // Очищаем текст от лишних переносов и пробелов перед обработкой
+            String cleanedText = commentText.trim()
+                .replaceAll("\\n\\s*\\n+", "\n")  // Убираем множественные переносы строк
+                .replaceAll("\\s+$", "")          // Убираем пробелы в конце
+                .replaceAll("^\\s+", "");         // Убираем пробелы в начале
+            
             // Обрабатываем HTML с помощью нового процессора
-            processor.processCommentHtml(commentText, holder.spoilerContainer);
+            processor.processCommentHtml(cleanedText, holder.spoilerContainer);
         } else {
             // Простое форматирование - используем обычный TextView
             holder.commentHtmlView.setVisibility(View.VISIBLE);
             holder.spoilerContainer.setVisibility(View.GONE);
 
-            // Очищаем от лишних переносов строк и пробелов
-            commentText = commentText.replaceAll("\\n\\s*\\n", "\n").trim();
-            Spanned sp = Html.fromHtml(commentText, Html.FROM_HTML_MODE_LEGACY);
-            holder.commentHtmlView.setText(sp);
+            // Агрессивная очистка текста
+            String cleanedText = commentText.trim()
+                .replaceAll("\\n\\s*\\n+", "\n")  // Убираем множественные переносы строк
+                .replaceAll("\\s+$", "")          // Убираем пробелы в конце
+                .replaceAll("^\\s+", "")          // Убираем пробелы в начале
+                .replaceAll("\\s+\\n", "\n")       // Убираем пробелы перед переносами
+                .replaceAll("\\n\\s+", "\n")       // Убираем пробелы после переносов
+                .replaceAll("\\s{2,}", " ")       // Заменяем множественные пробелы на один
+                .trim();                          // Финальная очистка
+            
+            Spanned sp = Html.fromHtml(cleanedText, Html.FROM_HTML_MODE_LEGACY);
+            
+            // Дополнительная очистка Spanned текста
+            String finalText = sp.toString().trim();
+            if (!finalText.equals(sp.toString())) {
+                holder.commentHtmlView.setText(finalText);
+            } else {
+                holder.commentHtmlView.setText(sp);
+            }
         }
         
         holder.dateView.setText(item.getCreated_at_ts() > 0 ? dateFormat.format(new Date(item.getCreated_at_ts())) : "");
@@ -161,10 +211,10 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
             holder.votesView.setText("");
         }
 
-        // Indent by level
+        // Indent by level (максимум 1 уровень)
         float density = holder.itemView.getResources().getDisplayMetrics().density;
         int basePad = (int) (8 * density);
-        int leftPad = (int) (basePad + di.level * 20 * density);
+        int leftPad = (int) (basePad + Math.min(di.level, 1) * 20 * density);
         holder.itemView.setPadding(leftPad, holder.itemView.getPaddingTop(), holder.itemView.getPaddingRight(), holder.itemView.getPaddingBottom());
 
         String avatarUrl = null;
@@ -182,6 +232,7 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
     public static class CommentVH extends RecyclerView.ViewHolder {
         ImageView avatarView;
         TextView usernameView;
+        TextView replyToView;
         TextView commentHtmlView;
         LinearLayout spoilerContainer;
         TextView dateView;
@@ -191,6 +242,7 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
             super(itemView);
             avatarView = itemView.findViewById(R.id.avatarView);
             usernameView = itemView.findViewById(R.id.usernameView);
+            replyToView = itemView.findViewById(R.id.replyToView);
             commentHtmlView = itemView.findViewById(R.id.commentHtmlView);
             spoilerContainer = itemView.findViewById(R.id.spoilerContainer);
             dateView = itemView.findViewById(R.id.dateView);

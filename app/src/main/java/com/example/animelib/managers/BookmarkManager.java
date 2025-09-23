@@ -15,8 +15,8 @@ import com.example.animelib.models.EpisodeResponse;
 public class BookmarkManager {
     private static final String TAG = "BookmarkManager";
     
-    private final Context context;
-    private final ApiService apiService;
+    private Context context;
+    private ApiService apiService;
     
     public BookmarkManager(Context context, ApiService apiService) {
         this.context = context;
@@ -105,6 +105,15 @@ public class BookmarkManager {
     public void fetchAnimeBookmark(String mediaSlug, AnimeBookmarkCallback callback) {
         Log.d(TAG, "Fetching anime bookmark for mediaSlug: " + mediaSlug);
         
+        // Проверяем что ApiService еще активен
+        if (apiService == null) {
+            Log.w(TAG, "ApiService is null, skipping bookmark fetch");
+            if (callback != null) {
+                callback.onError("ApiService is not available");
+            }
+            return;
+        }
+        
         apiService.fetchAnimeBookmark(mediaSlug, new ApiService.AnimeBookmarkCallback() {
             @Override
             public void onBookmarkReceived(AnimeBookmarkResponse response) {
@@ -160,13 +169,9 @@ public class BookmarkManager {
      * @param message Сообщение для показа
      */
     private void showToast(String message) {
-        if (context instanceof android.app.Activity) {
-            ((android.app.Activity) context).runOnUiThread(() -> 
+        safeRunOnUiThread(() -> 
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             );
-        } else {
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
-        }
     }
     
     /**
@@ -241,19 +246,48 @@ public class BookmarkManager {
                 // Формат MM:SS
                 int minutes = Integer.parseInt(parts[0]);
                 int seconds = Integer.parseInt(parts[1]);
-                return (minutes * 60 + seconds) * 1000L;
+                return (minutes * 60L + seconds) * 1000L;
             } else if (parts.length == 3) {
                 // Формат HH:MM:SS
                 int hours = Integer.parseInt(parts[0]);
                 int minutes = Integer.parseInt(parts[1]);
                 int seconds = Integer.parseInt(parts[2]);
-                return (hours * 3600 + minutes * 60 + seconds) * 1000L;
+                return (hours * 3600L + minutes * 60L + seconds) * 1000L;
             }
         } catch (NumberFormatException e) {
             Log.e(TAG, "Failed to parse timecode: " + timecode, e);
         }
         
         return 0;
+    }
+    
+    /**
+     * Очистка ресурсов
+     */
+    public void cleanup() {
+        apiService = null;
+        context = null;
+    }
+    
+    /**
+     * Безопасно вызывает код в главном потоке
+     */
+    private void safeRunOnUiThread(Runnable runnable) {
+        try {
+            if (context instanceof android.app.Activity) {
+                ((android.app.Activity) context).runOnUiThread(runnable);
+            } else {
+                runnable.run();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error calling UI thread", e);
+            // Fallback - вызываем в текущем потоке
+            try {
+                runnable.run();
+            } catch (Exception ex) {
+                Log.e(TAG, "Error in fallback callback", ex);
+            }
+        }
     }
     
     /**

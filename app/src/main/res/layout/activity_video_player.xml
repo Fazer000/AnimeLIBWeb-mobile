@@ -89,109 +89,117 @@
         android:visibility="visible" />
 
     <!-- Sliding Menu Panel -->
-    <LinearLayout
+    <androidx.cardview.widget.CardView
         android:id="@+id/slidingMenuPanel"
         android:layout_width="320dp"
         android:layout_height="match_parent"
+        app:cardCornerRadius="20dp"
+        app:cardBackgroundColor="?attr/primaryColor"
         android:layout_gravity="top|end"
-        android:background="@drawable/non_stroke_background"
-        android:elevation="200dp"
-        android:orientation="vertical"
         android:outlineProvider="bounds">
 
-        <androidx.cardview.widget.CardView
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@color/black_color"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="12dp">
-
-            <LinearLayout
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+            <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
-                <!-- Menu Header -->
+                android:background="@color/black_color"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="12dp">
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:background="@drawable/menu_header_background"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="12dp"
-                    android:paddingTop="8dp">
-
-                    <TextView
-                        android:layout_width="0dp"
+                    android:orientation="vertical">
+                    <!-- Menu Header -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:letterSpacing="0.02"
-                        android:text="Озвучка"
-                        android:textColor="?attr/primaryTextColor"
-                        android:textSize="20sp"
-                        android:textStyle="bold" />
+                        android:background="@drawable/menu_header_background"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="12dp"
+                        android:paddingTop="8dp">
 
-                    <ImageButton
-                        android:id="@+id/closeMenuButton"
-                        android:layout_width="36dp"
-                        android:layout_height="36dp"
-                        android:background="@android:color/transparent"
-                        android:contentDescription="Close Menu"
-                        android:foreground="@drawable/ripple_circle"
-                        android:padding="8dp"
-                        android:scaleType="fitCenter"
-                        android:src="@drawable/ic_close"
-                        app:tint="?attr/primaryTextColor" />
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:letterSpacing="0.02"
+                            android:text="Озвучка"
+                            android:textColor="?attr/primaryTextColor"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
 
+                        <ImageButton
+                            android:id="@+id/closeMenuButton"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="@android:color/transparent"
+                            android:contentDescription="Close Menu"
+                            android:foreground="@drawable/ripple_circle"
+                            android:padding="8dp"
+                            android:scaleType="fitCenter"
+                            android:src="@drawable/ic_close"
+                            app:tint="?attr/primaryTextColor" />
+
+                    </LinearLayout>
+
+                    <!-- Player Tabs -->
+
+                    <com.google.android.material.tabs.TabLayout
+                        android:id="@+id/playerTabLayout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="?attr/primaryColor"
+                        app:tabGravity="fill"
+                        app:tabIndicatorColor="?attr/secondaryColor"
+                        app:tabIndicatorGravity="bottom"
+                        app:tabIndicatorHeight="3dp"
+                        app:tabMode="fixed"
+                        app:tabSelectedTextColor="?attr/primaryTextColor"
+                        app:tabTextColor="?attr/accentTextColor" />
                 </LinearLayout>
+            </androidx.cardview.widget.CardView>
 
-                <!-- Player Tabs -->
-                <com.google.android.material.tabs.TabLayout
-                    android:id="@+id/playerTabLayout"
+            <!-- Players List Container with loading overlay -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/playersContainer"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                app:cardBackgroundColor="?attr/primaryColor"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp">
+
+                <androidx.viewpager2.widget.ViewPager2
+                    android:id="@+id/playersViewPager"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent" />
+
+                <FrameLayout
+                    android:id="@+id/menuLoadingOverlay"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
                     android:background="?attr/primaryColor"
-                    app:tabGravity="fill"
-                    app:tabIndicatorColor="?attr/secondaryColor"
-                    app:tabIndicatorGravity="bottom"
-                    app:tabIndicatorHeight="3dp"
-                    app:tabMode="fixed"
-                    app:tabSelectedTextColor="?attr/primaryTextColor"
-                    app:tabTextColor="?attr/accentTextColor" />
-            </LinearLayout>
-        </androidx.cardview.widget.CardView>
+                    android:visibility="visible">
 
-        <!-- Players List Container with loading overlay -->
-        <FrameLayout
-            android:id="@+id/playersContainer"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1">
+                    <com.google.android.material.progressindicator.CircularProgressIndicator
+                        android:id="@+id/menuLoadingIndicator"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_gravity="center"
+                        android:indeterminate="true"
+                        app:indicatorColor="?attr/secondaryColor"
+                        app:trackCornerRadius="8dp"
+                        app:trackThickness="4dp" />
+                </FrameLayout>
+            </androidx.cardview.widget.CardView>
+        </LinearLayout>
 
-            <androidx.viewpager2.widget.ViewPager2
-                android:id="@+id/playersViewPager"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent" />
-
-            <FrameLayout
-                android:id="@+id/menuLoadingOverlay"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="?attr/primaryColor"
-                android:visibility="visible">
-
-                <com.google.android.material.progressindicator.CircularProgressIndicator
-                    android:id="@+id/menuLoadingIndicator"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:layout_gravity="center"
-                    android:indeterminate="true"
-                    app:indicatorColor="?attr/secondaryColor"
-                    app:trackCornerRadius="8dp"
-                    app:trackThickness="4dp" />
-            </FrameLayout>
-        </FrameLayout>
-
-    </LinearLayout>
+    </androidx.cardview.widget.CardView>
 
     <!-- Comments Side Panel -->
     <LinearLayout

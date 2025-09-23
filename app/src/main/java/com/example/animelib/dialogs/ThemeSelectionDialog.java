@@ -1,4 +1,4 @@
-package com.example.animelib.managers;
+package com.example.animelib.dialogs;
 
 import android.app.Dialog;
 import android.content.Context;
@@ -20,22 +20,21 @@ import com.example.animelib.util.ThemeUtils;
 import com.google.android.material.button.MaterialButton;
 
 /**
- * Менеджер для управления темами приложения
- * Обеспечивает показ диалога выбора темы, сохранение и применение настроек
+ * Диалог для выбора темы приложения
  */
-public class ThemeManager {
+public class ThemeSelectionDialog {
     
-    private static final String TAG = "ThemeManager";
+    private static final String TAG = "ThemeSelectionDialog";
     
     private final Context context;
     private final ApiService apiService;
     
     /**
-     * Конструктор ThemeManager
+     * Конструктор ThemeSelectionDialog
      * @param context Контекст приложения
      * @param apiService Сервис для API запросов
      */
-    public ThemeManager(Context context, ApiService apiService) {
+    public ThemeSelectionDialog(Context context, ApiService apiService) {
         this.context = context;
         this.apiService = apiService;
     }
@@ -43,7 +42,7 @@ public class ThemeManager {
     /**
      * Показывает диалог выбора темы
      */
-    public void showThemeDialog() {
+    public void show() {
         Log.d(TAG, "Showing theme dialog");
         
         Dialog dialog = new Dialog(context);
@@ -121,18 +120,17 @@ public class ThemeManager {
             apiService.saveThemeSetting(themeValue);
             Log.d(TAG, "Theme saved to database: " + themeValue);
             
-            // Применяем тему
-            ThemeUtils.applyTheme(themeValue);
-            Log.d(TAG, "Theme applied: " + themeValue);
-            
             // Сохраняем в SharedPreferences для немедленного применения
             ThemeUtils.saveThemePreference(context, themeValue);
             Log.d(TAG, "Theme saved to SharedPreferences: " + themeValue);
             
-            // Перезагружаем активность
+            // Применяем тему без перезагрузки активности
             if (context instanceof android.app.Activity) {
-                ((android.app.Activity) context).recreate();
+                ThemeUtils.applyThemeToActivity((android.app.Activity) context, themeValue);
+            } else {
+                ThemeUtils.applyTheme(themeValue);
             }
+            Log.d(TAG, "Theme applied: " + themeValue);
             
             dialog.dismiss();
         });
@@ -145,90 +143,5 @@ public class ThemeManager {
      */
     private int dpToPx(int dp) {
         return (int) (dp * context.getResources().getDisplayMetrics().density);
-    }
-    
-    /**
-     * Загружает и применяет тему при запуске приложения
-     */
-    public void loadAndApplyTheme() {
-        Log.d(TAG, "Loading and applying theme");
-        
-        try {
-            // Получаем тему из базы данных
-            int themeMode = apiService.loadThemeSetting();
-            Log.d(TAG, "Loaded theme from database: " + themeMode);
-            
-            // Также проверяем SharedPreferences
-            int sharedPrefTheme = ThemeUtils.getSavedThemePreference(context);
-            Log.d(TAG, "Loaded theme from SharedPreferences: " + sharedPrefTheme);
-            
-            // Используем тему из базы данных, если она есть, иначе из SharedPreferences
-            int finalTheme = themeMode != 0 ? themeMode : sharedPrefTheme;
-            
-            // Применяем тему в главном потоке
-            if (context instanceof android.app.Activity) {
-                ((android.app.Activity) context).runOnUiThread(() -> {
-                    ThemeUtils.applyTheme(finalTheme);
-                    Log.d(TAG, "Theme applied on startup: " + finalTheme);
-                });
-            } else {
-                ThemeUtils.applyTheme(finalTheme);
-                Log.d(TAG, "Theme applied on startup: " + finalTheme);
-            }
-            
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to load and apply theme", e);
-            // Применяем тему по умолчанию в главном потоке
-            if (context instanceof android.app.Activity) {
-                ((android.app.Activity) context).runOnUiThread(() -> {
-                    ThemeUtils.applyTheme(0);
-                });
-            } else {
-                ThemeUtils.applyTheme(0);
-            }
-        }
-    }
-    
-    /**
-     * Получает текущую тему
-     * @return Значение текущей темы
-     */
-    public int getCurrentTheme() {
-        try {
-            return apiService.loadThemeSetting();
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to get current theme", e);
-            return ThemeUtils.getSavedThemePreference(context);
-        }
-    }
-    
-    /**
-     * Сохраняет тему
-     * @param themeMode Значение темы для сохранения
-     */
-    public void saveTheme(int themeMode) {
-        Log.d(TAG, "Saving theme: " + themeMode);
-        
-        // Сохраняем в базу данных
-        apiService.saveThemeSetting(themeMode);
-        
-        // Сохраняем в SharedPreferences
-        ThemeUtils.saveThemePreference(context, themeMode);
-        
-        Log.d(TAG, "Theme saved successfully");
-    }
-    
-    /**
-     * Применяет тему
-     * @param themeMode Значение темы для применения
-     */
-    public void applyTheme(int themeMode) {
-        Log.d(TAG, "Applying theme: " + themeMode);
-        ThemeUtils.applyTheme(themeMode);
-        
-        // Перезагружаем активность если это возможно
-        if (context instanceof android.app.Activity) {
-            ((android.app.Activity) context).recreate();
-        }
     }
 }

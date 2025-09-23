@@ -37,13 +37,26 @@
             android:ellipsize="end"/>
 
         <TextView
+            android:id="@+id/replyToView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="?attr/accentTextColor"
+            android:textSize="12sp"
+            android:textStyle="italic"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:visibility="gone"/>
+
+        <TextView
             android:id="@+id/commentHtmlView"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="?attr/primaryTextColor"
             android:textSize="13sp"
             android:lineSpacingExtra="0dp"
-            android:lineSpacingMultiplier="1.0"/>
+            android:lineSpacingMultiplier="1.0"
+            android:includeFontPadding="false"
+            android:paddingBottom="0dp"/>
 
         <LinearLayout
             android:id="@+id/spoilerContainer"
@@ -56,7 +69,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginTop="2dp">
+            android:layout_marginTop="6dp">
 
             <TextView
                 android:id="@+id/dateView"

@@ -169,13 +169,9 @@ public class DatabaseManager {
      * Загружает настройку темы
      */
     public int loadThemeSetting() {
-        try {
-            AppSettings settings = db.appSettingsDao().getSettingsSync();
-            return settings != null ? settings.getThemeMode() : 0; // Default to light theme (0)
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to load theme setting", e);
-            return 0; // Default to light theme (0)
-        }
+
+        AppSettings settings = db.appSettingsDao().getSettingsSync();
+        return settings != null ? settings.getThemeMode() : 0; // Default to light theme (0)
     }
     
     // ========== CurrentEpisode операции ==========

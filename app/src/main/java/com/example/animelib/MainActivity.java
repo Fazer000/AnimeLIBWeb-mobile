@@ -2,8 +2,11 @@ package com.example.animelib;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,7 +19,9 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.Toast;
-import com.example.animelib.managers.ThemeManager;
+
+import com.example.animelib.data.DatabaseManager;
+import com.example.animelib.dialogs.ThemeSelectionDialog;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
@@ -29,8 +34,11 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.example.animelib.ui.UrlInputDialog;
 import com.example.animelib.ui.PlayerButtonHandler;
+import com.example.animelib.util.ThemeUtils;
 import com.example.animelib.viewmodel.AppSettingsViewModel;
 import com.example.animelib.api.ApiService;
+import com.example.animelib.dialogs.BookmarksPopupDialog;
+import com.example.animelib.models.BookmarksListResponse;
 import com.google.android.material.progressindicator.CircularProgressIndicator;
 
 import com.google.gson.Gson;
@@ -65,7 +73,10 @@ public class MainActivity extends AppCompatActivity {
     private AppSettingsViewModel viewModel;
     private ApiService apiService;
     private PlayerButtonHandler playerButtonHandler;
-    private ThemeManager themeManager;
+    private BookmarksPopupDialog currentBookmarksDialog;
+    private ThemeSelectionDialog themeDialog;
+    private DatabaseManager databaseManager;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -91,11 +102,13 @@ public class MainActivity extends AppCompatActivity {
         // Initialize API service
         apiService = new ApiService(this);
 
+        databaseManager = new DatabaseManager(this);
+
         // Initialize player button handler
         playerButtonHandler = new PlayerButtonHandler(this);
 
         // Initialize theme manager
-        themeManager = new ThemeManager(this, apiService);
+        themeDialog = new ThemeSelectionDialog(this, apiService);
 
         // Clear WebView cache to avoid Chromium errors
         try {
@@ -116,6 +129,8 @@ public class MainActivity extends AppCompatActivity {
         // Load and apply theme
         loadAndApplyTheme();
 
+        showBookmarksPopupIfNeeded();
+
         setupWebView();
         setupRefreshLayout();
         setupBackPressHandler();
@@ -123,27 +138,34 @@ public class MainActivity extends AppCompatActivity {
         checkAndLoadUrl();
     }
 
-//    @Override
-//    protected void onResume() {
-//        super.onResume();
-//        startTestPlayer();
-//    }
-
     private void loadAndApplyTheme() {
         executor.execute(() -> {
-            themeManager.loadAndApplyTheme();
+            try {
+                // Получаем тему из базы данных
+                int themeMode = databaseManager.loadThemeSetting();
+                Log.d("Theme", "Loaded theme from database: " + themeMode);
+                
+                // Также проверяем SharedPreferences
+                int sharedPrefTheme = ThemeUtils.getSavedThemePreference(this);
+                Log.d("Theme", "Loaded theme from SharedPreferences: " + sharedPrefTheme);
+                
+                // Используем тему из базы данных, если она есть, иначе из SharedPreferences
+                int finalTheme = themeMode != 0 ? themeMode : sharedPrefTheme;
+                
+                // Применяем тему в главном потоке
+                runOnUiThread(() -> {
+                    ThemeUtils.applyThemeToActivity(MainActivity.this, finalTheme);
+                    Log.d("Theme", "Theme applied on startup: " + finalTheme);
+                });
+                
+            } catch (Exception e) {
+                Log.e("Theme", "Failed to load and apply theme", e);
+                // Применяем тему по умолчанию в главном потоке
+                runOnUiThread(() -> {
+                    ThemeUtils.applyThemeToActivity(MainActivity.this, 0);
+                });
+            }
         });
-    }
-
-    @OptIn(markerClass = UnstableApi.class)
-    private void startTestPlayer() {
-        // Тестовый запуск плеера с демо видео
-        // Для тестирования интерфейса плеера
-        Intent intent = new Intent(this, VideoPlayerActivity.class);
-        intent.putExtra(VideoPlayerActivity.EXTRA_ANIME_URL,
-                "https://v3.animelib.org/ru/anime/22934--saikyou-tank-no-meikyuu-kouryaku-tairyoku-9999-no-rare-skill-mochi-tank-yuusha-party-wo-tsuihou-sareru-anime/watch");
-        startActivity(intent);
-        finish(); // Закрываем MainActivity чтобы не было возможности вернуться
     }
 
     private void checkAndLoadUrl() {
@@ -557,7 +579,7 @@ public class MainActivity extends AppCompatActivity {
      * Показывает диалог выбора темы
      */
     public void showThemeDialog() {
-        themeManager.showThemeDialog();
+        themeDialog.show();
     }
 
     /**
@@ -705,6 +727,27 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Показывает popup с закладками при запуске приложения (один раз за сессию)
+     */
+    private void showBookmarksPopupIfNeeded() {
+            apiService.fetchBookmarksList(new ApiService.BookmarksListCallback() {
+                @Override
+                public void onBookmarksReceived(BookmarksListResponse response) {
+                    runOnUiThread(() -> {
+                        currentBookmarksDialog = new BookmarksPopupDialog(MainActivity.this, response, 10000);
+                        currentBookmarksDialog.show();
+                        currentBookmarksDialog.setOnDismissListener(dialog -> currentBookmarksDialog = null);
+                    });
+                }
+
+                @Override
+                public void onError(String error) {
+                    Log.e("MainActivity", "Failed to load bookmarks: " + error);
+                }
+            });
+    }
+
     @Override
     protected void onDestroy() {
         if (webView != null) {
@@ -713,6 +756,16 @@ public class MainActivity extends AppCompatActivity {
         if (apiService != null) {
             apiService.shutdown();
         }
+        currentBookmarksDialog = null;
+
+//        // Закрываем диалог если он открыт
+//        if (currentBookmarksDialog == null) {
+//            currentBookmarksDialog.dismiss();
+//            Log.d("BookmarkDialog", "Пиздец диалог не нулль ебать");
+//        } else {
+//            Log.d("BookmarkDialog", "Пиздец диалог нулль ебать");
+//        }
+
         super.onDestroy();
     }
 }

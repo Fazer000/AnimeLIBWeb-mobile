@@ -73,6 +73,7 @@ public class PlayerOptionsAdapter extends RecyclerView.Adapter<PlayerOptionsAdap
 
         // FHD tag (1080p)
         boolean hasFhd = false;
+        boolean hasFourK = false;
         if ("animelib".equalsIgnoreCase(player.getPlayer())) {
             if (player.getVideo() != null && player.getVideo().getQuality() != null) {
                 for (EpisodeResponse.QualityData q : player.getVideo().getQuality()) {
@@ -81,10 +82,20 @@ public class PlayerOptionsAdapter extends RecyclerView.Adapter<PlayerOptionsAdap
                         break;
                     }
                 }
+                for (EpisodeResponse.QualityData q : player.getVideo().getQuality()) {
+                    if (q != null && q.getQuality() == 2160) {
+                        hasFourK = true;
+                        break;
+                    }
+                }
             }
         }
         if (holder.fhdTag != null) {
-            holder.fhdTag.setVisibility(hasFhd ? View.VISIBLE : View.GONE);
+            holder.fhdTag.setVisibility(hasFhd && !hasFourK ? View.VISIBLE : View.GONE);
+        }
+
+        if (holder.fourKTag != null) {
+            holder.fourKTag.setVisibility(hasFourK ? View.VISIBLE : View.GONE);
         }
 
         int translationTypeId = 0;
@@ -140,12 +151,14 @@ public class PlayerOptionsAdapter extends RecyclerView.Adapter<PlayerOptionsAdap
     public static class PlayerViewHolder extends RecyclerView.ViewHolder {
         TextView firstRow;
         TextView fhdTag;
+        TextView fourKTag;
         TextView subTag;
 
         PlayerViewHolder(@NonNull View itemView) {
             super(itemView);
             firstRow = itemView.findViewById(R.id.firstRow);
             fhdTag = itemView.findViewById(R.id.fhdTag);
+            fourKTag = itemView.findViewById(R.id.fourKTag);
             subTag = itemView.findViewById(R.id.subTag);
         }
     }

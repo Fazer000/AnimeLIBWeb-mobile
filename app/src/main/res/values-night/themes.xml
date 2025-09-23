@@ -41,7 +41,7 @@
         <item name="fontFamily">@font/open_sans</item>
         <item name="android:textColor">@color/dt_primary_text_color</item>
 
-        <item name="android:fitsSystemWindows">true</item>
+<!--        <item name="android:fitsSystemWindows">true</item>-->
     </style>
 
     <style name="SplashScreenTheme" parent="Theme.SplashScreen">

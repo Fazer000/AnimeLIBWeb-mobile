@@ -23,6 +23,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.cardview.widget.CardView;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
@@ -87,7 +88,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
     private ImageButton ibClosePlayer;
     private ImageButton menuToggleButton;
     private ImageButton settingsButton;
-    private View slidingMenuPanel;
+    private CardView slidingMenuPanel;
     private View menuLoadingIndicator;
     private View menuLoadingOverlay;
     
@@ -183,6 +184,12 @@ public class VideoPlayerActivity extends AppCompatActivity {
         playerView = findViewById(R.id.playerView);
         loadingOverlay = findViewById(R.id.loadingOverlay);
 
+        // Устанавливаем fitsSystemWindows программно для предотвращения сброса при рестарте
+        View rootView = findViewById(android.R.id.content);
+        if (rootView != null) {
+            rootView.setFitsSystemWindows(false);
+        }
+
         // Configure PlayerView to show controls for shorter time
         updateControllerAutoHide();
         
@@ -192,6 +199,9 @@ public class VideoPlayerActivity extends AppCompatActivity {
         // Initialize network components
         executor = Executors.newSingleThreadExecutor();
         apiService = new ApiService(this);
+
+        // Load and apply theme
+        loadAndApplyTheme();
 
         // Initialize comments manager
         commentsManager = new CommentsManager(this, apiService);
@@ -270,6 +280,53 @@ public class VideoPlayerActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Безопасно вызывает код в главном потоке
+     */
+    private void safeRunOnUiThread(Runnable runnable) {
+        try {
+            runOnUiThread(runnable);
+        } catch (Exception e) {
+            Log.e("VideoPlayer", "Error calling UI thread", e);
+            // Fallback - вызываем в текущем потоке
+            try {
+                runnable.run();
+            } catch (Exception ex) {
+                Log.e("VideoPlayer", "Error in fallback callback", ex);
+            }
+        }
+    }
+
+    private void loadAndApplyTheme() {
+        executor.execute(() -> {
+            try {
+                // Получаем тему из базы данных
+                int themeMode = apiService.loadThemeSetting();
+                Log.d("VideoPlayerTheme", "Loaded theme from database: " + themeMode);
+                
+                // Также проверяем SharedPreferences
+                int sharedPrefTheme = ThemeUtils.getSavedThemePreference(this);
+                Log.d("VideoPlayerTheme", "Loaded theme from SharedPreferences: " + sharedPrefTheme);
+                
+                // Используем тему из базы данных, если она есть, иначе из SharedPreferences
+                int finalTheme = themeMode != 0 ? themeMode : sharedPrefTheme;
+                
+                // Применяем тему в главном потоке
+                safeRunOnUiThread(() -> {
+                    ThemeUtils.applyThemeToActivity(VideoPlayerActivity.this, finalTheme);
+                    Log.d("VideoPlayerTheme", "Theme applied on startup: " + finalTheme);
+                });
+                
+            } catch (Exception e) {
+                Log.e("VideoPlayerTheme", "Failed to load and apply theme", e);
+                // Применяем тему по умолчанию в главном потоке
+                safeRunOnUiThread(() -> {
+                    ThemeUtils.applyThemeToActivity(VideoPlayerActivity.this, 0);
+                });
+            }
+        });
+    }
+
     @Override
     public void onPictureInPictureModeChanged(boolean isInPictureInPictureMode, android.content.res.Configuration newConfig) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig);
@@ -277,8 +334,9 @@ public class VideoPlayerActivity extends AppCompatActivity {
 
         if (isInPictureInPictureMode) {
             // Entering PiP mode
-            if (player != null) {
-                player.isPlaying();
+            if (player != null && !player.isPlaying()) {
+                player.play();
+                Log.d("VideoPlayer", "Resumed playback in PiP mode");
             }
             wasCommentsVisibleBeforePiP = commentsManager.isCommentsVisible();
             hideAllUI();
@@ -1022,6 +1080,9 @@ public class VideoPlayerActivity extends AppCompatActivity {
         
         // Включаем кнопку закладки когда плеер выбран
         enableBookmarkButton();
+        
+        // Обновляем currentPlayerData в PlayersManager для правильной подсветки
+        playersManager.setCurrentPlayerData(playerData);
 
         // Route to appropriate player handler (use bookmark timecode if available, otherwise saved position)
         long startPosition = bookmarkTimecode > 0 ? bookmarkTimecode : savedPlayerPosition;
@@ -1112,8 +1173,8 @@ public class VideoPlayerActivity extends AppCompatActivity {
                     preferredQuality = quality;
                     Log.d("VideoPlayer", "Selected quality: " + quality);
 
-                    // If quality changed and player is currently playing, restart with new quality
-                    if (!quality.equals(oldQuality) && player != null && player.isPlaying()) {
+                    // If quality changed, restart with new quality (regardless of playback state)
+                    if (!quality.equals(oldQuality) && player != null) {
                         Log.d("VideoPlayer", "Restarting player with new quality");
                         restartPlayerWithNewQuality();
                     }
@@ -1161,8 +1222,8 @@ public class VideoPlayerActivity extends AppCompatActivity {
                 currentTheme,
                 themeMode -> {
                     currentTheme = themeMode;
-                    // Apply theme immediately
-                    ThemeUtils.applyTheme(themeMode);
+                    // Apply theme immediately without recreating activity
+                    ThemeUtils.applyThemeToActivity(VideoPlayerActivity.this, themeMode);
                     apiService.saveThemeSetting(themeMode);
                     Log.d("VideoPlayer", "Theme changed: " + themeMode);
                 });
@@ -1193,14 +1254,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
 
         // Update video URL with new quality for Animelib
         if ("animelib".equalsIgnoreCase(currentPlayerData.getPlayer())) {
-            if (currentPlayerData.getVideo() != null && currentPlayerData.getVideo().getQuality() != null) {
-                // Find the new quality URL
-                for (EpisodeResponse.QualityData ignored : currentPlayerData.getVideo().getQuality()) {
-                    if (preferredQuality != null) {
-                        preferredQuality.replace("p", "");
-                    }
-                }
-            }
+            // For Animelib, we need to restart with new quality URL
             handleAnimelibPlayer(currentPlayerData, currentPosition);
         } else if ("kodik".equalsIgnoreCase(currentPlayerData.getPlayer())) {
             // For Kodik, we need to restart with new HLS URL
@@ -1217,6 +1271,9 @@ public class VideoPlayerActivity extends AppCompatActivity {
             }
             handleKodikPlayer(currentPlayerData, currentPosition);
         }
+        
+        // Обновляем currentPlayerData в PlayersManager для правильной подсветки после смены качества
+        playersManager.setCurrentPlayerData(currentPlayerData);
     }
 
     private void applySettingsFromDialog(SettingsBottomSheet dialog) {
@@ -1229,7 +1286,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
     }
 
     private void showLoading(String message) {
-        runOnUiThread(() -> {
+        safeRunOnUiThread(() -> {
             if (loadingOverlay != null) {
                 loadingOverlay.setVisibility(View.VISIBLE);
                 TextView textView = loadingOverlay.findViewById(R.id.loadingText);
@@ -1241,7 +1298,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
     }
 
     private void hideLoading() {
-        runOnUiThread(() -> {
+        safeRunOnUiThread(() -> {
             if (loadingOverlay != null) {
                 loadingOverlay.setVisibility(View.GONE);
             }
@@ -1311,7 +1368,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
     }
 
     private void retryWithUrl(String newUrl) {
-        runOnUiThread(() -> {
+        safeRunOnUiThread(() -> {
             Log.d("VideoPlayer", "Retrying playback with new URL: " + newUrl);
             currentVideoUrl = newUrl;
 
@@ -1343,7 +1400,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
         apiService.loadAnimeFromUrl(url, new ApiService.EpisodeDataCallback() {
             @Override
             public void onEpisodeDataReceived(EpisodeResponse response) {
-                runOnUiThread(() -> {
+                safeRunOnUiThread(() -> {
                     hideLoading();
                     if (response.getData() != null && response.getData().getPlayers() != null) {
                         showPlayerSelectionDialog(response.getData().getPlayers());
@@ -1356,7 +1413,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
 
             @Override
             public void onError(String error) {
-                runOnUiThread(() -> {
+                safeRunOnUiThread(() -> {
                     hideLoading();
                     Toast.makeText(VideoPlayerActivity.this, error, Toast.LENGTH_SHORT).show();
                     finish();
@@ -1487,12 +1544,12 @@ public class VideoPlayerActivity extends AppCompatActivity {
 
     private void fetchKodikVideoLinks(String kodikSrc, long seekToPosition) {
         Log.d("KodikAPI", "Fetching HLS links for Kodik src: " + kodikSrc);
-        runOnUiThread(() -> showLoading("Получение HLS ссылок..."));
+        safeRunOnUiThread(() -> showLoading("Получение HLS ссылок..."));
 
         apiService.fetchKodikVideoLinksUnsafe(kodikSrc, new ApiService.KodikVideoCallback() {
             @Override
             public void onKodikVideoReceived(KodikResponse response) {
-                runOnUiThread(() -> {
+                safeRunOnUiThread(() -> {
                     hideLoading();
                     startHlsPlayer(response, seekToPosition);
                 });
@@ -1500,7 +1557,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
 
             @Override
             public void onError(String error) {
-                runOnUiThread(() -> {
+                safeRunOnUiThread(() -> {
                     hideLoading();
                     Toast.makeText(VideoPlayerActivity.this, error, Toast.LENGTH_SHORT).show();
                     finish();
@@ -1712,7 +1769,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
      * Обновляет список эпизодов после добавления закладки
      */
     private void updateEpisodesListAfterBookmark() {
-        runOnUiThread(() -> {
+        safeRunOnUiThread(() -> {
             // Получаем media_slug для обновления закладки
             String animeUrl = getIntent().getStringExtra("anime_url");
             String mediaSlug = null;
@@ -1726,7 +1783,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
                     new BookmarkManager.AnimeBookmarkCallback() {
                         @Override
                         public void onBookmarkReceived(com.example.animelib.models.AnimeBookmarkResponse response) {
-                            runOnUiThread(() -> {
+                            safeRunOnUiThread(() -> {
                                 if (response != null && response.getData() != null) {
                                     // Обновляем закладку в адаптере
                                     episodesManager.updateBookmarkInAdapter(response.getData());
@@ -1772,31 +1829,31 @@ public class VideoPlayerActivity extends AppCompatActivity {
         apiService.fetchAnimeInfo(slugOrId, new ApiService.AnimeInfoCallback() {
             @Override
             public void onAnimeInfoReceived(AnimeInfoResponse response) {
-                runOnUiThread(() -> {
-                    if (response != null && response.getData() != null) {
-                        String rus = response.getData().getRus_name();
-                        animeTitleView.setText(rus != null ? rus : "");
-                    }
+        safeRunOnUiThread(() -> {
+            if (response != null && response.getData() != null) {
+                String rus = response.getData().getRus_name();
+                animeTitleView.setText(rus != null ? rus : "");
+            }
 
-                    EpisodeResponse.PlayerData currentPlayerData = playersManager.getCurrentPlayerData();
-                    String tm = (currentPlayerData != null && currentPlayerData.getTeam() != null)
-                            ? currentPlayerData.getTeam().getName() : null;
-                    EpisodesListResponse.EpisodeItem currentEpisode = episodesManager.getCurrentEpisode();
-                    String ep = (currentEpisode != null) ? currentEpisode.getNumber() : null;
-                    String em = (currentEpisode != null && currentEpisode.getName() != null && !Objects.equals(currentEpisode.getName(), ""))
-                            ? currentEpisode.getName() : null;
+            EpisodeResponse.PlayerData currentPlayerData = playersManager.getCurrentPlayerData();
+            String tm = (currentPlayerData != null && currentPlayerData.getTeam() != null)
+                    ? currentPlayerData.getTeam().getName() : null;
+            EpisodesListResponse.EpisodeItem currentEpisode = episodesManager.getCurrentEpisode();
+            String ep = (currentEpisode != null) ? currentEpisode.getNumber() : null;
+            String em = (currentEpisode != null && currentEpisode.getName() != null && !Objects.equals(currentEpisode.getName(), ""))
+                    ? currentEpisode.getName() : null;
 
-                    if (currentTeamName != null) currentTeamName.setText(tm != null ? tm : "");
-                    if (currentEpisodeNumberView != null)
-                        currentEpisodeNumberView.setText(ep != null ? (ep + " серия") : "");
-                    if (currentEpisodeName != null)
-                        currentEpisodeName.setText(em != null ? (", " + em) : "");
-                });
+            if (currentTeamName != null) currentTeamName.setText(tm != null ? tm : "");
+            if (currentEpisodeNumberView != null)
+                currentEpisodeNumberView.setText(ep != null ? (ep + " серия") : "");
+            if (currentEpisodeName != null)
+                currentEpisodeName.setText(em != null ? (", " + em) : "");
+        });
             }
 
             @Override
             public void onError(String error) {
-                runOnUiThread(() -> {
+                safeRunOnUiThread(() -> {
                     EpisodesListResponse.EpisodeItem currentEpisode = episodesManager.getCurrentEpisode();
                     String ep = currentEpisode != null ? currentEpisode.getNumber() : null;
                     currentEpisodeNumberView.setText(ep != null ? (ep + " серия") : "");
@@ -2183,6 +2240,28 @@ public class VideoPlayerActivity extends AppCompatActivity {
         }
     }
     
+    @Override
+    public void onConfigurationChanged(android.content.res.Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        
+        // Убеждаемся что fitsSystemWindows установлен правильно после изменения конфигурации
+        View rootView = findViewById(android.R.id.content);
+        if (rootView != null) {
+            rootView.setFitsSystemWindows(false);
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        
+        // Убеждаемся что fitsSystemWindows установлен правильно
+        View rootView = findViewById(android.R.id.content);
+        if (rootView != null) {
+            rootView.setFitsSystemWindows(false);
+        }
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();

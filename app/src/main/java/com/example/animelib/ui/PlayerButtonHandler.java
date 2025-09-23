@@ -48,7 +48,7 @@ public class PlayerButtonHandler {
         loadAndExecuteJS(webView, "js/theme-button-listener.js", "Theme button listener");
         loadAndExecuteJS(webView, "js/custom-select-handler.js", "Custom select handler");
         loadAndExecuteJS(webView, "js/domain-change-handler.js", "Domain change handler");
-        loadAndExecuteJS(webView, "js/back-button-handler.js", "Back button handler");
+//        loadAndExecuteJS(webView, "js/back-button-handler.js", "Back button handler");
         loadAndExecuteJS(webView, "js/debug-info.js", "Debug info");
         loadAndExecuteJS(webView, "js/button-checker.js", "Button checker");
 

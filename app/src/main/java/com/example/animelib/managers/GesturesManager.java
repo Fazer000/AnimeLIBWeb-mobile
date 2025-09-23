@@ -29,6 +29,7 @@ public class GesturesManager {
     // Состояние жестов
     private boolean isSwipingSeek = false;
     private boolean isHoldToSpeed = false;
+    private boolean isGestureCooldown = false;
     private float swipeStartX = 0f;
     private float swipeStartY = 0f;
     private int swipeTouchSlopPx = 0;
@@ -120,6 +121,11 @@ public class GesturesManager {
         playerView.setOnTouchListener((v, event) -> {
             if (player == null) return false;
             
+            // Если активен cooldown после жестов, не перехватываем события
+            if (isGestureCooldown) {
+                return false;
+            }
+            
             switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
                     // Принудительно сбрасываем все состояния жестов
@@ -135,7 +141,7 @@ public class GesturesManager {
                         }
                     }
                     
-                    // Не перехватываем сразу — даём кликам/контролам работать
+                    // Инициализируем переменные для жестов
                     isSwipingSeek = false;
                     swipeAccumulatedDx = 0f;
                     basePositionMs = player.getCurrentPosition();
@@ -178,7 +184,7 @@ public class GesturesManager {
                             ((android.widget.TextView) seekPreviewText).setText("0 c");
                         }
                     }
-                    return false;
+                    return false; // НЕ перехватываем событие, позволяем контролам работать
                     
                 case MotionEvent.ACTION_MOVE:
                     float currentX = event.getX();
@@ -194,11 +200,11 @@ public class GesturesManager {
                     }
 
                     // Don't interfere with hold-to-speed если он уже активен
-                    if (isHoldToSpeed) return false;
+                    if (isHoldToSpeed) return true;
 
                     if (!isSwipingSeek) {
                         if (passedDeadZone) {
-                            v.postDelayed(() -> isSwipingSeek = true, 60); // задержка 60мс, чтобы не срабатывало мгновенно
+                            isSwipingSeek = true; // Устанавливаем сразу без задержки
                             // блокируем перехват родителями (ViewPager и т.п.)
                             android.view.ViewParent p = v.getParent();
                             if (p != null) p.requestDisallowInterceptTouchEvent(true);
@@ -208,9 +214,15 @@ public class GesturesManager {
                             if (gestureCallback != null && player != null) {
                                 gestureCallback.updatePlayLoadingIndicator(player.getPlaybackState());
                             }
+                            
+                            // Показываем контролы при начале свайпа
+                            if (playerView != null) {
+                                playerView.showController();
+                            }
+                            
                             return true;
                         } else {
-                            return false; // пока не прошли dead zone — не трогаем
+                            return false; // НЕ перехватываем событие для обычных касаний
                         }
                     }
 
@@ -242,6 +254,8 @@ public class GesturesManager {
                         seekPreviewText.setVisibility(View.GONE);
                     }
                     
+                    boolean handledGesture = false;
+                    
                     // Handle swipe seek completion
                     if (isSwipingSeek) {
                         long finalOffsetMs = Math.round(swipeAccumulatedDx / 12f) * 1000L;
@@ -249,13 +263,17 @@ public class GesturesManager {
                         long dur = player.getDuration();
                         if (dur > 0) newPos = Math.min(newPos, dur);
                         player.seekTo(newPos);
-                        v.postDelayed(() -> isSwipingSeek = false, 60);
-                        swipeAccumulatedDx = 0f;
-                        lastSwipeX = null;
-                        if (gestureCallback != null && player != null) {
-                            gestureCallback.updatePlayLoadingIndicator(player.getPlaybackState());
+                        Log.d(TAG, "Seek completed: " + finalOffsetMs + "ms");
+                        
+                        // Показываем контролы плеера после перемотки
+                        if (playerView != null) {
+                            playerView.showController();
                         }
-                        return true; // съедаем up, чтобы не кликалось
+                        
+                        // Активируем cooldown для восстановления кликабельности
+                        activateGestureCooldown();
+                        
+                        handledGesture = true;
                     }
                     
                     // Handle hold-to-speed release
@@ -283,14 +301,26 @@ public class GesturesManager {
                         if (gestureCallback != null && player != null) {
                             gestureCallback.updatePlayLoadingIndicator(player.getPlaybackState());
                         }
-                        return true;
+                        
+                        // Показываем контролы плеера после завершения ускорения
+                        if (playerView != null) {
+                            playerView.showController();
+                        }
+                        
+                        // Активируем cooldown для восстановления кликабельности
+                        activateGestureCooldown();
+                        
+                        handledGesture = true;
                     }
                     
-                    // не было свайпа или hold-to-speed — передаём дальше, чтобы сработали клики
+                    // Сбрасываем состояние
                     isSwipingSeek = false;
                     swipeAccumulatedDx = 0f;
                     lastSwipeX = null;
-                    return false;
+                    
+                    // Если был какой-то жест, перехватываем событие
+                    // Если не было жеста, позволяем клику пройти для показа контролов
+                    return handledGesture;
             }
             return false;
         });
@@ -346,6 +376,22 @@ public class GesturesManager {
     }
     
     /**
+     * Активирует cooldown для восстановления кликабельности контролов
+     */
+    private void activateGestureCooldown() {
+        isGestureCooldown = true;
+        Log.d(TAG, "Gesture cooldown activated");
+        
+        // Отключаем cooldown через 300мс
+        if (playerView != null) {
+            playerView.postDelayed(() -> {
+                isGestureCooldown = false;
+                Log.d(TAG, "Gesture cooldown deactivated");
+            }, 300);
+        }
+    }
+    
+    /**
      * Проверка, выполняется ли свайп для перемотки
      * @return true если выполняется свайп
      */
@@ -368,6 +414,7 @@ public class GesturesManager {
         Log.d(TAG, "Stopping all gestures");
         
         isSwipingSeek = false;
+        isGestureCooldown = false; // Сбрасываем cooldown
         
         // Принудительно отменяем таймер
         if (holdToSpeedRunnable != null && playerView != null) {

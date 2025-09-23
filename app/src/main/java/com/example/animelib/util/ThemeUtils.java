@@ -1,5 +1,6 @@
 package com.example.animelib.util;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
@@ -24,6 +25,42 @@ public class ThemeUtils {
             case THEME_SYSTEM:
                 AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
                 break;
+        }
+    }
+    
+    /**
+     * Применяет тему к конкретной активности без перезагрузки
+     * @param activity Активность для применения темы
+     * @param themeMode Режим темы
+     */
+    public static void applyThemeToActivity(Activity activity, int themeMode) {
+        // Сохраняем тему для будущих активностей
+        saveThemePreference(activity, themeMode);
+        
+        // Принудительно обновляем текущую активность БЕЗ пересоздания
+        if (activity instanceof androidx.appcompat.app.AppCompatActivity) {
+            androidx.appcompat.app.AppCompatDelegate delegate = 
+                ((androidx.appcompat.app.AppCompatActivity) activity).getDelegate();
+            
+            // Устанавливаем локальную тему для этой активности
+            delegate.setLocalNightMode(getAppCompatNightMode(themeMode));
+            
+            // Принудительно обновляем UI
+            delegate.applyDayNight();
+        }
+    }
+    
+    /**
+     * Преобразует режим темы в AppCompat режим
+     */
+    private static int getAppCompatNightMode(int themeMode) {
+        switch (themeMode) {
+            case THEME_LIGHT:
+                return AppCompatDelegate.MODE_NIGHT_NO;
+            case THEME_DARK:
+                return AppCompatDelegate.MODE_NIGHT_YES;
+            default:
+                return AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM;
         }
     }
 

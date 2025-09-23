@@ -68,6 +68,11 @@ public class ApiService {
         void onBookmarkReceived(AnimeBookmarkResponse response);
         void onError(String error);
     }
+    
+    public interface BookmarksListCallback {
+        void onBookmarksReceived(BookmarksListResponse response);
+        void onError(String error);
+    }
 
     private final OkHttpClient httpClient;
     private final Gson gson;
@@ -114,7 +119,7 @@ public class ApiService {
     }
 
     public void fetchAnimeInfo(String animeSlugOrId, AnimeInfoCallback callback) {
-        executor.execute(() -> {
+        safeExecute(() -> {
             try {
                 String apiUrl = "https://api.cdnlibs.org/api/anime/" + animeSlugOrId;
                 Request request = buildApiRequest(apiUrl).build();
@@ -149,7 +154,7 @@ public class ApiService {
 
     public void fetchEpisodesList(String animeId, EpisodesCallback callback) {
         Log.d("AnimeApiService", "fetchEpisodesList called with animeId: " + animeId);
-        executor.execute(() -> {
+        safeExecute(() -> {
             try {
                 String apiUrl = "https://api.cdnlibs.org/api/episodes?anime_id=" + animeId;
                 Log.d("AnimeApiService", "Fetching episodes list for anime_id: " + animeId);
@@ -194,7 +199,7 @@ public class ApiService {
     }
 
     public void fetchEpisodeData(int episodeId, EpisodeDataCallback callback) {
-        executor.execute(() -> {
+        safeExecute(() -> {
             try {
                 String apiUrl = "https://api.cdnlibs.org/api/episodes/" + episodeId;
                 Log.d("AnimeApiService", "Fetching episode data for episode_id: " + episodeId);
@@ -239,7 +244,7 @@ public class ApiService {
     }
 
     public void fetchKodikVideoLinks(String kodikSrc, KodikVideoCallback callback) {
-        executor.execute(() -> {
+        safeExecute(() -> {
             try {
                 String apiUrl = "https://anilib-kodik-api.burntv.ru/api/video-links?link=" + kodikSrc;
                 Log.d("AnimeApiService", "Fetching Kodik video links for src: " + kodikSrc);
@@ -291,7 +296,7 @@ public class ApiService {
     }
 
     public void fetchEpisodeComments(long episodeId, String sortType, int page, EpisodeCommentsCallback callback) {
-        executor.execute(() -> {
+        safeExecute(() -> {
             try {
                 String apiUrl = getSort(episodeId, sortType, page);
 
@@ -432,7 +437,7 @@ public class ApiService {
 
         Log.d("AnimeApiService", "Extracted anime_id: " + animeId + " from URL: " + animeUrl);
 
-        executor.execute(() -> {
+        safeExecute(() -> {
             try {
                 String apiUrl = "https://api.cdnlibs.org/api/episodes?anime_id=" + animeId;
                 Log.d("AnimeApiService", "Making direct API request to: " + apiUrl);
@@ -484,7 +489,7 @@ public class ApiService {
      * Fetch Kodik video links using unsafe HTTP client
      */
     public void fetchKodikVideoLinksUnsafe(String kodikSrc, KodikVideoCallback callback) {
-        executor.execute(() -> {
+        safeExecute(() -> {
             try {
                 String apiUrl = "https://anilib-kodik-api.burntv.ru/api/video-links?link=" + kodikSrc;
                 Log.d("AnimeApiService", "Making direct API request to: " + apiUrl);
@@ -582,7 +587,7 @@ public class ApiService {
     }
 
     public void checkApiForToast(ToastCheckCallback callback) {
-        executor.execute(() -> {
+        safeExecute(() -> {
             String apiUrl = "https://api.cdnlibs.org/api/";
             Request request = buildApiRequest(apiUrl).build();
 
@@ -667,7 +672,7 @@ public class ApiService {
                    ", episodeNumber: " + episodeNumber + 
                    ", timecode: " + currentTimecode);
         
-        executor.execute(() -> {
+        safeExecute(() -> {
             try {
                 // Создаем JSON объект для запроса
                 com.google.gson.JsonObject requestBody = createBookmarkRequestBody(
@@ -706,13 +711,7 @@ public class ApiService {
                     public void onFailure(@NonNull Call call, @NonNull IOException e) {
                         Log.e("ApiService", "Bookmark request failed", e);
                         // Вызываем колбэк в главном потоке
-                        if (context instanceof android.app.Activity) {
-                            ((android.app.Activity) context).runOnUiThread(() -> 
-                                callback.onError("Ошибка сети: " + e.getMessage())
-                            );
-                        } else {
-                            callback.onError("Ошибка сети: " + e.getMessage());
-                        }
+                        safeRunOnUiThread(() -> callback.onError("Ошибка сети: " + e.getMessage()));
                     }
                     
                     @Override
@@ -722,35 +721,17 @@ public class ApiService {
                                 String responseBody = response.body() != null ? response.body().string() : "";
                                 Log.d("ApiService", "Bookmark added successfully: " + responseBody);
                                 // Вызываем колбэк в главном потоке
-                                if (context instanceof android.app.Activity) {
-                                    ((android.app.Activity) context).runOnUiThread(() -> 
-                                        callback.onSuccess("Закладка добавлена успешно")
-                                    );
-                                } else {
-                                    callback.onSuccess("Закладка добавлена успешно");
-                                }
+                                safeRunOnUiThread(() -> callback.onSuccess("Закладка добавлена успешно"));
                             } else {
                                 String errorBody = response.body() != null ? response.body().string() : "";
                                 Log.e("ApiService", "Failed to add bookmark. Code: " + response.code() + ", Body: " + errorBody);
                                 // Вызываем колбэк в главном потоке
-                                if (context instanceof android.app.Activity) {
-                                    ((android.app.Activity) context).runOnUiThread(() -> 
-                                        callback.onError("Ошибка при добавлении закладки: " + response.code())
-                                    );
-                                } else {
-                                    callback.onError("Ошибка при добавлении закладки: " + response.code());
-                                }
+                                safeRunOnUiThread(() -> callback.onError("Ошибка при добавлении закладки: " + response.code()));
                             }
                         } catch (Exception e) {
                             Log.e("ApiService", "Error processing bookmark response", e);
                             // Вызываем колбэк в главном потоке
-                            if (context instanceof android.app.Activity) {
-                                ((android.app.Activity) context).runOnUiThread(() -> 
-                                    callback.onError("Ошибка обработки ответа: " + e.getMessage())
-                                );
-                            } else {
-                                callback.onError("Ошибка обработки ответа: " + e.getMessage());
-                            }
+                            safeRunOnUiThread(() -> callback.onError("Ошибка обработки ответа: " + e.getMessage()));
                         }
                     }
                 });
@@ -758,13 +739,7 @@ public class ApiService {
             } catch (Exception e) {
                 Log.e("ApiService", "Unexpected error while adding bookmark", e);
                 // Вызываем колбэк в главном потоке
-                if (context instanceof android.app.Activity) {
-                    ((android.app.Activity) context).runOnUiThread(() -> 
-                        callback.onError("Неожиданная ошибка: " + e.getMessage())
-                    );
-                } else {
-                    callback.onError("Неожиданная ошибка: " + e.getMessage());
-                }
+                safeRunOnUiThread(() -> callback.onError("Неожиданная ошибка: " + e.getMessage()));
             }
         });
     }
@@ -846,6 +821,21 @@ public class ApiService {
     }
     
     /**
+     * Безопасно выполняет задачу в executor
+     */
+    private void safeExecute(Runnable task) {
+        try {
+            if (executor != null && !executor.isShutdown()) {
+                executor.execute(task);
+            } else {
+                Log.w("ApiService", "Executor is shutdown, skipping task execution");
+            }
+        } catch (Exception e) {
+            Log.e("ApiService", "Error executing task", e);
+        }
+    }
+
+    /**
      * Получает закладку аниме
      * @param mediaSlug Слаг медиа (например: "23811--kaijuu-8-gou-2nd-season-anime")
      * @param callback Колбэк для результата операции
@@ -853,7 +843,7 @@ public class ApiService {
     public void fetchAnimeBookmark(String mediaSlug, AnimeBookmarkCallback callback) {
         Log.d("ApiService", "Fetching anime bookmark for mediaSlug: " + mediaSlug);
         
-        executor.execute(() -> {
+        safeExecute(() -> {
             try {
                 String apiUrl = "https://api.cdnlibs.org/api/anime/" + mediaSlug + "/bookmark";
                 Request request = buildApiRequest(apiUrl).build();
@@ -863,13 +853,7 @@ public class ApiService {
                     public void onFailure(@NonNull Call call, @NonNull IOException e) {
                         Log.e("ApiService", "Anime bookmark request failed", e);
                         // Вызываем колбэк в главном потоке
-                        if (context instanceof android.app.Activity) {
-                            ((android.app.Activity) context).runOnUiThread(() -> 
-                                callback.onError("Ошибка сети: " + e.getMessage())
-                            );
-                        } else {
-                            callback.onError("Ошибка сети: " + e.getMessage());
-                        }
+                        safeRunOnUiThread(() -> callback.onError("Ошибка сети: " + e.getMessage()));
                     }
                     
                     @Override
@@ -882,45 +866,21 @@ public class ApiService {
                                 AnimeBookmarkResponse bookmarkResponse = gson.fromJson(responseBody, AnimeBookmarkResponse.class);
                                 if (bookmarkResponse != null) {
                                     // Вызываем колбэк в главном потоке (даже если data == null, это нормально - нет закладки)
-                                    if (context instanceof android.app.Activity) {
-                                        ((android.app.Activity) context).runOnUiThread(() -> 
-                                            callback.onBookmarkReceived(bookmarkResponse)
-                                        );
-                                    } else {
-                                        callback.onBookmarkReceived(bookmarkResponse);
-                                    }
+                                    safeRunOnUiThread(() -> callback.onBookmarkReceived(bookmarkResponse));
                                 } else {
                                     // Вызываем колбэк в главном потоке
-                                    if (context instanceof android.app.Activity) {
-                                        ((android.app.Activity) context).runOnUiThread(() -> 
-                                            callback.onError("Неверный формат ответа закладки")
-                                        );
-                                    } else {
-                                        callback.onError("Неверный формат ответа закладки");
-                                    }
+                                    safeRunOnUiThread(() -> callback.onError("Неверный формат ответа закладки"));
                                 }
                             } else {
                                 String errorBody = response.body() != null ? response.body().string() : "";
                                 Log.e("ApiService", "Failed to fetch anime bookmark. Code: " + response.code() + ", Body: " + errorBody);
                                 // Вызываем колбэк в главном потоке
-                                if (context instanceof android.app.Activity) {
-                                    ((android.app.Activity) context).runOnUiThread(() -> 
-                                        callback.onError("Ошибка при получении закладки: " + response.code())
-                                    );
-                                } else {
-                                    callback.onError("Ошибка при получении закладки: " + response.code());
-                                }
+                                safeRunOnUiThread(() -> callback.onError("Ошибка при получении закладки: " + response.code()));
                             }
                         } catch (Exception e) {
                             Log.e("ApiService", "Error processing anime bookmark response", e);
                             // Вызываем колбэк в главном потоке
-                            if (context instanceof android.app.Activity) {
-                                ((android.app.Activity) context).runOnUiThread(() -> 
-                                    callback.onError("Ошибка обработки ответа: " + e.getMessage())
-                                );
-                            } else {
-                                callback.onError("Ошибка обработки ответа: " + e.getMessage());
-                            }
+                            safeRunOnUiThread(() -> callback.onError("Ошибка обработки ответа: " + e.getMessage()));
                         }
                     }
                 });
@@ -928,20 +888,103 @@ public class ApiService {
             } catch (Exception e) {
                 Log.e("ApiService", "Unexpected error while fetching anime bookmark", e);
                 // Вызываем колбэк в главном потоке
-                if (context instanceof android.app.Activity) {
-                    ((android.app.Activity) context).runOnUiThread(() -> 
-                        callback.onError("Неожиданная ошибка: " + e.getMessage())
-                    );
-                } else {
-                    callback.onError("Неожиданная ошибка: " + e.getMessage());
-                }
+                safeRunOnUiThread(() -> callback.onError("Неожиданная ошибка: " + e.getMessage()));
             }
         });
+    }
+
+    /**
+     * Получает список закладок пользователя
+     * @param callback Колбэк для результата операции
+     */
+    public void fetchBookmarksList(BookmarksListCallback callback) {
+        Log.d("ApiService", "Fetching bookmarks list");
+        
+        safeExecute(() -> {
+            try {
+                String apiUrl = "https://api.cdnlibs.org/api/bookmarks?page=1&sort_by=name&sort_type=desc&status=21&user_id=9439321";
+                Request request = buildApiRequest(apiUrl).build();
+                
+                httpClient.newCall(request).enqueue(new Callback() {
+                    @Override
+                    public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                        Log.e("ApiService", "Bookmarks list request failed", e);
+                        // Вызываем колбэк в главном потоке
+                        safeRunOnUiThread(() -> callback.onError("Ошибка сети: " + e.getMessage()));
+                    }
+                    
+                    @Override
+                    public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                        try (response) {
+                            if (response.isSuccessful()) {
+                                String responseBody = response.body() != null ? response.body().string() : "";
+                                Log.d("ApiService", "Bookmarks list response: " + responseBody);
+                                
+                                BookmarksListResponse bookmarksResponse = gson.fromJson(responseBody, BookmarksListResponse.class);
+                                if (bookmarksResponse != null) {
+                                    // Вызываем колбэк в главном потоке
+                                    safeRunOnUiThread(() -> callback.onBookmarksReceived(bookmarksResponse));
+                                } else {
+                                    // Вызываем колбэк в главном потоке
+                                    safeRunOnUiThread(() -> callback.onError("Неверный формат ответа закладок"));
+                                }
+                            } else {
+                                String errorBody = response.body() != null ? response.body().string() : "";
+                                Log.e("ApiService", "Failed to fetch bookmarks list. Code: " + response.code() + ", Body: " + errorBody);
+                                // Вызываем колбэк в главном потоке
+                                safeRunOnUiThread(() -> callback.onError("Ошибка при получении закладок: " + response.code()));
+                            }
+                        } catch (Exception e) {
+                            Log.e("ApiService", "Error processing bookmarks list response", e);
+                            // Вызываем колбэк в главном потоке
+                            safeRunOnUiThread(() -> callback.onError("Ошибка обработки ответа: " + e.getMessage()));
+                        }
+                    }
+                });
+                
+            } catch (Exception e) {
+                Log.e("ApiService", "Unexpected error while fetching bookmarks list", e);
+                // Вызываем колбэк в главном потоке
+                safeRunOnUiThread(() -> callback.onError("Неожиданная ошибка: " + e.getMessage()));
+            }
+        });
+    }
+
+    /**
+     * Безопасно вызывает колбэк в главном потоке
+     */
+    private void safeRunOnUiThread(Runnable runnable) {
+        try {
+            if (context instanceof android.app.Activity) {
+                ((android.app.Activity) context).runOnUiThread(runnable);
+            } else {
+                runnable.run();
+            }
+        } catch (Exception e) {
+            Log.e("ApiService", "Error calling UI thread callback", e);
+            // Fallback - вызываем в текущем потоке
+            try {
+                runnable.run();
+            } catch (Exception ex) {
+                Log.e("ApiService", "Error in fallback callback", ex);
+            }
+        }
     }
 
     public void shutdown() {
         if (executor != null && !executor.isShutdown()) {
             executor.shutdown();
+            try {
+                // Ждем завершения текущих задач максимум 2 секунды
+                if (!executor.awaitTermination(2, java.util.concurrent.TimeUnit.SECONDS)) {
+                    Log.w("ApiService", "Executor did not terminate gracefully, forcing shutdown");
+                    executor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                Log.e("ApiService", "Interrupted while waiting for executor termination", e);
+                executor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
         }
         if (databaseManager != null) {
             databaseManager.shutdown();

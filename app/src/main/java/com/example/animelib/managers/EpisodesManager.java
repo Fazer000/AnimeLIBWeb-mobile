@@ -405,7 +405,7 @@ public class EpisodesManager {
         apiService.fetchEpisodesList(animeId, new ApiService.EpisodesCallback() {
             @Override
             public void onEpisodesReceived(EpisodesListResponse response) {
-                ((android.app.Activity) context).runOnUiThread(() -> {
+                safeRunOnUiThread(() -> {
                     if (response != null && response.getData() != null) {
                         episodes.clear();
                         episodes.addAll(response.getData());
@@ -425,7 +425,7 @@ public class EpisodesManager {
 
             @Override
             public void onError(String error) {
-                ((android.app.Activity) context).runOnUiThread(() -> {
+                safeRunOnUiThread(() -> {
                     Log.e(TAG, "Error loading episodes: " + error);
 
                     if (dataCallback != null) {
@@ -452,7 +452,7 @@ public class EpisodesManager {
             bookmarkManager.fetchAnimeBookmark(mediaSlug, new BookmarkManager.AnimeBookmarkCallback() {
                 @Override
                 public void onBookmarkReceived(com.example.animelib.models.AnimeBookmarkResponse response) {
-                    ((android.app.Activity) context).runOnUiThread(() -> {
+                    safeRunOnUiThread(() -> {
                         if (response != null && response.getData() != null) {
                             animeBookmark = response.getData();
                             Log.d(TAG, "Anime bookmark loaded: episode " + animeBookmark.getItemId() + 
@@ -549,15 +549,10 @@ public class EpisodesManager {
         this.currentEpisode = episode;
         
         // Обновляем UI на главном потоке
-        if (context instanceof android.app.Activity) {
-            ((android.app.Activity) context).runOnUiThread(() -> {
+        safeRunOnUiThread(() -> {
                 updateEpisodesRecyclerView();
                 updateEpisodeNavigationButtonsVisibility();
             });
-        } else {
-            updateEpisodesRecyclerView();
-            updateEpisodeNavigationButtonsVisibility();
-        }
     }
 
     /**
@@ -718,6 +713,27 @@ public class EpisodesManager {
     }
 
     /**
+     * Безопасно вызывает код в главном потоке
+     */
+    private void safeRunOnUiThread(Runnable runnable) {
+        try {
+            if (context instanceof android.app.Activity) {
+                ((android.app.Activity) context).runOnUiThread(runnable);
+            } else {
+                runnable.run();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error calling UI thread", e);
+            // Fallback - вызываем в текущем потоке
+            try {
+                runnable.run();
+            } catch (Exception ex) {
+                Log.e(TAG, "Error in fallback callback", ex);
+            }
+        }
+    }
+
+    /**
      * Очистка ресурсов
      */
     public void cleanup() {
@@ -727,5 +743,10 @@ public class EpisodesManager {
         visibilityCallback = null;
         dataCallback = null;
         playerControlsCallback = null;
+        
+        // Очищаем BookmarkManager
+        if (bookmarkManager != null) {
+            bookmarkManager.cleanup();
+        }
     }
 }

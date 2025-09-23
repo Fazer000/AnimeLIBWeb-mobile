@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:gravity="center_vertical"
+    android:foreground="?attr/selectableItemBackground"
+    android:orientation="horizontal"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Обложка аниме -->
+    <androidx.cardview.widget.CardView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="12dp"
+        android:layout_marginVertical="12dp"
+        android:layout_marginStart="12dp"
+        app:cardCornerRadius="10dp"
+        app:cardElevation="2dp">
+        <ImageView
+            android:id="@+id/anime_cover"
+            android:layout_width="60dp"
+            android:layout_height="80dp"
+            android:scaleType="centerCrop"
+            android:background="@drawable/placeholder_image" />
+    </androidx.cardview.widget.CardView>
+
+    <!-- Информация о закладке -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginEnd="12dp"
+        android:orientation="vertical">
+
+        <!-- Название аниме -->
+        <TextView
+            android:id="@+id/anime_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Название аниме"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="?attr/primaryTextColor"
+            android:maxLines="2"
+            android:ellipsize="end" />
+
+        <!-- Эпизод -->
+        <TextView
+            android:id="@+id/episode_info"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Эпизод 1"
+            android:textSize="12sp"
+            android:textColor="?attr/accentTextColor"
+            android:layout_marginTop="4dp" />
+
+        <!-- Прогресс -->
+        <TextView
+            android:id="@+id/progress_info"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Прогресс: 12:34"
+            android:textSize="12sp"
+            android:textColor="?attr/accentTextColor"
+            android:layout_marginTop="2dp" />
+
+    </LinearLayout>
+
+</LinearLayout>

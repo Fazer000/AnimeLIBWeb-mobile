@@ -7,20 +7,18 @@
     android:background="@drawable/bs_background"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <androidx.cardview.widget.CardView
+    <View
+        android:layout_width="36dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:background="@drawable/bottom_sheet_handle" />
+
+    <View
         android:layout_width="match_parent"
-        android:layout_height="30dp"
-        app:cardBackgroundColor="?attr/primaryColor"
-        app:cardCornerRadius="20dp"
-        app:cardElevation="8dp">
-        <View
-            android:layout_width="36dp"
-            android:layout_height="4dp"
-            android:layout_gravity="center"
-            android:background="@drawable/bottom_sheet_handle"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="8dp"/>
-    </androidx.cardview.widget.CardView>
+        android:layout_height="0.5dp"
+        android:background="?attr/lineColor" />
 
     <ScrollView
         android:layout_width="match_parent"

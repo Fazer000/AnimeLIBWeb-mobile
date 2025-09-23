@@ -32,14 +32,14 @@
 
         <!-- Status Bar -->
         <item name="android:statusBarColor">@color/lt_header_color</item>
-        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightStatusBar">true</item>
 
         <!-- Global font family -->
         <item name="android:fontFamily">@font/open_sans</item>
         <item name="fontFamily">@font/open_sans</item>
         <item name="android:textColor">@color/dt_primary_text_color</item>
 
-        <item name="android:fitsSystemWindows">true</item>
+<!--        <item name="android:fitsSystemWindows">true</item>-->
     </style>
 
     <style name="SplashScreenTheme" parent="Theme.SplashScreen">

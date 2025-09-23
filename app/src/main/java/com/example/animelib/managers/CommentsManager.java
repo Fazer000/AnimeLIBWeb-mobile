@@ -33,7 +33,9 @@ import java.util.List;
  * Обеспечивает загрузку, отображение и управление комментариями
  */
 public class CommentsManager {
-    
+
+    private static final String TAG = "CommentsManager";
+
     // UI компоненты
     private View commentsPanel;
     private ImageButton closeCommentsButton;
@@ -381,8 +383,7 @@ public class CommentsManager {
             @Override
             public void onCommentsReceived(CommentsResponse response) {
                 // Выполняем обновление UI в главном потоке
-                if (context instanceof android.app.Activity) {
-                    ((android.app.Activity) context).runOnUiThread(() -> {
+                safeRunOnUiThread(() -> {
                         if (commentsLoadingOverlay != null) {
                             commentsLoadingOverlay.setVisibility(View.GONE);
                         }
@@ -401,7 +402,7 @@ public class CommentsManager {
                                     hasComments = true;
                                 }
                             }
-                            
+
                             // Показываем/скрываем текст пустого состояния
                             if (emptyCommentsText != null) {
                                 emptyCommentsText.setVisibility(hasComments ? View.GONE : View.VISIBLE);
@@ -428,7 +429,6 @@ public class CommentsManager {
                             }
                         }
                     });
-                }
             }
                 
             @Override
@@ -444,11 +444,9 @@ public class CommentsManager {
                 }
                 
                 // Показать Toast в UI потоке
-                if (context instanceof android.app.Activity) {
-                    ((android.app.Activity) context).runOnUiThread(() -> {
+                safeRunOnUiThread(() -> {
                         Toast.makeText(context, error, Toast.LENGTH_SHORT).show();
                     });
-                }
                 
                 // Уведомить об ошибке
                 if (dataCallback != null) {
@@ -457,7 +455,7 @@ public class CommentsManager {
             }
             });
     }
-    
+
     /**
      * Сбросить состояние комментариев при смене эпизода
      * @param reloadIfVisible Перезагрузить если панель видна
@@ -578,10 +576,31 @@ public class CommentsManager {
             showCommentsPanel();
         }
     }
-    
+
     /**
      * Очистить ресурсы менеджера комментариев
      */
+    /**
+     * Безопасно вызывает код в главном потоке
+     */
+    private void safeRunOnUiThread(Runnable runnable) {
+        try {
+            if (context instanceof android.app.Activity) {
+                ((android.app.Activity) context).runOnUiThread(runnable);
+            } else {
+                runnable.run();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error calling UI thread", e);
+            // Fallback - вызываем в текущем потоке
+            try {
+                runnable.run();
+            } catch (Exception ex) {
+                Log.e(TAG, "Error in fallback callback", ex);
+            }
+        }
+    }
+
     public void cleanup() {
         if (commentsAdapter != null) {
             commentsAdapter.clearAll();
