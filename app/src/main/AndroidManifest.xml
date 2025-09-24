@@ -53,6 +53,13 @@
             android:launchMode="singleTop"
             android:theme="@style/Theme.AnimeLIB.VideoPlayer" />
 
+        <activity
+            android:name="com.example.animelib.UrlInputActivity"
+            android:exported="false"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.AnimeLIB" />
+
         <meta-data
             android:name="preloaded_fonts"
             android:resource="@array/preloaded_fonts" />

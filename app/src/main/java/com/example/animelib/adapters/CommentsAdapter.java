@@ -136,16 +136,16 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
                 if (parentComment != null && parentComment.getUser() != null) {
                     String parentUsername = parentComment.getUser().getUsername();
                     holder.replyToView.setText(parentUsername);
-                    holder.replyToView.setVisibility(View.VISIBLE);
+                    holder.llReply.setVisibility(View.VISIBLE);
                 } else {
-                    holder.replyToView.setVisibility(View.GONE);
+                    holder.llReply.setVisibility(View.GONE);
                 }
             } else {
-                holder.replyToView.setVisibility(View.GONE);
+                holder.llReply.setVisibility(View.GONE);
             }
         } else {
-            // Это корневой комментарий - скрываем replyToView
-            holder.replyToView.setVisibility(View.GONE);
+            // Это корневой комментарий - скрываем llReply
+            holder.llReply.setVisibility(View.GONE);
         }
         String commentText = item.getComment() != null ? item.getComment() : "";
 
@@ -237,6 +237,7 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
         LinearLayout spoilerContainer;
         TextView dateView;
         TextView votesView;
+        LinearLayout llReply;
 
         public CommentVH(@NonNull View itemView) {
             super(itemView);
@@ -247,6 +248,7 @@ public class CommentsAdapter extends RecyclerView.Adapter<CommentsAdapter.Commen
             spoilerContainer = itemView.findViewById(R.id.spoilerContainer);
             dateView = itemView.findViewById(R.id.dateView);
             votesView = itemView.findViewById(R.id.votesView);
+            llReply = itemView.findViewById(R.id.llReply);
         }
     }
 }

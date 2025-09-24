@@ -15,4 +15,6 @@
     <attr name="primaryTextColor" format="color" />
     <attr name="secondaryTextColor" format="color" />
     <attr name="accentTextColor" format="color" />
+
+    <attr name="logoDrawable" format="reference" />
 </resources>

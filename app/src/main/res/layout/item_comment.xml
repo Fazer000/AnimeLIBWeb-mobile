@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -36,16 +37,32 @@
             android:maxLines="1"
             android:ellipsize="end"/>
 
-        <TextView
-            android:id="@+id/replyToView"
+        <LinearLayout
+            android:id="@+id/llReply"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="?attr/accentTextColor"
-            android:textSize="12sp"
-            android:textStyle="italic"
-            android:maxLines="1"
-            android:ellipsize="end"
-            android:visibility="gone"/>
+            android:orientation="horizontal"
+            android:visibility="gone"
+            tools:ignore="UseCompoundDrawables">
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_down_right_arrow"
+                app:tint="?attr/accentTextColor"
+                android:paddingBottom="2dp"
+                android:layout_marginEnd="4dp" />
+
+            <TextView
+                android:id="@+id/replyToView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="?attr/accentTextColor"
+                android:textSize="12sp"
+                android:textStyle="italic"
+                android:maxLines="1"
+                android:text="Fazer"
+                android:ellipsize="end"/>
+        </LinearLayout>
 
         <TextView
             android:id="@+id/commentHtmlView"

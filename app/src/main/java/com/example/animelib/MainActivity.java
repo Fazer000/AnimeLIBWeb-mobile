@@ -32,7 +32,6 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.media3.common.util.UnstableApi;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
-import com.example.animelib.ui.UrlInputDialog;
 import com.example.animelib.ui.PlayerButtonHandler;
 import com.example.animelib.util.ThemeUtils;
 import com.example.animelib.viewmodel.AppSettingsViewModel;
@@ -67,6 +66,7 @@ public class MainActivity extends AppCompatActivity {
     private String currentDomain = null;
     private long lastBackPressTime = 0;
     private static final int BACK_PRESS_INTERVAL = 2000; // 2 секунды
+    private static final int REQUEST_URL_INPUT = 1001;
     private OkHttpClient httpClient;
     private Executor executor;
     private Gson gson;
@@ -129,7 +129,7 @@ public class MainActivity extends AppCompatActivity {
         // Load and apply theme
         loadAndApplyTheme();
 
-        showBookmarksPopupIfNeeded();
+//        showBookmarksPopupIfNeeded();
 
         setupWebView();
         setupRefreshLayout();
@@ -174,8 +174,8 @@ public class MainActivity extends AppCompatActivity {
                 // URL найден в базе данных, загружаем его
                 loadUrl(settings.getSiteUrl());
             } else {
-                // URL не найден, показываем диалог для ввода
-                showUrlInputDialog();
+                // URL не найден, показываем активность для ввода
+                showUrlInputActivity();
             }
         });
     }
@@ -197,12 +197,9 @@ public class MainActivity extends AppCompatActivity {
         checkApiForToast();
     }
 
-    private void showUrlInputDialog() {
-        UrlInputDialog dialog = new UrlInputDialog(this, url -> {
-            viewModel.saveSettings(url);
-            loadUrl(url);
-        });
-        dialog.show();
+    private void showUrlInputActivity() {
+        Intent intent = new Intent(this, UrlInputActivity.class);
+        startActivityForResult(intent, REQUEST_URL_INPUT);
     }
 
     private void checkApiForToast() {
@@ -727,25 +724,48 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * Показывает popup с закладками при запуске приложения (один раз за сессию)
-     */
-    private void showBookmarksPopupIfNeeded() {
-            apiService.fetchBookmarksList(new ApiService.BookmarksListCallback() {
-                @Override
-                public void onBookmarksReceived(BookmarksListResponse response) {
-                    runOnUiThread(() -> {
-                        currentBookmarksDialog = new BookmarksPopupDialog(MainActivity.this, response, 10000);
-                        currentBookmarksDialog.show();
-                        currentBookmarksDialog.setOnDismissListener(dialog -> currentBookmarksDialog = null);
-                    });
-                }
+//    /**
+//     * Показывает popup с закладками при запуске приложения (один раз за сессию)
+//     */
+//    private void showBookmarksPopupIfNeeded() {
+//            apiService.fetchBookmarksList(new ApiService.BookmarksListCallback() {
+//                @Override
+//                public void onBookmarksReceived(BookmarksListResponse response) {
+//                    runOnUiThread(() -> {
+//                        currentBookmarksDialog = new BookmarksPopupDialog(MainActivity.this, response, 10000);
+//                        currentBookmarksDialog.show();
+//                        currentBookmarksDialog.setOnDismissListener(dialog -> currentBookmarksDialog = null);
+//                    });
+//                }
+//
+//                @Override
+//                public void onError(String error) {
+//                    Log.e("MainActivity", "Failed to load bookmarks: " + error);
+//                }
+//            });
+//    }
 
-                @Override
-                public void onError(String error) {
-                    Log.e("MainActivity", "Failed to load bookmarks: " + error);
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        
+        if (requestCode == REQUEST_URL_INPUT) {
+            if (resultCode == RESULT_OK && data != null) {
+                String siteUrl = data.getStringExtra("site_url");
+                if (siteUrl != null && !siteUrl.isEmpty()) {
+                    // Сохраняем URL в ViewModel
+                    viewModel.saveSettings(siteUrl);
+                    // Загружаем URL
+                    loadUrl(siteUrl);
+                    Log.d("MainActivity", "URL received from UrlInputActivity: " + siteUrl);
                 }
-            });
+            } else {
+                // Пользователь отменил ввод, показываем сообщение
+                Toast.makeText(this, "Для работы приложения необходимо указать URL сайта", Toast.LENGTH_LONG).show();
+                // Показываем активность снова
+                showUrlInputActivity();
+            }
+        }
     }
 
     @Override
