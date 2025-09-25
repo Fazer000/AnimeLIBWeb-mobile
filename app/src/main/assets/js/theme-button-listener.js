@@ -9,13 +9,13 @@ try {
 
     document.addEventListener('click', function (e) {
       // Используем closest для поиска родительского элемента с классом ue_ui
-      const themeButton = e.target.closest('.ub_ug');
+//      const themeButton = e.target.closest('.ub_ug');
 
       // Проверяем, содержит ли кнопка span с текстом "Тема"
       const themeSpan = themeButton.querySelector('span');
       if (themeSpan && themeSpan.textContent.trim() === 'Тема') {
         console.log('[AnimeLIB] Theme button clicked!');
-        console.log('Button details:', themeButton)
+//        console.log('Button details:', themeButton)
         e.preventDefault();
         e.stopPropagation();
         AndroidInterface.onThemeButtonClicked();
