@@ -7,8 +7,12 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 
+import androidx.annotation.OptIn;
 import androidx.media3.common.Player;
+import androidx.media3.common.util.UnstableApi;
 import androidx.media3.ui.PlayerView;
+
+import java.util.Locale;
 
 /**
  * Менеджер для управления жестами плеера
@@ -34,9 +38,13 @@ public class GesturesManager {
     private float swipeStartY = 0f;
     private int swipeTouchSlopPx = 0;
     
-    // Переменные для hold-to-speed
+    // Переменные для hold-to-speed с регулировкой
     private long holdStartTime = 0L;
     private Runnable holdToSpeedRunnable = null;
+    private float currentSpeedMultiplier = 1.0f;
+    private boolean isSpeedAdjustmentMode = false;
+    private float speedAdjustmentStartX = 0f;
+    private float speedAdjustmentSensitivity = 0.5f; // Чувствительность регулировки скорости
     
     // Переменные для свайпа (как в оригинале)
     private float swipeAccumulatedDx = 0f;
@@ -114,6 +122,7 @@ public class GesturesManager {
     /**
      * Настройка свайпа для перемотки (оригинальная реализация)
      */
+    @OptIn(markerClass = UnstableApi.class)
     @SuppressLint({"ClickableViewAccessibility", "SetTextI18n"})
     private void setupSwipeSeek() {
         if (playerView == null) return;
@@ -131,24 +140,21 @@ public class GesturesManager {
                     // Принудительно сбрасываем все состояния жестов
                     if (isHoldToSpeed && player != null) {
                         Log.d(TAG, "Force reset hold-to-speed on new touch");
-                        isHoldToSpeed = false;
-                        player.setPlaybackSpeed(1.0f);
-                        if (holdSpeedToast != null) {
-                            holdSpeedToast.setVisibility(View.GONE);
-                        }
-                        if (gestureCallback != null) {
-                            gestureCallback.onSpeedChange(1.0f);
-                        }
+                        resetHoldToSpeed();
                     }
                     
-                    // Инициализируем переменные для жестов
-                    isSwipingSeek = false;
-                    swipeAccumulatedDx = 0f;
-                    basePositionMs = player.getCurrentPosition();
-                    lastSwipeX = event.getX();
-                    swipeStartX = event.getX();
-                    swipeStartY = event.getY();
-                    holdStartTime = System.currentTimeMillis();
+                     // Инициализируем переменные для жестов
+                     isSwipingSeek = false;
+                     isSpeedAdjustmentMode = false;
+                     swipeAccumulatedDx = 0f;
+                     assert player != null;
+                     basePositionMs = player.getCurrentPosition();
+                     lastSwipeX = event.getX();
+                     swipeStartX = event.getX();
+                     swipeStartY = event.getY();
+                     speedAdjustmentStartX = event.getX();
+                     holdStartTime = System.currentTimeMillis();
+                     currentSpeedMultiplier = 1.0f; // Сбрасываем скорость на 1.0x при новом касании
                     
                     // Запускаем таймер для hold-to-speed
                     if (holdToSpeedRunnable != null) {
@@ -157,23 +163,7 @@ public class GesturesManager {
                     holdToSpeedRunnable = () -> {
                         if (!isSwipingSeek && !isHoldToSpeed && player != null) {
                             Log.d(TAG, "Hold to speed activated");
-                            isHoldToSpeed = true;
-                            
-                            // Set playback speed to 2x
-                            float speedMultiplier = 2.0f;
-                            player.setPlaybackSpeed(speedMultiplier);
-                            
-                            // Show speed toast
-                            if (holdSpeedToast != null) {
-                                holdSpeedToast.setVisibility(View.VISIBLE);
-                                holdSpeedToast.setAlpha(0f);
-                                holdSpeedToast.animate().alpha(1f).setDuration(120).start();
-                            }
-                            
-                            // Notify callback about speed change
-                            if (gestureCallback != null) {
-                                gestureCallback.onSpeedChange(speedMultiplier);
-                            }
+                            activateHoldToSpeed();
                         }
                     };
                     v.postDelayed(holdToSpeedRunnable, 500); // 500ms для активации hold-to-speed
@@ -199,8 +189,11 @@ public class GesturesManager {
                         holdToSpeedRunnable = null;
                     }
 
-                    // Don't interfere with hold-to-speed если он уже активен
-                    if (isHoldToSpeed) return true;
+                    // Обработка регулировки скорости при активном hold-to-speed
+                    if (isHoldToSpeed) {
+                        handleSpeedAdjustment(currentX);
+                        return true;
+                    }
 
                     if (!isSwipingSeek) {
                         if (passedDeadZone) {
@@ -279,28 +272,7 @@ public class GesturesManager {
                     // Handle hold-to-speed release
                     if (isHoldToSpeed) {
                         Log.d(TAG, "Hold to speed deactivated");
-                        isHoldToSpeed = false;
-                        
-                        // Reset to normal speed
-                        if (player != null) {
-                            player.setPlaybackSpeed(1.0f);
-                        }
-                        
-                        // Hide speed toast
-                        if (holdSpeedToast != null) {
-                            holdSpeedToast.animate().alpha(0f).setDuration(120)
-                                    .withEndAction(() -> holdSpeedToast.setVisibility(View.GONE))
-                                    .start();
-                        }
-                        
-                        // Notify callback about speed reset
-                        if (gestureCallback != null) {
-                            gestureCallback.onSpeedChange(1.0f);
-                        }
-                        
-                        if (gestureCallback != null && player != null) {
-                            gestureCallback.updatePlayLoadingIndicator(player.getPlaybackState());
-                        }
+                        resetHoldToSpeed();
                         
                         // Показываем контролы плеера после завершения ускорения
                         if (playerView != null) {
@@ -326,6 +298,121 @@ public class GesturesManager {
         });
     }
     
+    /**
+     * Активирует режим ускорения с начальной скоростью 2x
+     */
+    private void activateHoldToSpeed() {
+        isHoldToSpeed = true;
+        currentSpeedMultiplier = 2.0f;
+        
+        // Set playback speed to 2x
+        if (player != null) {
+            player.setPlaybackSpeed(currentSpeedMultiplier);
+        }
+        
+        // Show speed toast
+        if (holdSpeedToast != null) {
+            holdSpeedToast.setVisibility(View.VISIBLE);
+            holdSpeedToast.setAlpha(0f);
+            holdSpeedToast.animate().alpha(1f).setDuration(120).start();
+        }
+        
+        // Обновляем текст в toast
+        updateSpeedToast();
+        
+        // Notify callback about speed change
+        if (gestureCallback != null) {
+            gestureCallback.onSpeedChange(currentSpeedMultiplier);
+        }
+        
+        Log.d(TAG, "Hold to speed activated with speed: " + currentSpeedMultiplier);
+    }
+    
+    /**
+     * Сбрасывает режим ускорения
+     */
+    private void resetHoldToSpeed() {
+        isHoldToSpeed = false;
+        isSpeedAdjustmentMode = false;
+        currentSpeedMultiplier = 1.0f;
+        
+        // Reset to normal speed
+        if (player != null) {
+            player.setPlaybackSpeed(1.0f);
+        }
+        
+        // Hide speed toast
+        if (holdSpeedToast != null) {
+            holdSpeedToast.animate().alpha(0f).setDuration(120)
+                    .withEndAction(() -> holdSpeedToast.setVisibility(View.GONE))
+                    .start();
+        }
+        
+        // Notify callback about speed reset
+        if (gestureCallback != null) {
+            gestureCallback.onSpeedChange(1.0f);
+        }
+        
+        if (gestureCallback != null && player != null) {
+            gestureCallback.updatePlayLoadingIndicator(player.getPlaybackState());
+        }
+        
+        Log.d(TAG, "Hold to speed reset to 1.0x");
+    }
+    
+    /**
+     * Обрабатывает регулировку скорости движением влево/вправо
+     */
+    private void handleSpeedAdjustment(float currentX) {
+        if (!isSpeedAdjustmentMode) {
+            // Активируем режим регулировки скорости при первом движении
+            isSpeedAdjustmentMode = true;
+            speedAdjustmentStartX = currentX;
+            Log.d(TAG, "Speed adjustment mode activated");
+            return;
+        }
+        
+        // Вычисляем изменение позиции
+        float deltaX = currentX - speedAdjustmentStartX;
+        
+        // Вычисляем новую скорость на основе движения
+        // Движение вправо = увеличение скорости, влево = уменьшение
+        float speedChange = deltaX * speedAdjustmentSensitivity / 100f; // Чувствительность
+        float newSpeed = Math.max(0.25f, Math.min(4.0f, 2.0f + speedChange)); // Ограничиваем от 0.25x до 4x
+        
+        // Обновляем скорость только если она изменилась значительно
+        if (Math.abs(newSpeed - currentSpeedMultiplier) > 0.1f) {
+            currentSpeedMultiplier = newSpeed;
+            
+            // Применяем новую скорость
+            if (player != null) {
+                player.setPlaybackSpeed(currentSpeedMultiplier);
+            }
+            
+            // Обновляем toast с новой скоростью
+            updateSpeedToast();
+            
+            // Notify callback about speed change
+            if (gestureCallback != null) {
+                gestureCallback.onSpeedChange(currentSpeedMultiplier);
+            }
+            
+            Log.d(TAG, "Speed adjusted to: " + currentSpeedMultiplier + "x (deltaX: " + deltaX + ")");
+        }
+    }
+    
+    /**
+     * Обновляет отображение скорости в toast
+     */
+    private void updateSpeedToast() {
+        if (holdSpeedToast != null && holdSpeedToast instanceof android.widget.TextView) {
+            @SuppressLint("DefaultLocale")
+            String speedText = String.format(Locale.US, "%.1f", currentSpeedMultiplier) + "x";
+
+            ((android.widget.TextView) holdSpeedToast).setText(speedText);
+        }
+    }
+    
     // handleSeekSwipe logic is now integrated into setupSwipeSeek
     
     // setupHoldToSpeed logic is now integrated into setupCombinedGestures
@@ -338,14 +425,7 @@ public class GesturesManager {
         // Принудительно сбрасываем hold-to-speed при смене плеера
         if (isHoldToSpeed && this.player != null) {
             Log.d(TAG, "Resetting hold-to-speed on player update");
-            isHoldToSpeed = false;
-            this.player.setPlaybackSpeed(1.0f);
-            if (holdSpeedToast != null) {
-                holdSpeedToast.setVisibility(View.GONE);
-            }
-            if (gestureCallback != null) {
-                gestureCallback.onSpeedChange(1.0f);
-            }
+            resetHoldToSpeed();
         }
         
         this.player = player;
@@ -360,14 +440,7 @@ public class GesturesManager {
         // Принудительно сбрасываем hold-to-speed при смене PlayerView
         if (isHoldToSpeed && player != null) {
             Log.d(TAG, "Resetting hold-to-speed on PlayerView update");
-            isHoldToSpeed = false;
-            player.setPlaybackSpeed(1.0f);
-            if (holdSpeedToast != null) {
-                holdSpeedToast.setVisibility(View.GONE);
-            }
-            if (gestureCallback != null) {
-                gestureCallback.onSpeedChange(1.0f);
-            }
+            resetHoldToSpeed();
         }
         
         this.playerView = playerView;
@@ -430,16 +503,7 @@ public class GesturesManager {
         // Принудительно сбрасываем hold-to-speed
         if (isHoldToSpeed && player != null) {
             Log.d(TAG, "Force stopping hold-to-speed");
-            isHoldToSpeed = false;
-            player.setPlaybackSpeed(1.0f);
-            
-            if (holdSpeedToast != null) {
-                holdSpeedToast.setVisibility(View.GONE);
-            }
-            
-            if (gestureCallback != null) {
-                gestureCallback.onSpeedChange(1.0f);
-            }
+            resetHoldToSpeed();
         }
         
         // Re-setup gestures to restore normal functionality
@@ -453,11 +517,7 @@ public class GesturesManager {
         // Принудительно сбрасываем hold-to-speed
         if (isHoldToSpeed && player != null) {
             Log.d(TAG, "Force resetting hold-to-speed on UI hide");
-            isHoldToSpeed = false;
-            player.setPlaybackSpeed(1.0f);
-            if (gestureCallback != null) {
-                gestureCallback.onSpeedChange(1.0f);
-            }
+            resetHoldToSpeed();
         }
         
         if (holdSpeedToast != null) {

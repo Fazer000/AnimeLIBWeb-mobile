@@ -67,24 +67,40 @@
             </androidx.cardview.widget.CardView>
 
 
+<!--            <com.google.android.material.button.MaterialButton-->
+<!--                android:id="@+id/saveButton"-->
+<!--                android:layout_width="match_parent"-->
+<!--                android:layout_height="0dp"-->
+<!--                android:layout_gravity="bottom"-->
+<!--                android:layout_weight="1"-->
+<!--                android:text="Сохранить"-->
+<!--                android:background="@drawable/outlined_button_background"-->
+<!--                app:backgroundTint="?attr/secondaryColor"-->
+<!--                android:textColor="?attr/secondaryTextColor"-->
+<!--                app:rippleColor="@color/dt_line_color"-->
+<!--                android:textSize="16sp"-->
+<!--                app:icon="@drawable/ic_check"-->
+<!--                app:iconGravity="textStart"-->
+<!--                app:iconPadding="8dp"-->
+<!--                style="@style/Widget.Material3.Button" />-->
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/saveButton"
                 android:layout_width="match_parent"
-                android:layout_height="55dp"
-                android:layout_gravity="bottom"
-                android:layout_weight="1"
+                android:layout_height="match_parent"
+                android:textAllCaps="false"
                 android:text="Сохранить"
+                android:textColor="?attr/secondaryColor"
+                android:textSize="14dp"
+                app:rippleColor="@color/dt_line_color"
+                app:icon="@drawable/ic_check"
+                app:iconTint="?attr/secondaryColor"
+                app:iconGravity="textStart"
+                app:iconSize="19dp"
+                style="@style/Widget.Material3.Button.OutlinedButton"
                 app:strokeColor="?attr/secondaryColor"
                 app:strokeWidth="1dp"
-                android:textColor="?attr/secondaryTextColor"
-                android:textSize="16sp"
-                android:backgroundTint="@android:color/transparent"
-                app:cornerRadius="12dp"
-                app:icon="@drawable/ic_check"
-                app:iconGravity="textStart"
-                app:elevation="20dp"
-                app:iconPadding="8dp"
-                style="@style/Widget.Material3.Button" />
+                app:cornerRadius="12dp" />
 
         </LinearLayout>
     </androidx.cardview.widget.CardView>

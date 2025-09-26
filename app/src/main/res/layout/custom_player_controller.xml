@@ -226,8 +226,8 @@
             app:played_color="?attr/secondaryColor"
             app:scrubber_color="?attr/primaryColor"
             app:bar_height="2dp"
-            app:buffered_color="?attr/alphaBorderColor"
-            app:unplayed_color="?attr/alphaPrimaryColor"
+            app:buffered_color="@color/lt_alpha_border_color"
+            app:unplayed_color="@color/lt_alpha_primary_color"
             app:scrubber_drawable="@drawable/custom_scrubber"
             app:scrubber_enabled_size="16dp"
             app:scrubber_disabled_size="0dp" />
@@ -283,27 +283,28 @@
                 android:id="@+id/skipForwardButton"
                 android:layout_width="36dp"
                 android:layout_height="36dp"
+                android:padding="8dp"
                 android:layout_marginEnd="8dp"
                 android:background="@android:color/transparent"
                 android:foreground="@drawable/ripple_circle"
+                app:tint="@color/white_color"
                 android:src="@drawable/ic_skip"
                 android:scaleType="fitCenter"
-                android:rotation="180"
-                android:contentDescription="Skip Forward 1:25"
-                android:paddingTop="2dp"
-                android:paddingBottom="6dp" />
+                android:contentDescription="Skip Forward 1:25"/>
 
             <ImageButton
                 android:id="@+id/bookmarkButton"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
                 android:layout_marginEnd="8dp"
+                android:paddingTop="5dp"
+                android:paddingHorizontal="6dp"
+                android:paddingBottom="2dp"
                 android:background="@android:color/transparent"
                 android:foreground="@drawable/ripple_circle"
                 android:src="@drawable/ic_bookmark"
                 app:tint="@color/white_color"
                 android:scaleType="fitCenter"
-                android:paddingTop="4dp"
                 android:contentDescription="Bookmark" />
 
             <!-- Comments Button -->
@@ -327,7 +328,7 @@
                 android:layout_marginEnd="8dp"
                 android:background="@android:color/transparent"
                 android:foreground="@drawable/ripple_circle"
-                android:src="@drawable/episodes_ico"
+                android:src="@drawable/ic_episodes"
                 android:scaleType="fitCenter"
                 android:contentDescription="Episodes Menu"
                 android:padding="6dp" />
@@ -341,8 +342,21 @@
                 android:foreground="@drawable/ripple_circle"
                 android:src="@drawable/ic_voice"
                 android:scaleType="fitCenter"
+                android:layout_marginEnd="8dp"
                 android:contentDescription="Players Menu"
                 android:padding="6dp" />
+
+            <ImageButton
+                android:id="@+id/menuToggleFullscreen"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="@android:color/transparent"
+                android:foreground="@drawable/ripple_circle"
+                app:tint="@color/white_color"
+                android:src="@drawable/ic_fullscreen"
+                android:scaleType="fitCenter"
+                android:contentDescription="Players Menu"
+                android:padding="8dp" />
 
         </LinearLayout>
 

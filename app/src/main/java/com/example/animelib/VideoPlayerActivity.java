@@ -17,7 +17,9 @@ import android.util.Rational;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -46,10 +48,12 @@ import com.example.animelib.managers.CommentsManager;
 import com.example.animelib.managers.EpisodesManager;
 import com.example.animelib.managers.PlayersManager;
 import com.example.animelib.managers.GesturesManager;
+import com.example.animelib.managers.TimecodeManager;
 import com.example.animelib.util.ThemeUtils;
 import com.example.animelib.models.EpisodeResponse;
 import com.example.animelib.models.EpisodesListResponse;
 import com.example.animelib.models.KodikResponse;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.tabs.TabLayout;
 
 import java.util.List;
@@ -88,6 +92,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
     private ImageButton ibClosePlayer;
     private ImageButton menuToggleButton;
     private ImageButton settingsButton;
+    private ImageButton menuToggleFullscreen;
     private CardView slidingMenuPanel;
     private View menuLoadingIndicator;
     private View menuLoadingOverlay;
@@ -125,6 +130,9 @@ public class VideoPlayerActivity extends AppCompatActivity {
     
     // Gestures manager
     private GesturesManager gesturesManager;
+    
+    // Timecode manager
+    private TimecodeManager timecodeManager;
 
     // Picture-in-Picture support
     private boolean isInPictureInPictureMode = false;
@@ -143,6 +151,9 @@ public class VideoPlayerActivity extends AppCompatActivity {
 
     // Controller visibility state
     private boolean isControllerVisible = false;
+    
+    // Fullscreen state
+    private boolean isFullscreenMode = false;
 
     // Player data is now managed by PlayersManager
     private KodikResponse currentKodikResponse;
@@ -220,6 +231,9 @@ public class VideoPlayerActivity extends AppCompatActivity {
         
         // Initialize gestures manager
         gesturesManager = new GesturesManager(this);
+        
+        // Initialize timecode manager
+        timecodeManager = new TimecodeManager(this);
 
         // Clear WebView cache to avoid Chromium errors
         try {
@@ -367,6 +381,37 @@ public class VideoPlayerActivity extends AppCompatActivity {
             enterPictureInPictureMode(params);
         } catch (Exception e) {
             Log.e("VideoPlayer", "Failed to enter Picture-in-Picture mode", e);
+        }
+    }
+
+    /**
+     * Переключает режим полноэкранного видео (растягивание по ширине с обрезкой краев)
+     */
+    private void toggleFullscreenMode() {
+        isFullscreenMode = !isFullscreenMode;
+        
+        if (playerView != null) {
+            if (isFullscreenMode) {
+                // Включаем режим обрезки - растягиваем по ширине экрана
+                playerView.setResizeMode(androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM);
+                
+                // Меняем иконку на exit fullscreen
+                if (menuToggleFullscreen != null) {
+                    menuToggleFullscreen.setImageResource(R.drawable.ic_fullscreen_exit);
+                }
+                
+                Log.d("VideoPlayer", "Fullscreen mode enabled - video zoomed to fit width");
+            } else {
+                // Выключаем режим обрезки - показываем видео полностью
+                playerView.setResizeMode(androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT);
+                
+                // Меняем иконку на обычный fullscreen
+                if (menuToggleFullscreen != null) {
+                    menuToggleFullscreen.setImageResource(R.drawable.ic_fullscreen);
+                }
+                
+                Log.d("VideoPlayer", "Fullscreen mode disabled - video fitted to screen");
+            }
         }
     }
 
@@ -563,6 +608,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
         // Player info components
         ibClosePlayer = controllerView.findViewById(R.id.ibClosePlayer);
         settingsButton = controllerView.findViewById(R.id.settingsButton);
+        menuToggleFullscreen = controllerView.findViewById(R.id.menuToggleFullscreen);
         animeTitleView = controllerView.findViewById(R.id.animeTitle);
         currentTeamName = controllerView.findViewById(R.id.currentTeamName);
         currentEpisodeName = controllerView.findViewById(R.id.currentEpisodeName);
@@ -669,6 +715,12 @@ public class VideoPlayerActivity extends AppCompatActivity {
                     .alpha(1.0f)
                     .setDuration(200)
                     .setInterpolator(new android.view.animation.DecelerateInterpolator())
+                    .withStartAction(() -> {
+                        // Уведомляем TimecodeManager что контроллер стал видимым
+                        if (timecodeManager != null) {
+                            timecodeManager.setControllerVisibility(true);
+                        }
+                    })
                     .start();
         } else {
             // Hide controller with fade out
@@ -676,6 +728,12 @@ public class VideoPlayerActivity extends AppCompatActivity {
                     .alpha(0.0f)
                     .setDuration(150)
                     .setInterpolator(new android.view.animation.AccelerateInterpolator())
+                    .withStartAction(() -> {
+                        // Уведомляем TimecodeManager что контроллер стал скрытым
+                        if (timecodeManager != null) {
+                            timecodeManager.setControllerVisibility(false);
+                        }
+                    })
                     .withEndAction(() -> {
                         // Set visibility to GONE after animation completes
                         if (controllerView.getAlpha() == 0.0f) {
@@ -696,6 +754,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
         if (settingsButton != null) settingsButton.setVisibility(visibility);
         if (episodesMenuButton != null) episodesMenuButton.setVisibility(visibility);
         if (menuToggleButton != null) menuToggleButton.setVisibility(visibility);
+        if (menuToggleFullscreen != null) menuToggleFullscreen.setVisibility(visibility);
         
         commentsManager.updateCommentsButtonVisibility(visible);
     }
@@ -739,6 +798,10 @@ public class VideoPlayerActivity extends AppCompatActivity {
         // Control buttons
         if (settingsButton != null) {
             settingsButton.setOnClickListener(v -> showSettingsDialog());
+        }
+        
+        if (menuToggleFullscreen != null) {
+            menuToggleFullscreen.setOnClickListener(v -> toggleFullscreenMode());
         }
         
         if (pipButton != null) {
@@ -1323,6 +1386,10 @@ public class VideoPlayerActivity extends AppCompatActivity {
         
         // Update gestures manager with new player
         gesturesManager.updatePlayer(player);
+        
+        // Initialize timecode manager with UI components
+        MaterialButton skipSegmentButton = findViewById(R.id.skipSegmentButton);
+        timecodeManager.initializeViews(player, playerView, skipSegmentButton);
 
         // Setup all player control buttons
         setupPlayerControlButtons();
@@ -1516,6 +1583,10 @@ public class VideoPlayerActivity extends AppCompatActivity {
 
             Log.d("AnimelibPlayer", "Final video URL: " + videoUrl);
             currentVideoUrl = videoUrl;
+            
+            // Set timecodes from player data
+            timecodeManager.setTimecodes(playerData);
+            
             initializePlayer();
             if (seekToPosition > 0) {
                 player.seekTo(seekToPosition);
@@ -1528,6 +1599,10 @@ public class VideoPlayerActivity extends AppCompatActivity {
 
     private void handleKodikPlayer(EpisodeResponse.PlayerData playerData, long seekToPosition) {
         Log.d("KodikPlayer", "Handling Kodik player");
+        
+        // Set timecodes from player data
+        timecodeManager.setTimecodes(playerData);
+        
         if (playerData.getSrc() != null && !playerData.getSrc().isEmpty()) {
             String kodikSrc = playerData.getSrc();
             if (!kodikSrc.startsWith("http")) {
@@ -1947,6 +2022,13 @@ public class VideoPlayerActivity extends AppCompatActivity {
         updateControllerAutoHide();
 
         Log.d("HlsPlayerInit", "HLS ExoPlayer bound to PlayerView with controller enabled");
+        
+        // Update gestures manager with new player
+        gesturesManager.updatePlayer(player);
+        
+        // Initialize timecode manager with UI components
+        MaterialButton skipSegmentButton = findViewById(R.id.skipSegmentButton);
+        timecodeManager.initializeViews(player, playerView, skipSegmentButton);
 
         player.setMediaSource(hlsMediaSource);
         player.prepare();
@@ -2290,6 +2372,9 @@ public class VideoPlayerActivity extends AppCompatActivity {
         }
         if (gesturesManager != null) {
             gesturesManager.cleanup();
+        }
+        if (timecodeManager != null) {
+            timecodeManager.cleanup();
         }
     }
 

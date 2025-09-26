@@ -80,6 +80,28 @@
         android:textStyle="bold"
         android:visibility="gone" />
 
+    <!-- Skip segment button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/skipSegmentButton"
+        android:layout_width="wrap_content"
+        android:layout_height="50dp"
+        android:paddingVertical="0dp"
+        android:paddingHorizontal="15dp"
+        android:textAllCaps="false"
+        android:layout_gravity="bottom|end"
+        android:layout_marginBottom="80dp"
+        android:layout_marginEnd="20dp"
+        android:text="Пропустить сегмент"
+        android:textColor="@color/gray_color"
+        android:textSize="14dp"
+        app:rippleColor="@color/dt_line_color"
+        style="@style/Widget.Material3.Button.TextButton"
+        android:backgroundTint="?attr/alphaPrimaryColor"
+        app:strokeColor="?attr/alphaBorderColor"
+        app:strokeWidth="0.5dp"
+        app:cornerRadius="12dp"
+        android:visibility="gone" />
+
     <View
         android:id="@+id/menuOverlay"
         android:layout_width="match_parent"
@@ -309,5 +331,6 @@
                     app:trackThickness="4dp" />
             </FrameLayout>
         </FrameLayout>
+
     </LinearLayout>
 </FrameLayout>

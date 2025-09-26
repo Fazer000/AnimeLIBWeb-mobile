@@ -1,66 +1,67 @@
 {
-    "data": [
-        {
-            "id": 20850540,
-            "type": "anime_bookmark",
-            "media_id": 23368,
-            "item_id": 127468,
-            "progress": "22:27",
-            "status": 21,
-            "created_at": "2025-09-21 12:28:43",
-            "updated_at": "2025-09-21T21:08:42.000000Z",
-            "media": {
-                "id": 23368,
-                "name": "Kusuriya no Hitorigoto 2nd Season",
-                "rus_name": "Монолог фармацевта 2",
-                "eng_name": "The Apothecary Diaries Season 2",
-                "model": "anime",
-                "slug": "kusuriya-no-hitorigoto-2nd-season-anime",
-                "slug_url": "23368--kusuriya-no-hitorigoto-2nd-season-anime",
-                "cover": {
-                    "filename": "ce435f76-da16-4033-848f-be367da4d7f2",
-                    "thumbnail": "https://cover.imglib.info/uploads/anime/23368/cover/ce435f76-da16-4033-848f-be367da4d7f2_thumb.jpg",
-                    "default": "https://cover.imglib.info/uploads/anime/23368/cover/ce435f76-da16-4033-848f-be367da4d7f2.jpg",
-                    "md": "https://cover.imglib.info/uploads/anime/23368/cover/ce435f76-da16-4033-848f-be367da4d7f2.jpg"
-                },
-                "type": {
-                    "id": 16,
-                    "label": "TV Сериал"
-                },
-                "items_count": {
-                    "uploaded": 24,
-                    "total": null
-                }
-            },
-            "item": {
-                "id": 127468,
-                "model": "episodes",
-                "name": null,
-                "number": "8",
-                "number_secondary": "2",
-                "season": "2",
-                "anime_id": null,
-                "created_at": null,
-                "type": "episodes"
+    "id": 537450,
+    "episode_id": 132164,
+    "player": "Animelib",
+    "translation_type": {
+        "id": 2,
+        "label": "Озвучка"
+    },
+    "team": {
+        "id": 49363,
+        "slug": "dubliaznaia",
+        "slug_url": "49363--dubliaznaia",
+        "model": "team",
+        "name": "Дубляжная",
+        "cover": {
+            "filename": "cc3f848b-c07d-4f9c-b3fc-729d2fd4a457",
+            "thumbnail": "https://cover.imglib.info/uploads/team/49363/cover/cc3f848b-c07d-4f9c-b3fc-729d2fd4a457_thumb.jpg",
+            "default": "https://cover.imglib.info/uploads/team/49363/cover/cc3f848b-c07d-4f9c-b3fc-729d2fd4a457.jpg",
+            "md": "https://cover.imglib.info/uploads/team/49363/cover/cc3f848b-c07d-4f9c-b3fc-729d2fd4a457.jpg"
+        },
+        "stats": [
+            {
+                "value": 104,
+                "formated": "104",
+                "short": "104",
+                "label": "Подписчика",
+                "tag": "subscribes"
             }
+        ]
+    },
+    "created_at": "2025-06-29T05:27:01.000000Z",
+    "is_viewed": false,
+    "views": 377,
+    "timecode": [
+        {
+            "type": "opening",
+            "from": 0,
+            "to": 90
+        },
+        {
+            "type": "splashScreen",
+            "from": 1425,
+            "to": 1441
         }
     ],
-    "links": {
-        "first": "http://api.cdnlibs.org/api/bookmarks?page=1",
-        "last": null,
-        "prev": null,
-        "next": null
-    },
-    "meta": {
-        "current_page": 1,
-        "from": 1,
-        "path": "http://api.cdnlibs.org/api/bookmarks",
-        "per_page": [
-            24,
-            24
-        ],
-        "to": 1,
-        "page": 1,
-        "next_page_url": false
+    "subtitles": [],
+    "video": {
+        "id": 104575,
+        "quality": [
+            {
+                "href": "/uploads/converted_videos/anime/23368/players/104575/86c47fa7-7440-484c-8575-1edcfefb1cd9_1080.mp4",
+                "quality": 1080,
+                "bitrate": 3000
+            },
+            {
+                "href": "/uploads/converted_videos/anime/23368/players/104575/86c47fa7-7440-484c-8575-1edcfefb1cd9_720.mp4",
+                "quality": 720,
+                "bitrate": 1400
+            },
+            {
+                "href": "/uploads/converted_videos/anime/23368/players/104575/86c47fa7-7440-484c-8575-1edcfefb1cd9_360.mp4",
+                "quality": 360,
+                "bitrate": 600
+            }
+        ]
     }
-}
+},

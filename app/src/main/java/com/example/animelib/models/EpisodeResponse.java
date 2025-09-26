@@ -46,6 +46,7 @@ public class EpisodeResponse {
         private Team team;
         private String src;
         private VideoData video;
+        private List<TimecodeData> timecode;
 
         public PlayerData() {}
 
@@ -87,6 +88,14 @@ public class EpisodeResponse {
 
         public void setVideo(VideoData video) {
             this.video = video;
+        }
+
+        public List<TimecodeData> getTimecode() {
+            return timecode;
+        }
+
+        public void setTimecode(List<TimecodeData> timecode) {
+            this.timecode = timecode;
         }
     }
 
@@ -166,6 +175,38 @@ public class EpisodeResponse {
 
         public void setQuality(int quality) {
             this.quality = quality;
+        }
+    }
+
+    public static class TimecodeData {
+        private String type;
+        private int from;
+        private int to;
+
+        public TimecodeData() {}
+
+        public String getType() {
+            return type;
+        }
+
+        public void setType(String type) {
+            this.type = type;
+        }
+
+        public int getFrom() {
+            return from;
+        }
+
+        public void setFrom(int from) {
+            this.from = from;
+        }
+
+        public int getTo() {
+            return to;
+        }
+
+        public void setTo(int to) {
+            this.to = to;
         }
     }
 }
