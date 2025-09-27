@@ -5,11 +5,15 @@ import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
 
-@Database(entities = {AppSettings.class}, version = 8, exportSchema = false)
+import com.example.animelib.data.dao.TokenDao;
+import com.example.animelib.data.entity.TokenEntity;
+
+@Database(entities = {AppSettings.class, TokenEntity.class}, version = 9, exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
     private static volatile AppDatabase INSTANCE;
 
     public abstract AppSettingsDao appSettingsDao();
+    public abstract TokenDao tokenDao();
 
     public static AppDatabase getDatabase(final Context context) {
         if (INSTANCE == null) {

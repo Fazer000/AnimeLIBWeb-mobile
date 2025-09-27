@@ -21,7 +21,9 @@ import android.widget.FrameLayout;
 import android.widget.Toast;
 
 import com.example.animelib.data.DatabaseManager;
+import com.example.animelib.data.entity.TokenEntity;
 import com.example.animelib.dialogs.ThemeSelectionDialog;
+import com.example.animelib.models.TokenResponse;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
@@ -129,6 +131,9 @@ public class MainActivity extends AppCompatActivity {
         // Load and apply theme
         loadAndApplyTheme();
 
+        // Обновляем токены при запуске
+        updateTokensOnStartup();
+
 //        showBookmarksPopupIfNeeded();
 
         setupWebView();
@@ -164,6 +169,41 @@ public class MainActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     ThemeUtils.applyThemeToActivity(MainActivity.this, 0);
                 });
+            }
+        });
+    }
+    
+    /**
+     * Обновляет токены при запуске приложения
+     */
+    private void updateTokensOnStartup() {
+        executor.execute(() -> {
+            try {
+                // Проверяем есть ли токен в БД
+                boolean hasToken = databaseManager.hasToken();
+                Log.d("MainActivity", "Has token in DB: " + hasToken);
+                
+                if (hasToken) {
+                    TokenEntity token = databaseManager.getToken();
+                    if (token != null) {
+                        Log.d("MainActivity", "Token found in DB: " + token.getAccessToken().substring(0, 20) + "...");
+                        
+                        // Проверяем не истек ли токен
+                        long currentTime = System.currentTimeMillis();
+                        long tokenExpiry = token.getTimestamp() + (token.getExpiresIn() * 1000);
+                        
+                        if (currentTime < tokenExpiry) {
+                            Log.d("MainActivity", "Token is still valid, expires at: " + new java.util.Date(tokenExpiry));
+                        } else {
+                            Log.d("MainActivity", "Token expired, will update from localStorage");
+                        }
+                    }
+                } else {
+                    Log.d("MainActivity", "No token in DB, will load from localStorage when available");
+                }
+                
+            } catch (Exception e) {
+                Log.e("MainActivity", "Error checking tokens on startup", e);
             }
         });
     }
@@ -577,6 +617,80 @@ public class MainActivity extends AppCompatActivity {
      */
     public void showThemeDialog() {
         themeDialog.show();
+    }
+    
+    /**
+     * Получает значение auth из localStorage WebView и показывает в Toast
+     */
+    public void getAuthFromLocalStorage() {
+        if (webView != null) {
+            webView.evaluateJavascript(
+                "localStorage.getItem('auth')",
+                value -> {
+                    runOnUiThread(() -> {
+                        // Убираем внешние кавычки и экранируем внутренние кавычки
+                        String authValue = value != null ? value.replaceAll("^\"|\"$", "") : "null";
+                        
+                        // Декодируем экранированные кавычки
+                        if (authValue != null && !"null".equals(authValue)) {
+                            authValue = authValue.replace("\\\"", "\"");
+                        }
+                        
+                        if ("null".equals(authValue)) {
+                            Log.d("MainActivity", "Auth не найден в localStorage");
+                        } else {
+                            Log.d("MainActivity", "Auth получен из localStorage");
+                            
+                            // Парсим и сохраняем токены
+                            try {
+                                // Проверяем что это валидный JSON
+                                if (authValue.startsWith("{") && authValue.endsWith("}")) {
+                                    Gson gson = new Gson();
+                                    TokenResponse tokenResponse = gson.fromJson(authValue, TokenResponse.class);
+                                    if (tokenResponse != null && tokenResponse.getToken() != null) {
+                                        saveTokensToDatabase(tokenResponse.getToken());
+                                        Log.d("MainActivity", "Successfully parsed and saved tokens");
+                                    } else {
+                                        Log.w("MainActivity", "Token data not found in auth response");
+                                    }
+                                } else {
+                                    Log.w("MainActivity", "Auth value is not valid JSON: " + authValue.substring(0, Math.min(50, authValue.length())));
+                                }
+                            } catch (Exception e) {
+                                Log.e("MainActivity", "Error parsing auth JSON: " + e.getMessage());
+                                Log.e("MainActivity", "Auth value: " + authValue.substring(0, Math.min(100, authValue.length())));
+                            }
+                        }
+                        Log.d("MainActivity", "Auth from localStorage processed");
+                    });
+                }
+            );
+        } else {
+            Log.d("MainActivity", "WebView не готов");
+        }
+    }
+    
+    /**
+     * Сохраняет токены в базу данных
+     */
+    private void saveTokensToDatabase(TokenResponse.TokenData tokenData) {
+        executor.execute(() -> {
+            try {
+                TokenEntity tokenEntity = new TokenEntity(
+                    tokenData.getTokenType(),
+                    tokenData.getExpiresIn(),
+                    tokenData.getAccessToken(),
+                    tokenData.getRefreshToken(),
+                    tokenData.getTimestamp()
+                );
+                
+                databaseManager.saveToken(tokenEntity);
+                Log.d("MainActivity", "Tokens saved to database successfully");
+                
+            } catch (Exception e) {
+                Log.e("MainActivity", "Error saving tokens to database", e);
+            }
+        });
     }
 
     /**

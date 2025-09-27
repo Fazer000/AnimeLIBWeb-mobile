@@ -6,6 +6,7 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import com.example.animelib.data.entity.TokenEntity;
 import com.example.animelib.models.*;
 import com.google.gson.Gson;
 import java.io.IOException;
@@ -26,7 +27,8 @@ import javax.net.ssl.X509TrustManager;
 import java.security.cert.CertificateException;
 
 public class ApiService {
-    private static final String CDNLIBS_BEARER_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIxIiwianRpIjoiOTZkYjliMDI4NGM0OWQ1Yzc2NTIxMzkxZTRlNDJkNjAwNTFmMDUzMDU2NjBjZGQzYTRjYmEzN2FjMmRmYTZhNjEyM2VmNDgxZDBjMGU0Y2MiLCJpYXQiOjE3NTc0MzEyNDcuOTg2MjE5LCJuYmYiOjE3NTc0MzEyNDcuOTg2MjIxLCJleHAiOjE3NjAwMjMyNDcuOTgyNTM3LCJzdWIiOiI5NDM5MzIxIiwic2NvcGVzIjpbXX0.FG2bBdeF0328Prrsr9Q_SL-VkQyeJMqE9b9uQ1E74JsCnJPveeMMLYNuJt_cTp5XpkvFK3XHltfCM7wi4Gg-x3rlpG-sTELMaoMNWv-4TmNcQbrKwSnTSVJfUFlnguVA7kpGHBgfAaL3NVKSwu_Pu1xqq6UwqpV9hBSJ6iTHG7T3vz7e_HxhGWQ7AZ47xmoo76aOnWQ2vIceF-zq6gF0peKBsHXuG8Prl-88xyltkT2SSnAJrTl4xmPQsM0F0OntkkFZGU6XPdFwXw-orxvtpCfsv556ra5fdbACMjqfZ3euwqXEHGRtkjMJpmku1-sV_xubQvCgbwuO8WRc-ukuWv3x2WTffkXypFKviEdNTXLBFki5ex4sblvaYhDUd4IrZwIjL-GRPQ9_X6WZITz7Lic5faKs1kr3mxXDSuK7u7tC2WSCom_I_CYR9_aIytJ_XkxixG-aa3LP9-jaOn0n7iZS8XNjaIlLHyqr2Of9wPvJ-A1NVv41EeaptXWs7VcSWg42-fUkofNyS2Qn1Qdo9DzVKmqzO9jMpe-8suwBVGl3gpr4nCwn4J8tIKOTzWX--xHkotH5w1TYaQAtzKs6ocyptylNdAD8WRm_FU3E3pdY5Ecarem7SK8ij5rh724GMiBXN9y9s6jBSwPoIAD9W-R4UoXo1mhsRNGiJ4EkC0U";
+    // Fallback токен если нет токена в БД
+    private static final String FALLBACK_BEARER_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIxIiwianRpIjoiOTZkYjliMDI4NGM0OWQ1Yzc2NTIxMzkxZTRlNDJkNjAwNTFmMDUzMDU2NjBjZGQzYTRjYmEzN2FjMmRmYTZhNjEyM2VmNDgxZDBjMGU0Y2MiLCJpYXQiOjE3NTc0MzEyNDcuOTg2MjE5LCJuYmYiOjE3NTc0MzEyNDcuOTg2MjIxLCJleHAiOjE3NjAwMjMyNDcuOTgyNTM3LCJzdWIiOiI5NDM5MzIxIiwic2NvcGVzIjpbXX0.FG2bBdeF0328Prrsr9Q_SL-VkQyeJMqE9b9uQ1E74JsCnJPveeMMLYNuJt_cTp5XpkvFK3XHltfCM7wi4Gg-x3rlpG-sTELMaoMNWv-4TmNcQbrKwSnTSVJfUFlnguVA7kpGHBgfAaL3NVKSwu_Pu1xqq6UwqpV9hBSJ6iTHG7T3vz7e_HxhGWQ7AZ47xmoo76aOnWQ2vIceF-zq6gF0peKBsHXuG8Prl-88xyltkT2SSnAJrTl4xmPQsM0F0OntkkFZGU6XPdFwXw-orxvtpCfsv556ra5fdbACMjqfZ3euwqXEHGRtkjMJpmku1-sV_xubQvCgbwuO8WRc-ukuWv3x2WTffkXypFKviEdNTXLBFki5ex4sblvaYhDUd4IrZwIjL-GRPQ9_X6WZITz7Lic5faKs1kr3mxXDSuK7u7tC2WSCom_I_CYR9_aIytJ_XkxixG-aa3LP9-jaOn0n7iZS8XNjaIlLHyqr2Of9wPvJ-A1NVv41EeaptXWs7VcSWg42-fUkofNyS2Qn1Qdo9DzVKmqzO9jMpe-8suwBVGl3gpr4nCwn4J8tIKOTzWX--xHkotH5w1TYaQAtzKs6ocyptylNdAD8WRm_FU3E3pdY5Ecarem7SK8ij5rh724GMiBXN9y9s6jBSwPoIAD9W-R4UoXo1mhsRNGiJ4EkC0U";
 
     public interface EpisodesCallback {
         void onEpisodesReceived(EpisodesListResponse response);
@@ -96,7 +98,7 @@ public class ApiService {
         
         return new Request.Builder()
                 .url(url)
-                .addHeader("Authorization", "Bearer " + CDNLIBS_BEARER_TOKEN)
+                .addHeader("Authorization", "Bearer " + getBearerToken())
                 .addHeader("Accept", "*/*")
                 .addHeader("Accept-Language", "ru,en;q=0.9,de;q=0.8,zh;q=0.7")
                 .addHeader("Content-Type", "application/json")
@@ -116,6 +118,24 @@ public class ApiService {
 
     private String getSiteUrlFromDb() {
         return databaseManager.getSiteUrl();
+    }
+    
+    /**
+     * Получает токен авторизации из базы данных или возвращает fallback токен
+     */
+    private String getBearerToken() {
+        try {
+            TokenEntity token = databaseManager.getToken();
+            if (token != null && token.getAccessToken() != null && !token.getAccessToken().isEmpty()) {
+                Log.d("ApiService", "Using token from database");
+                return token.getAccessToken();
+            }
+        } catch (Exception e) {
+            Log.e("ApiService", "Failed to get token from database", e);
+        }
+        
+        Log.d("ApiService", "Using fallback token");
+        return FALLBACK_BEARER_TOKEN;
     }
 
     public void fetchAnimeInfo(String animeSlugOrId, AnimeInfoCallback callback) {
@@ -251,7 +271,7 @@ public class ApiService {
 
                 Request request = new Request.Builder()
                         .url(apiUrl)
-                        .addHeader("Authorization", "Bearer " + CDNLIBS_BEARER_TOKEN)
+                        .addHeader("Authorization", "Bearer " + getBearerToken())
                         .build();
 
                 httpClient.newCall(request).enqueue(new Callback() {
@@ -496,7 +516,7 @@ public class ApiService {
 
                 Request request = new Request.Builder()
                         .url(apiUrl)
-                        .addHeader("Authorization", "Bearer " + CDNLIBS_BEARER_TOKEN)
+                        .addHeader("Authorization", "Bearer " + getBearerToken())
                         .build();
 
                 // Create OkHttpClient with disabled SSL verification for Kodik API
@@ -687,7 +707,7 @@ public class ApiService {
                 Request request = new Request.Builder()
                     .url("https://api.cdnlibs.org/api/bookmarks")
                     .post(body)
-                    .addHeader("Authorization", "Bearer " + CDNLIBS_BEARER_TOKEN)
+                    .addHeader("Authorization", "Bearer " + getBearerToken())
                     .addHeader("Accept", "*/*")
                     .addHeader("Accept-Language", "ru,en;q=0.9,de;q=0.8,zh;q=0.7")
                     .addHeader("Content-Type", "application/json")

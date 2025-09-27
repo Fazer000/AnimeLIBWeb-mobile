@@ -1,67 +1,38 @@
 {
-    "id": 537450,
-    "episode_id": 132164,
-    "player": "Animelib",
-    "translation_type": {
-        "id": 2,
-        "label": "Озвучка"
+    "token": {
+        "token_type": "Bearer",
+        "expires_in": 2592000,
+        "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIxIiwianRpIjoiMGMwZDFhNzE0MmZhZDBlNTdhNzZiOWY3MzdlYzNlMWU2YmQyMTYwNzljMzkwNWJiYzRmYmJjNzI5MzU1NDM5NmMyYWEyZTMyOTZkODlmYzciLCJpYXQiOjE3NTg5OTU1MjUuMDc2OTQsIm5iZiI6MTc1ODk5NTUyNS4wNzY5NDEsImV4cCI6MTc2MTU4NzUyNS4wNzIxMzcsInN1YiI6Ijk0MzkzMjEiLCJzY29wZXMiOltdfQ.h92ua0LnpNbm8drIsK3k9GyLL0HMzHLFLx9wbh4wlC0OqZCqAExoGaKg6IUfks99cCTV-5wSOaAFtSjzYFtePxPUYF1OBuKdkPFNH6u73PrIWrXrYHZbuv2OK_O9ABMr_SVNDbH1F_WgF2OtpIsyDwb9qndwNbVSDP96KV7dX3CSCJeJ1oR-A-qOOp6ayIsfyBjihIivRAsPQWcUyQ0w6mEejRlHKtFnYNoSzBpGq4KMwEEoYfTfx2JoiiPyDbALUpSCbT_G4wRioy8Binfw7js57zndYgUGFRm7VSBszzzGMoj0ooDvEM-AQ2c_3W2F4F1uJ-4dGpQL_UFkn8E4rv9xs70MdOKibRh9zkDXK8aPKUbJsgQ7JxueHJBVJX2Kr5xidITsnsdEJQ-PB_fbIiAKnL9Snz0PaYdsi9SWUHF5zyU24cDg_aGZXde0t28sqpcEwmAAm_Bywz19w37aq6X9OHqU4-KCOIAeqxeYixsst-u9GYZTEeqAwm-vRSwmV--ECxSnkcmkSJNgoKiyqxPzi0TWWFJ15LPpJaTveH-5tl9QvgOAVaArML0SsMXP7mIPZ0FMv7fidMF2qh_aYHkH7i0KwNmfnOFbRaI7vBXuZ3EO0DwDLVib-Jcji6v6m4ti4b5oRjYMDIx7dZKlH6ql6i11g44mCdDbVrjseFw",
+        "refresh_token": "def50200e45323741e3a6c47af749e6ce8d5676f4834ab85fe962f8c045e9af805d86cd0db2cd74941a7043863b3eb5116bbebb8e5ebef4a7e3bba6c4803e9fb75c0d67c68de22d324fba6ca01dc23023a9b81d926d622d0a2d7327076b83bfcf4cd7a7a93ec25446e78401f603b6906129e24741e7bfcd9cf328651bbbabd1f179403d23c12cc60e768571c75c232dd0318760622f1eff9add7f62e47c97e2987e6c4abf59f6d3731503e4e79b8086cf1234093ff4d69dfd6159029732944044eaaeeaf866d5e568721f5901e3b571cd3ad1ba49a1db3e161d402b784bc1c6b86f854aa785726a30dd047449fd2aee5178047169357bd258221c7afd928a34cdf4ef3ceeb66382dcadbcb56a7e11df7764f38b78feb2b14d0e26f88cca38c075444ea7b65e1371849b114717bbbb7a1d535f47371bdcf81a29a52fc7adca4a574228afa2fa5e91e3b7034a8ba430beda84436cdbb7dd2fcd3e03ce58f63b18a40472611e48171",
+        "timestamp": 1758995524356
     },
-    "team": {
-        "id": 49363,
-        "slug": "dubliaznaia",
-        "slug_url": "49363--dubliaznaia",
-        "model": "team",
-        "name": "Дубляжная",
-        "cover": {
-            "filename": "cc3f848b-c07d-4f9c-b3fc-729d2fd4a457",
-            "thumbnail": "https://cover.imglib.info/uploads/team/49363/cover/cc3f848b-c07d-4f9c-b3fc-729d2fd4a457_thumb.jpg",
-            "default": "https://cover.imglib.info/uploads/team/49363/cover/cc3f848b-c07d-4f9c-b3fc-729d2fd4a457.jpg",
-            "md": "https://cover.imglib.info/uploads/team/49363/cover/cc3f848b-c07d-4f9c-b3fc-729d2fd4a457.jpg"
+    "auth": {
+        "id": 9439321,
+        "username": "Fazer000",
+        "avatar": {
+            "filename": "80a1e08d-afe7-4e32-b593-ad3d0042bf83.jpg",
+            "url": "https://cover.imglib.info/uploads/users/9439321/80a1e08d-afe7-4e32-b593-ad3d0042bf83.jpg"
         },
-        "stats": [
-            {
-                "value": 104,
-                "formated": "104",
-                "short": "104",
-                "label": "Подписчика",
-                "tag": "subscribes"
+        "balance": 0,
+        "last_online_at": "2025-09-27T18:13:24.000000Z",
+        "teams": [],
+        "rolesInTeams": [],
+        "permissions": [],
+        "roles": [],
+        "metadata": {
+            "auth_domains": {
+                "0": "mangalib.me",
+                "1": "test-front.mangalib.me",
+                "2": "slashlib.me",
+                "3": "ranobelib.me",
+                "4": "hentailib.me",
+                "5": "v3.animelib.org"
             }
-        ]
-    },
-    "created_at": "2025-06-29T05:27:01.000000Z",
-    "is_viewed": false,
-    "views": 377,
-    "timecode": [
-        {
-            "type": "opening",
-            "from": 0,
-            "to": 90
         },
-        {
-            "type": "splashScreen",
-            "from": 1425,
-            "to": 1441
+        "premium": {
+            "enabled": false
         }
-    ],
-    "subtitles": [],
-    "video": {
-        "id": 104575,
-        "quality": [
-            {
-                "href": "/uploads/converted_videos/anime/23368/players/104575/86c47fa7-7440-484c-8575-1edcfefb1cd9_1080.mp4",
-                "quality": 1080,
-                "bitrate": 3000
-            },
-            {
-                "href": "/uploads/converted_videos/anime/23368/players/104575/86c47fa7-7440-484c-8575-1edcfefb1cd9_720.mp4",
-                "quality": 720,
-                "bitrate": 1400
-            },
-            {
-                "href": "/uploads/converted_videos/anime/23368/players/104575/86c47fa7-7440-484c-8575-1edcfefb1cd9_360.mp4",
-                "quality": 360,
-                "bitrate": 600
-            }
-        ]
-    }
-},
+    },
+    "prevUrl": "",
+    "timestamp": 1758997508013
+}

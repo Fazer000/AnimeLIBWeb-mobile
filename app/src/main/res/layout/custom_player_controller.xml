@@ -283,7 +283,9 @@
                 android:id="@+id/skipForwardButton"
                 android:layout_width="36dp"
                 android:layout_height="36dp"
-                android:padding="8dp"
+                android:paddingTop="9dp"
+                android:paddingHorizontal="8dp"
+                android:paddingBottom="8dp"
                 android:layout_marginEnd="8dp"
                 android:background="@android:color/transparent"
                 android:foreground="@drawable/ripple_circle"
@@ -298,7 +300,7 @@
                 android:layout_height="36dp"
                 android:layout_marginEnd="8dp"
                 android:paddingTop="5dp"
-                android:paddingHorizontal="6dp"
+                android:paddingHorizontal="7dp"
                 android:paddingBottom="2dp"
                 android:background="@android:color/transparent"
                 android:foreground="@drawable/ripple_circle"
@@ -313,11 +315,14 @@
                 android:layout_width="36dp"
                 android:layout_height="36dp"
                 android:layout_marginEnd="8dp"
+                android:paddingTop="7dp"
+                android:paddingHorizontal="5dp"
+                android:paddingBottom="5dp"
                 android:background="@android:color/transparent"
                 android:foreground="@drawable/ripple_circle"
-                android:src="@drawable/ic_comments"
+                android:src="@drawable/ic_comments_2"
+                app:tint="@color/white_color"
                 android:scaleType="fitCenter"
-                android:paddingTop="4dp"
                 android:contentDescription="Comments" />
 
             <!-- Episodes Menu Button -->
@@ -350,13 +355,15 @@
                 android:id="@+id/menuToggleFullscreen"
                 android:layout_width="36dp"
                 android:layout_height="36dp"
+                android:paddingTop="9dp"
+                android:paddingBottom="8dp"
+                android:paddingHorizontal="8dp"
                 android:background="@android:color/transparent"
                 android:foreground="@drawable/ripple_circle"
                 app:tint="@color/white_color"
                 android:src="@drawable/ic_fullscreen"
                 android:scaleType="fitCenter"
-                android:contentDescription="Players Menu"
-                android:padding="8dp" />
+                android:contentDescription="Players Menu" />
 
         </LinearLayout>
 

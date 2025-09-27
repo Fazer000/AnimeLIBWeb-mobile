@@ -3,6 +3,7 @@ package com.example.animelib.data;
 import android.content.Context;
 import android.util.Log;
 
+import com.example.animelib.data.entity.TokenEntity;
 import com.example.animelib.models.EpisodesListResponse;
 
 import java.util.concurrent.ExecutorService;
@@ -172,6 +173,60 @@ public class DatabaseManager {
 
         AppSettings settings = db.appSettingsDao().getSettingsSync();
         return settings != null ? settings.getThemeMode() : 0; // Default to light theme (0)
+    }
+    
+    // ========== Token операции ==========
+    
+    /**
+     * Сохраняет токен в базу данных
+     */
+    public void saveToken(TokenEntity token) {
+        executor.execute(() -> {
+            try {
+                db.tokenDao().insertOrUpdateToken(token);
+                Log.d(TAG, "Saved token to database successfully");
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to save token", e);
+            }
+        });
+    }
+    
+    /**
+     * Получает токен из базы данных
+     */
+    public TokenEntity getToken() {
+        try {
+            return db.tokenDao().getToken();
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to get token from database", e);
+            return null;
+        }
+    }
+    
+    /**
+     * Проверяет есть ли токен в базе данных
+     */
+    public boolean hasToken() {
+        try {
+            return db.tokenDao().getTokenCount() > 0;
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to check token existence", e);
+            return false;
+        }
+    }
+    
+    /**
+     * Удаляет токен из базы данных
+     */
+    public void deleteToken() {
+        executor.execute(() -> {
+            try {
+                db.tokenDao().deleteToken();
+                Log.d(TAG, "Deleted token from database");
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to delete token", e);
+            }
+        });
     }
     
     // ========== CurrentEpisode операции ==========

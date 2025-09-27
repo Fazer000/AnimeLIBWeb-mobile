@@ -48,6 +48,7 @@ public class PlayerButtonHandler {
         loadAndExecuteJS(webView, "js/theme-button-listener.js", "Theme button listener");
         loadAndExecuteJS(webView, "js/custom-select-handler.js", "Custom select handler");
         loadAndExecuteJS(webView, "js/domain-change-handler.js", "Domain change handler");
+        loadAndExecuteJS(webView, "js/auth-handler.js", "Auth handler");
 //        loadAndExecuteJS(webView, "js/back-button-handler.js", "Back button handler");
         loadAndExecuteJS(webView, "js/debug-info.js", "Debug info");
         loadAndExecuteJS(webView, "js/button-checker.js", "Button checker");
@@ -178,6 +179,20 @@ public class PlayerButtonHandler {
                 });
             } else {
                 Log.e(TAG, "Context is not an Activity, cannot handle back press");
+            }
+        }
+        
+        @JavascriptInterface
+        public void getAuthFromLocalStorage() {
+            if (context instanceof android.app.Activity) {
+                ((android.app.Activity) context).runOnUiThread(() -> {
+                    Log.d("PlayerHandler", "Getting auth from localStorage");
+                    if (context instanceof com.example.animelib.MainActivity) {
+                        ((com.example.animelib.MainActivity) context).getAuthFromLocalStorage();
+                    }
+                });
+            } else {
+                Log.e(TAG, "Context is not an Activity, cannot get auth from localStorage");
             }
         }
     }
