@@ -24,6 +24,11 @@
     <color name="dt_primary_text_color">#bfbfbf</color>
     <color name="dt_secondary_text_color">#7C3AED</color>
     <color name="dt_accent_text_color">#80F5F5FA</color>
+    
+    <!-- Anime Info Colors -->
+    <color name="dt_card_background">#252527</color>
+    <color name="dt_card_elevation">#40000000</color>
+    <color name="dt_rating_star">#FFD700</color>
 
 
     <!-- Light Theme -->
@@ -44,4 +49,9 @@
     <color name="lt_primary_text_color">#212121</color>
     <color name="lt_secondary_text_color">#7C3AED</color>
     <color name="lt_accent_text_color">#757575</color>
+    
+    <!-- Anime Info Colors -->
+    <color name="lt_card_background">#FAFAFA</color>
+    <color name="lt_card_elevation">#20000000</color>
+    <color name="lt_rating_star">#FFA000</color>
 </resources>

@@ -4,8 +4,11 @@ import android.content.Context;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
+import androidx.annotation.OptIn;
+import androidx.media3.common.util.UnstableApi;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.example.animelib.adapters.PlayerTabsAdapter;
@@ -29,7 +32,7 @@ public class PlayersManager {
     private final ApiService apiService;
     
     // UI компоненты
-    private View slidingMenuPanel;
+    private LinearLayout slidingMenuPanel;
     private ImageButton closeMenuButton;
     private TabLayout playerTabLayout;
     private ViewPager2 playersViewPager;
@@ -81,7 +84,7 @@ public class PlayersManager {
     /**
      * Инициализация UI компонентов
      */
-    public void initializeViews(View slidingMenuPanel, ImageButton closeMenuButton,
+    public void initializeViews(LinearLayout slidingMenuPanel, ImageButton closeMenuButton,
                                TabLayout playerTabLayout, ViewPager2 playersViewPager,
                                View menuOverlay, View menuLoadingOverlay, View menuLoadingIndicator) {
         this.slidingMenuPanel = slidingMenuPanel;
@@ -93,27 +96,6 @@ public class PlayersManager {
         this.menuLoadingIndicator = menuLoadingIndicator;
         
         setupPlayersViews();
-        initializePanelPosition();
-    }
-    
-    /**
-     * Инициализация начальной позиции панели
-     */
-    private void initializePanelPosition() {
-        if (slidingMenuPanel != null) {
-            // Set initial position off-screen to the right
-            slidingMenuPanel.post(() -> {
-                float panelWidth = slidingMenuPanel.getWidth();
-                if (panelWidth > 0) {
-                    slidingMenuPanel.setTranslationX(panelWidth);
-                    Log.d(TAG, "Initialized panel position with width: " + panelWidth);
-                } else {
-                    // Fallback to set width
-                    slidingMenuPanel.setTranslationX(menuWidth);
-                    Log.d(TAG, "Initialized panel position with fallback width: " + menuWidth);
-                }
-            });
-        }
     }
     
     /**
@@ -124,8 +106,6 @@ public class PlayersManager {
             closeMenuButton.setOnClickListener(v -> {
                 if (currentPlayerData != null) {
                     hideMenu();
-                } else {
-                    Toast.makeText(context, "Сначала выберите озвучку", Toast.LENGTH_SHORT).show();
                 }
             });
         }
@@ -190,32 +170,13 @@ public class PlayersManager {
      * Показать меню плееров
      */
     public void showMenu() {
-        if (slidingMenuPanel != null && !isMenuVisible) {
+        if (!isMenuVisible) {
             Log.d(TAG, "Showing players menu");
             isMenuVisible = true;
             
-            // Cancel any ongoing animation
-            slidingMenuPanel.animate().cancel();
-            slidingMenuPanel.animate()
-                    .translationX(0)
-                    .setInterpolator(new android.view.animation.OvershootInterpolator(0.8f))
-                    .setDuration(320)
-                    .withLayer()
-                    .start();
-
-            // Show overlay
-            if (menuOverlay != null) {
-                menuOverlay.setVisibility(View.VISIBLE);
-                menuOverlay.animate().cancel();
-                menuOverlay.animate()
-                        .alpha(1f)
-                        .setInterpolator(new androidx.interpolator.view.animation.FastOutSlowInInterpolator())
-                        .setDuration(220)
-                        .withLayer()
-                        .start();
-                if (slidingMenuPanel != null) {
-                    slidingMenuPanel.bringToFront();
-                }
+            // Use VideoPlayerActivity's method to open draggable panel
+            if (context instanceof com.example.animelib.VideoPlayerActivity) {
+                ((com.example.animelib.VideoPlayerActivity) context).openMenuPanel();
             }
             
             if (visibilityCallback != null) {
@@ -227,47 +188,20 @@ public class PlayersManager {
     /**
      * Скрыть меню плееров
      */
+    @OptIn(markerClass = UnstableApi.class)
     public void hideMenu() {
-        if (slidingMenuPanel != null && isMenuVisible) {
-            // Block closing if no episode selected
-            if (currentPlayerData == null) {
-                Toast.makeText(context, "Сначала выберите озвучку", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            
+        // Block closing if no episode selected
+        if (currentPlayerData == null) {
+            return;
+        }
+        
+        if (isMenuVisible) {
             Log.d(TAG, "Hiding players menu");
             isMenuVisible = false;
             
-            // Cancel any ongoing animation
-            slidingMenuPanel.animate().cancel();
-            
-            // Get actual panel width for proper hiding
-            float panelWidth = slidingMenuPanel.getWidth();
-            if (panelWidth == 0) {
-                panelWidth = menuWidth; // fallback to set width
-            }
-            
-            Log.d(TAG, "Hiding panel with width: " + panelWidth);
-            
-            slidingMenuPanel.animate()
-                    .translationX(panelWidth)
-                    .setInterpolator(new androidx.interpolator.view.animation.FastOutSlowInInterpolator())
-                    .setDuration(240)
-                    .withLayer()
-                    .start();
-
-            // Hide overlay
-            if (menuOverlay != null) {
-                menuOverlay.animate().cancel();
-                menuOverlay.animate()
-                        .alpha(0f)
-                        .setInterpolator(new androidx.interpolator.view.animation.FastOutSlowInInterpolator())
-                        .setDuration(160)
-                        .withEndAction(() -> {
-                            if (!isMenuVisible) menuOverlay.setVisibility(View.GONE);
-                        })
-                        .withLayer()
-                        .start();
+            // Use VideoPlayerActivity's method to close draggable panel
+            if (context instanceof com.example.animelib.VideoPlayerActivity) {
+                ((com.example.animelib.VideoPlayerActivity) context).closeMenuPanel();
             }
             
             if (visibilityCallback != null) {
@@ -491,12 +425,13 @@ public class PlayersManager {
      * Скрытие всех UI элементов плееров (для PiP режима)
      */
     public void hideAllPlayersUI() {
-        if (slidingMenuPanel != null) {
-            slidingMenuPanel.setVisibility(View.GONE);
+        if (context instanceof com.example.animelib.VideoPlayerActivity) {
+            ((com.example.animelib.VideoPlayerActivity) context).closeMenuPanel();
         }
         if (menuOverlay != null) {
             menuOverlay.setVisibility(View.GONE);
         }
+        isMenuVisible = false;
     }
     
     /**
@@ -525,6 +460,14 @@ public class PlayersManager {
     
     public boolean isMenuVisible() {
         return isMenuVisible;
+    }
+    
+    /**
+     * Вызывается когда панель закрывается через драг
+     */
+    public void onPanelClosedByDrag() {
+        Log.d(TAG, "Panel closed by drag, updating isMenuVisible flag");
+        isMenuVisible = false;
     }
     
     public String getPreferredPlayerType() {

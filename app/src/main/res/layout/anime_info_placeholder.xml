@@ -1,0 +1,317 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:cardCornerRadius="20dp"
+    app:cardBackgroundColor="?attr/primaryColor"
+    app:cardElevation="20dp">
+
+    <!-- Градиентный фон -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/anime_info_gradient" />
+
+    <!-- Контент без скролла -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:clipToPadding="false"
+        android:padding="24dp"
+        android:gravity="center_vertical">
+
+        <!-- Постер аниме слева (вертикальный) -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="220dp"
+            android:layout_height="match_parent"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="12dp"
+            app:cardBackgroundColor="?attr/cardBackgroundColor">
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <ImageView
+                    android:id="@+id/animeInfoPoster"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:contentDescription="Anime Poster" />
+
+            </FrameLayout>
+
+        </androidx.cardview.widget.CardView>
+
+        <!-- Информация справа -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginStart="24dp"
+            android:orientation="vertical"
+            android:gravity="center_vertical">
+
+            <!-- Название -->
+            <TextView
+                android:id="@+id/animeInfoTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="?attr/primaryTextColor"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.01"
+                android:maxLines="2"
+                android:ellipsize="end"
+                android:shadowColor="?attr/cardElevationColor"
+                android:shadowRadius="8"
+                android:shadowDx="0"
+                android:shadowDy="2" />
+
+            <!-- Оригинальное название -->
+            <TextView
+                android:id="@+id/animeInfoOriginalTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:textColor="?attr/accentTextColor"
+                android:textSize="14sp"
+                android:fontFamily="@font/open_sans"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <!-- Чипсы с информацией -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:orientation="horizontal"
+                android:gravity="start">
+
+                <!-- Год -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="2dp"
+                    android:visibility="gone"
+                    app:cardBackgroundColor="?attr/alphaPrimaryColor"
+                    android:layout_marginEnd="8dp">
+
+                    <TextView
+                        android:id="@+id/animeInfoYear"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingHorizontal="14dp"
+                        android:paddingVertical="6dp"
+                        android:textColor="?attr/primaryTextColor"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+                </androidx.cardview.widget.CardView>
+
+                <!-- Тип -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="2dp"
+                    app:cardBackgroundColor="?attr/alphaPrimaryColor"
+                    android:layout_marginEnd="8dp">
+
+                    <TextView
+                        android:id="@+id/animeInfoType"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingHorizontal="14dp"
+                        android:paddingVertical="6dp"
+                        android:textColor="?attr/primaryTextColor"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+                </androidx.cardview.widget.CardView>
+
+                <!-- Статус -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="2dp"
+                    app:cardBackgroundColor="?attr/secondaryColor">
+
+                    <TextView
+                        android:id="@+id/animeInfoStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingHorizontal="14dp"
+                        android:paddingVertical="6dp"
+                        android:textColor="#FFFFFF"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+                </androidx.cardview.widget.CardView>
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:orientation="horizontal">
+                <!-- Рейтинг -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:layout_weight="1"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <ImageView
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:layout_marginRight="10dp"
+                        android:contentDescription="TODO"
+                        android:scaleType="fitCenter"
+                        app:tint="?attr/secondaryColor"
+                        android:src="@drawable/ic_star"/>
+
+                    <TextView
+                        android:id="@+id/animeInfoRating"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="?attr/primaryTextColor"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
+
+                <!-- Количество эпизодов -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:layout_weight="1"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_marginRight="10dp"
+                        android:contentDescription="TODO"
+                        android:scaleType="fitCenter"
+                        app:tint="?attr/secondaryColor"
+                        android:src="@drawable/ic_tv"/>
+                    <TextView
+                        android:id="@+id/animeInfoEpisodes"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="?attr/primaryTextColor"
+                        android:textSize="16sp" />
+
+                </LinearLayout>
+
+                <!-- Возрастное ограничение -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_gravity="center"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:layout_marginRight="10dp"
+                        android:contentDescription="TODO"
+                        android:scaleType="fitCenter"
+                        app:tint="?attr/secondaryColor"
+                        android:src="@drawable/ic_age"/>
+
+                    <TextView
+                        android:id="@+id/animeInfoAge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="?attr/primaryTextColor"
+                        android:textSize="16sp" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+            <!-- Дата выхода -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginRight="10dp"
+                    android:contentDescription="TODO"
+                    android:scaleType="fitCenter"
+                    app:tint="?attr/primaryTextColor"
+                    android:src="@drawable/ic_calendar"/>
+
+                <TextView
+                    android:id="@+id/animeInfoReleaseDate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="?attr/accentTextColor"
+                    android:textSize="14sp" />
+
+            </LinearLayout>
+
+            <!-- Shikimori рейтинг -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_marginRight="10dp"
+                    android:contentDescription="TODO"
+                    android:scaleType="fitCenter"
+                    app:tint="?attr/primaryTextColor"
+                    android:src="@drawable/ic_shikimori"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Shikimori: "
+                    android:textColor="?attr/accentTextColor"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/animeInfoShikimori"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="?attr/primaryTextColor"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
+
+            <!-- Подсказка -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="Выберите озвучку для начала просмотра"
+                android:textColor="?attr/secondaryColor"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:gravity="start"
+                android:alpha="0.9" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>
+

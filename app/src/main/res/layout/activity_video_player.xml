@@ -47,6 +47,23 @@
         app:show_previous_button="false"
         app:show_shuffle_button="false"
         app:show_subtitle_button="false" />
+    
+    <!-- Anime Info Placeholder (показывается слева от панели озвучек когда не выбрана озвучка) -->
+    <include
+        android:id="@+id/animeInfoPlaceholder"
+        layout="@layout/anime_info_placeholder"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginEnd="320dp"
+        android:visibility="gone" />
+
+    <!-- Next Episode Overlay (показывается перед автовоспроизведением следующего эпизода) -->
+    <include
+        android:id="@+id/nextEpisodeOverlay"
+        layout="@layout/next_episode_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center" />
 
     <!-- Swipe seek preview -->
     <TextView
@@ -108,229 +125,27 @@
         android:layout_height="match_parent"
         android:background="@color/dt_alpha_primary_color"
         android:clickable="true"
-        android:visibility="visible" />
+        android:visibility="gone" />
 
     <!-- Sliding Menu Panel -->
-    <androidx.cardview.widget.CardView
-        android:id="@+id/slidingMenuPanel"
-        android:layout_width="320dp"
+    <com.example.animelib.ui.DraggableSidePanel
+        android:id="@+id/menuPanelContainer"
+        android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:cardCornerRadius="20dp"
-        app:cardBackgroundColor="?attr/primaryColor"
-        android:layout_gravity="top|end"
-        android:outlineProvider="bounds">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@color/black_color"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="12dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-                    <!-- Menu Header -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:background="@drawable/menu_header_background"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal"
-                        android:paddingHorizontal="12dp"
-                        android:paddingTop="8dp">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:letterSpacing="0.02"
-                            android:text="Озвучка"
-                            android:textColor="?attr/primaryTextColor"
-                            android:textSize="20sp"
-                            android:textStyle="bold" />
-
-                        <ImageButton
-                            android:id="@+id/closeMenuButton"
-                            android:layout_width="36dp"
-                            android:layout_height="36dp"
-                            android:background="@android:color/transparent"
-                            android:contentDescription="Close Menu"
-                            android:foreground="@drawable/ripple_circle"
-                            android:padding="8dp"
-                            android:scaleType="fitCenter"
-                            android:src="@drawable/ic_close"
-                            app:tint="?attr/primaryTextColor" />
-
-                    </LinearLayout>
-
-                    <!-- Player Tabs -->
-
-                    <com.google.android.material.tabs.TabLayout
-                        android:id="@+id/playerTabLayout"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:background="?attr/primaryColor"
-                        app:tabGravity="fill"
-                        app:tabIndicatorColor="?attr/secondaryColor"
-                        app:tabIndicatorGravity="bottom"
-                        app:tabIndicatorHeight="3dp"
-                        app:tabMode="fixed"
-                        app:tabSelectedTextColor="?attr/primaryTextColor"
-                        app:tabTextColor="?attr/accentTextColor" />
-                </LinearLayout>
-            </androidx.cardview.widget.CardView>
-
-            <!-- Players List Container with loading overlay -->
-            <androidx.cardview.widget.CardView
-                android:id="@+id/playersContainer"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                app:cardBackgroundColor="?attr/primaryColor"
-                app:cardCornerRadius="20dp"
-                app:cardElevation="0dp">
-
-                <androidx.viewpager2.widget.ViewPager2
-                    android:id="@+id/playersViewPager"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent" />
-
-                <FrameLayout
-                    android:id="@+id/menuLoadingOverlay"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:background="?attr/primaryColor"
-                    android:visibility="visible">
-
-                    <com.google.android.material.progressindicator.CircularProgressIndicator
-                        android:id="@+id/menuLoadingIndicator"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:layout_gravity="center"
-                        android:indeterminate="true"
-                        app:indicatorColor="?attr/secondaryColor"
-                        app:trackCornerRadius="8dp"
-                        app:trackThickness="4dp" />
-                </FrameLayout>
-            </androidx.cardview.widget.CardView>
-        </LinearLayout>
-
-    </androidx.cardview.widget.CardView>
+        android:visibility="gone">
+        
+        <include layout="@layout/panel_voiceover_menu" />
+        
+    </com.example.animelib.ui.DraggableSidePanel>
 
     <!-- Comments Side Panel -->
-    <LinearLayout
-        android:id="@+id/commentsPanel"
-        android:layout_width="320dp"
+    <com.example.animelib.ui.DraggableSidePanel
+        android:id="@+id/commentsPanelContainer"
+        android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_gravity="top|end"
-        android:background="@drawable/non_stroke_background"
-        android:elevation="200dp"
-        android:orientation="vertical">
-
-        <androidx.cardview.widget.CardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@color/black_color"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="12dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@color/black_color"
-                android:orientation="vertical">
-                <!-- Header -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/menu_header_background"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="12dp"
-                    android:paddingVertical="8dp">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:letterSpacing="0.02"
-                        android:text="Комментарии"
-                        android:textColor="?attr/primaryTextColor"
-                        android:textSize="20sp"
-                        android:textStyle="bold" />
-
-                    <ImageButton
-                        android:id="@+id/commentsOptionsButton"
-                        android:layout_width="36dp"
-                        android:layout_height="36dp"
-                        android:layout_marginEnd="6dp"
-                        android:background="@drawable/button_ripple_effect"
-                        android:contentDescription="Options"
-                        android:padding="8dp"
-                        android:scaleType="fitCenter"
-                        android:src="@drawable/ic_more_vert"
-                        app:tint="?attr/primaryTextColor" />
-
-                    <ImageButton
-                        android:id="@+id/closeCommentsButton"
-                        android:layout_width="36dp"
-                        android:layout_height="36dp"
-                        android:background="@drawable/button_close_background"
-                        android:contentDescription="Close Comments"
-                        android:padding="8dp"
-                        android:scaleType="fitCenter"
-                        android:src="@drawable/ic_close"
-                        app:tint="?attr/primaryTextColor" />
-                </LinearLayout>
-
-            </LinearLayout>
-        </androidx.cardview.widget.CardView>
-
-        <FrameLayout
-            android:id="@+id/commentsContainer"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1">
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/commentsRecyclerView"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:clipToPadding="false"
-                android:padding="8dp" />
-
-            <TextView
-                android:id="@+id/emptyCommentsText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:text="Комментариев пока нет"
-                android:textColor="?attr/accentTextColor"
-                android:textSize="14sp"
-                android:visibility="gone" />
-
-            <FrameLayout
-                android:id="@+id/commentsLoadingOverlay"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:visibility="gone">
-
-                <com.google.android.material.progressindicator.CircularProgressIndicator
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:layout_gravity="center"
-                    android:indeterminate="true"
-                    app:indicatorColor="?attr/secondaryColor"
-                    app:trackCornerRadius="8dp"
-                    app:trackThickness="4dp" />
-            </FrameLayout>
-        </FrameLayout>
-
-    </LinearLayout>
+        android:visibility="gone">
+        
+        <include layout="@layout/panel_comments" />
+        
+    </com.example.animelib.ui.DraggableSidePanel>
 </FrameLayout>

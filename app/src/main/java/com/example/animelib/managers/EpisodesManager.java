@@ -617,6 +617,29 @@ public class EpisodesManager {
     }
     
     /**
+     * Получить следующий эпизод (без переключения)
+     */
+    public EpisodesListResponse.EpisodeItem getNextEpisode() {
+        if (episodes == null || episodes.isEmpty() || currentEpisode == null) {
+            return null;
+        }
+        
+        int currentIndex = -1;
+        for (int i = 0; i < episodes.size(); i++) {
+            if (episodes.get(i).equals(currentEpisode)) {
+                currentIndex = i;
+                break;
+            }
+        }
+        
+        if (currentIndex >= 0 && currentIndex < episodes.size() - 1) {
+            return episodes.get(currentIndex + 1);
+        }
+        
+        return null;
+    }
+    
+    /**
      * Получает BookmarkManager
      */
     public BookmarkManager getBookmarkManager() {

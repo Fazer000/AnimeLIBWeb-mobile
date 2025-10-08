@@ -12,6 +12,8 @@ import android.content.pm.ActivityInfo;
 import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.util.Rational;
 import android.view.MotionEvent;
@@ -19,6 +21,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -90,9 +93,37 @@ public class VideoPlayerActivity extends AppCompatActivity {
     private ImageButton menuToggleButton;
     private ImageButton settingsButton;
     private ImageButton menuToggleFullscreen;
-    private CardView slidingMenuPanel;
+    private LinearLayout slidingMenuPanel;
     private View menuLoadingIndicator;
     private View menuLoadingOverlay;
+    
+    // Draggable panels
+    private com.example.animelib.ui.DraggableSidePanel menuPanelContainer;
+    private com.example.animelib.ui.DraggableSidePanel commentsPanelContainer;
+    
+    // Anime info placeholder
+    private View animeInfoPlaceholder;
+    private ImageView animeInfoPoster;
+    private TextView animeInfoTitle;
+    private TextView animeInfoOriginalTitle;
+    private TextView animeInfoYear;
+    private TextView animeInfoType;
+    private TextView animeInfoStatus;
+    private TextView animeInfoRating;
+    private TextView animeInfoEpisodes;
+    private TextView animeInfoAge;
+    private TextView animeInfoReleaseDate;
+    private TextView animeInfoShikimori;
+    
+    // Next episode overlay
+    private View nextEpisodeOverlay;
+    private TextView nextEpisodeNumber;
+    private TextView nextEpisodeCountdown;
+    private com.google.android.material.button.MaterialButton cancelNextEpisodeButton;
+    private com.google.android.material.button.MaterialButton playNextEpisodeButton;
+    private Handler nextEpisodeHandler;
+    private Runnable nextEpisodeRunnable;
+    private int countdownSeconds = 7;
     
     // UI components for managers
     private View menuOverlay;
@@ -433,6 +464,56 @@ public class VideoPlayerActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Открыть панель меню плееров
+     */
+    public void openMenuPanel() {
+        if (menuPanelContainer != null) {
+            menuPanelContainer.openPanel();
+        }
+    }
+    
+    /**
+     * Закрыть панель меню плееров
+     */
+    public void closeMenuPanel() {
+        if (menuPanelContainer != null) {
+            menuPanelContainer.closePanel();
+        }
+    }
+    
+    /**
+     * Открыть панель комментариев
+     */
+    public void openCommentsPanel() {
+        if (commentsPanelContainer != null) {
+            commentsPanelContainer.openPanel();
+        }
+    }
+    
+    /**
+     * Закрыть панель комментариев
+     */
+    public void closeCommentsPanel() {
+        if (commentsPanelContainer != null) {
+            commentsPanelContainer.closePanel();
+        }
+    }
+    
+    /**
+     * Проверить открыта ли панель меню
+     */
+    public boolean isMenuPanelOpen() {
+        return menuPanelContainer != null && menuPanelContainer.isOpen();
+    }
+    
+    /**
+     * Проверить открыта ли панель комментариев
+     */
+    public boolean isCommentsPanelOpen() {
+        return commentsPanelContainer != null && commentsPanelContainer.isOpen();
+    }
+    
     private void hideAllUI() {
         // Hide all UI elements except the player
         if (playerView != null) {
@@ -440,8 +521,8 @@ public class VideoPlayerActivity extends AppCompatActivity {
         }
 
         // Hide menu and other panels
-        if (slidingMenuPanel != null) {
-            slidingMenuPanel.setVisibility(View.GONE);
+        if (menuPanelContainer != null) {
+            menuPanelContainer.closePanel();
         }
         // Hide comments panel if it's currently visible
         if (commentsManager.isCommentsVisible()) {
@@ -481,10 +562,8 @@ public class VideoPlayerActivity extends AppCompatActivity {
             playerView.setUseController(true);
         }
 
-        // Show menu panel
-        if (slidingMenuPanel != null) {
-            slidingMenuPanel.setVisibility(View.VISIBLE);
-        }
+        // Menu panel is shown only when user requests it
+        // (don't auto-open after PiP)
 
         // Show PiP button back
         ImageButton pipButton = findViewById(R.id.pipButton);
@@ -554,10 +633,57 @@ public class VideoPlayerActivity extends AppCompatActivity {
             controllerView.setAlpha(1.0f);
         }
 
+        // Initialize draggable panels
+        menuPanelContainer = findViewById(R.id.menuPanelContainer);
+        commentsPanelContainer = findViewById(R.id.commentsPanelContainer);
+        
         slidingMenuPanel = findViewById(R.id.slidingMenuPanel);
-        View menuOverlay = findViewById(R.id.menuOverlay);
+        menuOverlay = findViewById(R.id.menuOverlay);
         menuLoadingIndicator = findViewById(R.id.menuLoadingIndicator);
         menuLoadingOverlay = findViewById(R.id.menuLoadingOverlay);
+        
+        // Setup menu overlay click to close panels
+        if (menuOverlay != null) {
+            menuOverlay.setOnClickListener(v -> {
+                // Закрываем открытые панели при клике на overlay
+                if (menuPanelContainer != null && menuPanelContainer.isOpen()) {
+                    closeMenuPanel();
+                }
+                if (commentsPanelContainer != null && commentsPanelContainer.isOpen()) {
+                    closeCommentsPanel();
+                }
+            });
+        }
+        
+        // Initialize anime info placeholder
+        animeInfoPlaceholder = findViewById(R.id.animeInfoPlaceholder);
+        animeInfoPoster = findViewById(R.id.animeInfoPoster);
+        animeInfoTitle = findViewById(R.id.animeInfoTitle);
+        animeInfoOriginalTitle = findViewById(R.id.animeInfoOriginalTitle);
+        animeInfoYear = findViewById(R.id.animeInfoYear);
+        animeInfoType = findViewById(R.id.animeInfoType);
+        animeInfoStatus = findViewById(R.id.animeInfoStatus);
+        animeInfoRating = findViewById(R.id.animeInfoRating);
+        animeInfoEpisodes = findViewById(R.id.animeInfoEpisodes);
+        animeInfoAge = findViewById(R.id.animeInfoAge);
+        animeInfoReleaseDate = findViewById(R.id.animeInfoReleaseDate);
+        animeInfoShikimori = findViewById(R.id.animeInfoShikimori);
+        
+        // Next episode overlay
+        nextEpisodeOverlay = findViewById(R.id.nextEpisodeOverlay);
+        nextEpisodeNumber = findViewById(R.id.nextEpisodeNumber);
+        nextEpisodeCountdown = findViewById(R.id.nextEpisodeCountdown);
+        cancelNextEpisodeButton = findViewById(R.id.cancelNextEpisodeButton);
+        playNextEpisodeButton = findViewById(R.id.playNextEpisodeButton);
+        nextEpisodeHandler = new Handler(Looper.getMainLooper());
+        
+        // Setup next episode overlay buttons
+        if (cancelNextEpisodeButton != null) {
+            cancelNextEpisodeButton.setOnClickListener(v -> cancelNextEpisode());
+        }
+        if (playNextEpisodeButton != null) {
+            playNextEpisodeButton.setOnClickListener(v -> playNextEpisodeNow());
+        }
         
         // Gesture components
         TextView seekPreviewText = findViewById(R.id.seekPreviewText);
@@ -631,11 +757,103 @@ public class VideoPlayerActivity extends AppCompatActivity {
     }
     
     /**
+     * Настройка драггабельных панелей
+     */
+    private void setupDraggablePanels() {
+        final float density = getResources().getDisplayMetrics().density;
+        final float panelWidthPx = 320 * density;
+        final float videoOffsetPx = panelWidthPx / 2; // Сдвигаем только на половину ширины панели
+        
+        if (menuPanelContainer != null) {
+            menuPanelContainer.setOnPanelStateChangeListener(new com.example.animelib.ui.DraggableSidePanel.OnPanelStateChangeListener() {
+                @Override
+                public void onPanelOpened() {
+                    // Показываем overlay для возможности закрытия панели кликом вне её
+                    if (menuOverlay != null) {
+                        menuOverlay.setVisibility(View.VISIBLE);
+                        menuOverlay.setAlpha(0.5f);
+                    }
+                }
+
+                @Override
+                public void onPanelClosed() {
+                    // onPanelSliding уже установил финальную позицию
+                    // Скрываем overlay
+                    if (menuOverlay != null) {
+                        menuOverlay.setVisibility(View.GONE);
+                    }
+                    // Уведомляем PlayersManager что панель закрыта через драг
+                    if (playersManager != null) {
+                        playersManager.onPanelClosedByDrag();
+                    }
+                }
+
+                @Override
+                public void onPanelSliding(float slideOffset) {
+                    // slideOffset: 0 = открыто, 1 = закрыто
+                    // Сдвигаем видео на половину ширины панели для центрирования
+                    if (playerView != null) {
+                        float offset = -videoOffsetPx * (1f - slideOffset);
+                        playerView.setTranslationX(offset);
+                    }
+                }
+                
+                @Override
+                public boolean canClosePanel() {
+                    // Запрещаем закрытие панели озвучки, если не выбрана озвучка
+                    if (playersManager != null && playersManager.getCurrentPlayerData() == null) {
+                        return false;
+                    }
+                    return true;
+                }
+            });
+        }
+        
+        if (commentsPanelContainer != null) {
+            commentsPanelContainer.setOnPanelStateChangeListener(new com.example.animelib.ui.DraggableSidePanel.OnPanelStateChangeListener() {
+                @Override
+                public void onPanelOpened() {
+                    // Показываем overlay для возможности закрытия панели кликом вне её
+                    if (menuOverlay != null) {
+                        menuOverlay.setVisibility(View.VISIBLE);
+                        menuOverlay.setAlpha(0.5f);
+                    }
+                }
+
+                @Override
+                public void onPanelClosed() {
+                    // onPanelSliding уже установил финальную позицию
+                    // Скрываем overlay
+                    if (menuOverlay != null) {
+                        menuOverlay.setVisibility(View.GONE);
+                    }
+                    // Уведомляем CommentsManager что панель закрыта через драг
+                    if (commentsManager != null) {
+                        commentsManager.onPanelClosedByDrag();
+                    }
+                }
+
+                @Override
+                public void onPanelSliding(float slideOffset) {
+                    // Сдвигаем видео на половину ширины панели для центрирования
+                    if (playerView != null) {
+                        float offset = -videoOffsetPx * (1f - slideOffset);
+                        playerView.setTranslationX(offset);
+                    }
+                }
+            });
+        }
+    }
+    
+    /**
      * Инициализация всех менеджеров
      */
     private void initializeManagers() {
         // Initialize gestures manager
         gesturesManager.initializeViews(playerView, null, holdSpeedToast, seekPreviewText);
+        
+        // Setup draggable panels
+        setupDraggablePanels();
         
         // Initialize comments manager
         commentsManager.initializeViews(commentsPanel, closeCommentsButton, commentsRecyclerView,
@@ -1004,7 +1222,13 @@ public class VideoPlayerActivity extends AppCompatActivity {
         
         // Players manager callbacks
         playersManager.setPlayerSelectionCallback(this::onPlayerSelected);
+        
+        // Показываем placeholder когда нет выбранной озвучки
         playersManager.setVisibilityCallback(isVisible -> {
+            if (!isVisible && playersManager.getCurrentPlayerData() == null) {
+                // Меню закрыто и нет выбранной озвучки - показываем placeholder
+                showAnimeInfoPlaceholder();
+            }
             // Update controller visibility if needed
         });
         playersManager.setDataCallback(new PlayersManager.PlayersDataCallback() {
@@ -1029,10 +1253,306 @@ public class VideoPlayerActivity extends AppCompatActivity {
         if (menuLoadingOverlay != null) {
             menuLoadingOverlay.setVisibility(View.VISIBLE);
         }
+        
+        // Показываем anime info placeholder и загружаем информацию
+        // Placeholder будет скрыт автоматически при выборе озвучки
+        showAnimeInfoPlaceholder();
+        loadAnimeInfoForPlaceholder();
+    }
+    
+    /**
+     * Показывает placeholder с информацией об аниме
+     */
+    private void showAnimeInfoPlaceholder() {
+        if (animeInfoPlaceholder != null) {
+            animeInfoPlaceholder.setVisibility(View.VISIBLE);
+            animeInfoPlaceholder.setTranslationX(0); // Показываем справа
+        }
+    }
+    
+    /**
+     * Скрывает placeholder с информацией об аниме
+     */
+    private void hideAnimeInfoPlaceholder() {
+        if (animeInfoPlaceholder != null) {
+            animeInfoPlaceholder.animate()
+                .alpha(0f)
+                .setDuration(200)
+                .withEndAction(() -> {
+                    animeInfoPlaceholder.setVisibility(View.GONE);
+                    animeInfoPlaceholder.setAlpha(1f);
+                })
+                .start();
+        }
+    }
+    
+    /**
+     * Загружает информацию об аниме для placeholder
+     */
+    private void loadAnimeInfoForPlaceholder() {
+        if (animeUrl == null) return;
+        
+        // Извлекаем slug из URL для API
+        String animeSlug = apiService.extractAnimeSlug(animeUrl);
+        if (animeSlug == null) {
+            Log.e("VideoPlayer", "Could not extract anime slug from URL: " + animeUrl);
+            return;
+        }
+        
+        Log.d("VideoPlayer", "Loading anime info for slug: " + animeSlug);
+        apiService.fetchAnimeInfo(animeSlug, new ApiService.AnimeInfoCallback() {
+            @Override
+            public void onAnimeInfoReceived(AnimeInfoResponse response) {
+                runOnUiThread(() -> displayAnimeInfo(response));
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                Log.e("VideoPlayer", "Failed to load anime info: " + errorMessage);
+            }
+        });
+    }
+    
+    /**
+     * Отображает информацию об аниме в placeholder
+     */
+    @SuppressLint("SetTextI18n")
+    private void displayAnimeInfo(AnimeInfoResponse animeInfo) {
+        if (animeInfo == null || animeInfo.getData() == null) {
+            Log.e("VideoPlayer", "displayAnimeInfo: animeInfo or data is null");
+            return;
+        }
+        
+        AnimeInfoResponse.Data data = animeInfo.getData();
+        Log.d("VideoPlayer", "Displaying anime info: " + data.getRus_name());
+        
+        // Название
+        if (animeInfoTitle != null && data.getRus_name() != null) {
+            animeInfoTitle.setText(data.getRus_name());
+        }
+        
+        // Оригинальное название
+        if (animeInfoOriginalTitle != null && data.getEng_name() != null) {
+            animeInfoOriginalTitle.setText(data.getEng_name());
+            animeInfoOriginalTitle.setVisibility(View.VISIBLE);
+        }
+        
+        // Год из releaseDate
+        if (animeInfoYear != null && data.getReleaseDate() != null && data.getReleaseDate().length() >= 4) {
+            String year = data.getReleaseDate().substring(0, 4);
+            animeInfoYear.setText(year);
+        } else if (animeInfoYear != null) {
+            animeInfoYear.setText("—");
+        }
+        
+        // Тип
+        if (animeInfoType != null && data.getType() != null && data.getType().getLabel() != null) {
+            String type = data.getType().getLabel();
+            // Убираем "TV " из "TV Сериал"
+            type = type.replace("TV ", "");
+            animeInfoType.setText(type);
+        } else if (animeInfoType != null) {
+            animeInfoType.setText("—");
+        }
+        
+        // Статус
+        if (animeInfoStatus != null && data.getStatus() != null && data.getStatus().getLabel() != null) {
+            animeInfoStatus.setText(data.getStatus().getLabel());
+        } else if (animeInfoStatus != null) {
+            animeInfoStatus.setText("—");
+        }
+        
+        // Рейтинг
+        Log.d("VideoPlayer", "Rating view: " + (animeInfoRating != null) + ", data: " + (data.getRating() != null));
+        if (animeInfoRating != null) {
+            if (data.getRating() != null && data.getRating().getAverage() != null) {
+                animeInfoRating.setText(data.getRating().getAverage());
+                Log.d("VideoPlayer", "Set rating: " + data.getRating().getAverage());
+            } else {
+                animeInfoRating.setText("—");
+                Log.d("VideoPlayer", "Rating data is null");
+            }
+        }
+        
+        // Количество эпизодов
+        Log.d("VideoPlayer", "Episodes view: " + (animeInfoEpisodes != null) + ", data: " + (data.getItems_count() != null));
+        if (animeInfoEpisodes != null) {
+            if (data.getItems_count() != null) {
+                animeInfoEpisodes.setText(data.getItems_count().getTotal() + " эпизодов");
+                Log.d("VideoPlayer", "Set episodes: " + data.getItems_count().getTotal());
+            } else {
+                animeInfoEpisodes.setText("—");
+                Log.d("VideoPlayer", "Episodes data is null");
+            }
+        }
+        
+        // Возрастное ограничение
+        Log.d("VideoPlayer", "Age view: " + (animeInfoAge != null) + ", data: " + (data.getAgeRestriction() != null));
+        if (animeInfoAge != null) {
+            if (data.getAgeRestriction() != null && data.getAgeRestriction().getLabel() != null) {
+                animeInfoAge.setText(data.getAgeRestriction().getLabel());
+                Log.d("VideoPlayer", "Set age: " + data.getAgeRestriction().getLabel());
+            } else {
+                animeInfoAge.setText("—");
+                Log.d("VideoPlayer", "Age data is null");
+            }
+        }
+        
+        // Дата выхода
+        Log.d("VideoPlayer", "ReleaseDate view: " + (animeInfoReleaseDate != null) + ", data: " + (data.getReleaseDateString() != null));
+        if (animeInfoReleaseDate != null) {
+            if (data.getReleaseDateString() != null) {
+                animeInfoReleaseDate.setText(data.getReleaseDateString());
+                Log.d("VideoPlayer", "Set release date: " + data.getReleaseDateString());
+            } else {
+                animeInfoReleaseDate.setText("—");
+                Log.d("VideoPlayer", "Release date data is null");
+            }
+        }
+        
+        // Shikimori рейтинг
+        Log.d("VideoPlayer", "Shikimori view: " + (animeInfoShikimori != null) + ", data: " + (data.getShikimori_href() != null));
+        if (animeInfoShikimori != null) {
+            if (data.getShikimori_href() != null) {
+                animeInfoShikimori.setText(String.valueOf(data.getShiki_rate()));
+                Log.d("VideoPlayer", "Set shikimori: " + data.getShiki_rate());
+            } else {
+                animeInfoShikimori.setText("—");
+                Log.d("VideoPlayer", "Shikimori data is null");
+            }
+        }
+        
+        // Постер - загружаем через ImageLoader
+        if (animeInfoPoster != null && data.getCover() != null) {
+            String posterUrl = data.getCover().getDefaultUrl();
+            if (posterUrl != null && !posterUrl.isEmpty()) {
+                com.example.animelib.util.ImageLoader.getInstance()
+                    .loadInto(animeInfoPoster, posterUrl, R.drawable.ic_image_placeholder);
+            } else {
+                animeInfoPoster.setImageResource(R.drawable.ic_image_placeholder);
+            }
+        }
     }
 
     private void toggleMenu() {
         playersManager.toggleMenu();
+    }
+    
+    /**
+     * Показывает оверлей следующего эпизода с обратным отсчетом
+     */
+    private void showNextEpisodeOverlay() {
+        if (nextEpisodeOverlay == null || episodesManager == null) return;
+        
+        // Проверяем есть ли следующий эпизод
+        EpisodesListResponse.EpisodeItem nextEpisode = episodesManager.getNextEpisode();
+        if (nextEpisode == null) {
+            Log.d("VideoPlayer", "No next episode available");
+            return;
+        }
+        
+        Log.d("VideoPlayer", "Showing next episode overlay for episode: " + nextEpisode.getNumber());
+        
+        // Устанавливаем номер эпизода
+        if (nextEpisodeNumber != null) {
+            nextEpisodeNumber.setText("эпизод " + nextEpisode.getNumber());
+        }
+        
+        // Сбрасываем счетчик
+        countdownSeconds = 7;
+        if (nextEpisodeCountdown != null) {
+            nextEpisodeCountdown.setText(String.valueOf(countdownSeconds));
+        }
+        
+        // Показываем оверлей
+        nextEpisodeOverlay.setVisibility(View.VISIBLE);
+        nextEpisodeOverlay.setAlpha(0f);
+        nextEpisodeOverlay.animate()
+            .alpha(1f)
+            .setDuration(300)
+            .start();
+        
+        // Запускаем обратный отсчет
+        startCountdown();
+    }
+    
+    /**
+     * Запускает обратный отсчет до следующего эпизода
+     */
+    private void startCountdown() {
+        if (nextEpisodeHandler == null) return;
+        
+        nextEpisodeRunnable = new Runnable() {
+            @Override
+            public void run() {
+                countdownSeconds--;
+                
+                if (nextEpisodeCountdown != null) {
+                    nextEpisodeCountdown.setText(String.valueOf(countdownSeconds));
+                }
+                
+                if (countdownSeconds > 0) {
+                    nextEpisodeHandler.postDelayed(this, 1000);
+                } else {
+                    // Время вышло - запускаем следующий эпизод
+                    playNextEpisodeNow();
+                }
+            }
+        };
+        
+        nextEpisodeHandler.postDelayed(nextEpisodeRunnable, 1000);
+    }
+    
+    /**
+     * Отменяет автовоспроизведение следующего эпизода
+     */
+    private void cancelNextEpisode() {
+        Log.d("VideoPlayer", "Next episode cancelled by user");
+        
+        // Останавливаем обратный отсчет
+        if (nextEpisodeHandler != null && nextEpisodeRunnable != null) {
+            nextEpisodeHandler.removeCallbacks(nextEpisodeRunnable);
+        }
+        
+        // Скрываем оверлей
+        hideNextEpisodeOverlay();
+    }
+    
+    /**
+     * Немедленно запускает следующий эпизод
+     */
+    private void playNextEpisodeNow() {
+        Log.d("VideoPlayer", "Playing next episode now");
+        
+        // Останавливаем обратный отсчет
+        if (nextEpisodeHandler != null && nextEpisodeRunnable != null) {
+            nextEpisodeHandler.removeCallbacks(nextEpisodeRunnable);
+        }
+        
+        // Скрываем оверлей
+        hideNextEpisodeOverlay();
+        
+        // Переключаемся на следующий эпизод
+        if (episodesManager != null) {
+            episodesManager.navigateToNextEpisode();
+        }
+    }
+    
+    /**
+     * Скрывает оверлей следующего эпизода
+     */
+    private void hideNextEpisodeOverlay() {
+        if (nextEpisodeOverlay == null) return;
+        
+        nextEpisodeOverlay.animate()
+            .alpha(0f)
+            .setDuration(300)
+            .withEndAction(() -> {
+                if (nextEpisodeOverlay != null) {
+                    nextEpisodeOverlay.setVisibility(View.GONE);
+                }
+            })
+            .start();
     }
 
     private void toggleEpisodesInController() {
@@ -1106,6 +1626,9 @@ public class VideoPlayerActivity extends AppCompatActivity {
 
     private void onPlayerSelected(EpisodeResponse.PlayerData playerData) {
         Log.d("VideoPlayer", "Player selected: " + playerData.getPlayer());
+        
+        // Скрываем anime info placeholder при выборе озвучки
+        hideAnimeInfoPlaceholder();
 
         // Сохраняем текущую позицию перед сменой плеера
         if (player != null) {
@@ -1216,7 +1739,6 @@ public class VideoPlayerActivity extends AppCompatActivity {
 
     private void showSettingsDialog() {
         if (playersManager.getCurrentPlayerData() == null) {
-            Toast.makeText(this, "Сначала выберите плеер", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -2105,7 +2627,14 @@ public class VideoPlayerActivity extends AppCompatActivity {
                     // Handle auto-play next episode
                     if (playbackState == Player.STATE_ENDED && autoPlay) {
                         Log.d("PlayerControls", "Video ended, checking for next episode");
-                        episodesManager.navigateToNextEpisode();
+                        
+                        // Проверяем есть ли следующий эпизод
+                        if (episodesManager != null && episodesManager.getNextEpisode() != null) {
+                            // Показываем оверлей с обратным отсчетом
+                            showNextEpisodeOverlay();
+                        } else {
+                            Log.d("PlayerControls", "No next episode available");
+                        }
                     }
                 }
 
@@ -2231,7 +2760,6 @@ public class VideoPlayerActivity extends AppCompatActivity {
         // Проверяем что данные готовы
         if (currentPlayer == null) {
             Log.e("VideoPlayer", "Current player is null, cannot add bookmark");
-            Toast.makeText(this, "Сначала выберите озвучку", Toast.LENGTH_SHORT).show();
             return;
         }
         
@@ -2372,6 +2900,11 @@ public class VideoPlayerActivity extends AppCompatActivity {
         }
         if (timecodeManager != null) {
             timecodeManager.cleanup();
+        }
+        
+        // Останавливаем обратный отсчет следующего эпизода
+        if (nextEpisodeHandler != null && nextEpisodeRunnable != null) {
+            nextEpisodeHandler.removeCallbacks(nextEpisodeRunnable);
         }
     }
 

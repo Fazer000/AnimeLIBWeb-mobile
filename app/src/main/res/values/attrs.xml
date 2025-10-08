@@ -15,6 +15,11 @@
     <attr name="primaryTextColor" format="color" />
     <attr name="secondaryTextColor" format="color" />
     <attr name="accentTextColor" format="color" />
+    
+    <!-- Дополнительные цвета для anime info -->
+    <attr name="cardBackgroundColor" format="color" />
+    <attr name="cardElevationColor" format="color" />
+    <attr name="ratingStarColor" format="color" />
 
     <attr name="logoDrawable" format="reference" />
 </resources>

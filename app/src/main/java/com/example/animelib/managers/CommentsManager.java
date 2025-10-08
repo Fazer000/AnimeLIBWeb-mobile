@@ -275,40 +275,16 @@ public class CommentsManager {
      */
     public void showCommentsPanel() {
         Log.d("CommentsManager", "showCommentsPanel called, commentsPanel: " + (commentsPanel != null) + ", isCommentsVisible: " + isCommentsVisible);
-        if (commentsPanel == null || isCommentsVisible) {
-            Log.w("CommentsManager", "Cannot show comments panel - panel is null or already visible");
+        if (isCommentsVisible) {
+            Log.w("CommentsManager", "Comments panel already visible");
             return;
         }
         
         isCommentsVisible = true;
         
-        // Получаем ширину панели в пикселях
-        int panelWidth = commentsPanel.getWidth();
-        if (panelWidth == 0) {
-            // Если ширина еще не измерена, используем значение по умолчанию
-            panelWidth = (int) (commentsPanelWidth * context.getResources().getDisplayMetrics().density);
-        }
-        
-        Log.d("CommentsManager", "Showing comments panel, width: " + panelWidth);
-        
-        // Устанавливаем начальную позицию панели (за экраном справа)
-        commentsPanel.setTranslationX(panelWidth);
-        
-        // Анимация появления панели
-        commentsPanel.animate().cancel();
-        commentsPanel.animate()
-            .translationX(0)
-            .setDuration(260)
-            .withEndAction(() -> {
-                Log.d("CommentsManager", "Show animation completed, final translationX: " + commentsPanel.getTranslationX());
-            })
-            .start();
-        
-        // Показать overlay
-        if (menuOverlay != null) {
-            menuOverlay.setVisibility(View.VISIBLE);
-            menuOverlay.animate().alpha(1f).setDuration(200).start();
-            commentsPanel.bringToFront();
+        // Use VideoPlayerActivity's method to open draggable panel
+        if (context instanceof com.example.animelib.VideoPlayerActivity) {
+            ((com.example.animelib.VideoPlayerActivity) context).openCommentsPanel();
         }
         
         // Загрузить первую страницу если комментарии пустые
@@ -328,35 +304,13 @@ public class CommentsManager {
      * Скрыть панель комментариев
      */
     public void hideCommentsPanel() {
-        if (commentsPanel == null || !isCommentsVisible) return;
+        if (!isCommentsVisible) return;
         
         isCommentsVisible = false;
         
-        // Получаем ширину панели в пикселях
-        int panelWidth = commentsPanel.getWidth();
-        if (panelWidth == 0) {
-            // Если ширина еще не измерена, используем значение по умолчанию
-            panelWidth = (int) (commentsPanelWidth * context.getResources().getDisplayMetrics().density);
-        }
-        
-        Log.d("CommentsManager", "Hiding comments panel, width: " + panelWidth);
-        
-        // Анимация скрытия панели
-        commentsPanel.animate().cancel();
-        commentsPanel.animate()
-            .translationX(panelWidth)
-            .setDuration(220)
-            .withEndAction(() -> {
-                Log.d("CommentsManager", "Hide animation completed, final translationX: " + commentsPanel.getTranslationX());
-                if (!isCommentsVisible && menuOverlay != null) {
-                    menuOverlay.setVisibility(View.GONE);
-                }
-            })
-            .start();
-        
-        // Скрыть overlay если меню тоже не видно
-        if (menuOverlay != null) {
-            menuOverlay.animate().alpha(0f).setDuration(160).start();
+        // Use VideoPlayerActivity's method to close draggable panel
+        if (context instanceof com.example.animelib.VideoPlayerActivity) {
+            ((com.example.animelib.VideoPlayerActivity) context).closeCommentsPanel();
         }
         
         // Уведомить о изменении видимости
@@ -516,6 +470,14 @@ public class CommentsManager {
      */
     public boolean isCommentsVisible() {
         return isCommentsVisible;
+    }
+    
+    /**
+     * Вызывается когда панель закрывается через драг
+     */
+    public void onPanelClosedByDrag() {
+        Log.d("CommentsManager", "Panel closed by drag, updating isCommentsVisible flag");
+        isCommentsVisible = false;
     }
     
     /**

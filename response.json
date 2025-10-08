@@ -1,38 +1,50 @@
 {
-    "token": {
-        "token_type": "Bearer",
-        "expires_in": 2592000,
-        "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIxIiwianRpIjoiMGMwZDFhNzE0MmZhZDBlNTdhNzZiOWY3MzdlYzNlMWU2YmQyMTYwNzljMzkwNWJiYzRmYmJjNzI5MzU1NDM5NmMyYWEyZTMyOTZkODlmYzciLCJpYXQiOjE3NTg5OTU1MjUuMDc2OTQsIm5iZiI6MTc1ODk5NTUyNS4wNzY5NDEsImV4cCI6MTc2MTU4NzUyNS4wNzIxMzcsInN1YiI6Ijk0MzkzMjEiLCJzY29wZXMiOltdfQ.h92ua0LnpNbm8drIsK3k9GyLL0HMzHLFLx9wbh4wlC0OqZCqAExoGaKg6IUfks99cCTV-5wSOaAFtSjzYFtePxPUYF1OBuKdkPFNH6u73PrIWrXrYHZbuv2OK_O9ABMr_SVNDbH1F_WgF2OtpIsyDwb9qndwNbVSDP96KV7dX3CSCJeJ1oR-A-qOOp6ayIsfyBjihIivRAsPQWcUyQ0w6mEejRlHKtFnYNoSzBpGq4KMwEEoYfTfx2JoiiPyDbALUpSCbT_G4wRioy8Binfw7js57zndYgUGFRm7VSBszzzGMoj0ooDvEM-AQ2c_3W2F4F1uJ-4dGpQL_UFkn8E4rv9xs70MdOKibRh9zkDXK8aPKUbJsgQ7JxueHJBVJX2Kr5xidITsnsdEJQ-PB_fbIiAKnL9Snz0PaYdsi9SWUHF5zyU24cDg_aGZXde0t28sqpcEwmAAm_Bywz19w37aq6X9OHqU4-KCOIAeqxeYixsst-u9GYZTEeqAwm-vRSwmV--ECxSnkcmkSJNgoKiyqxPzi0TWWFJ15LPpJaTveH-5tl9QvgOAVaArML0SsMXP7mIPZ0FMv7fidMF2qh_aYHkH7i0KwNmfnOFbRaI7vBXuZ3EO0DwDLVib-Jcji6v6m4ti4b5oRjYMDIx7dZKlH6ql6i11g44mCdDbVrjseFw",
-        "refresh_token": "def50200e45323741e3a6c47af749e6ce8d5676f4834ab85fe962f8c045e9af805d86cd0db2cd74941a7043863b3eb5116bbebb8e5ebef4a7e3bba6c4803e9fb75c0d67c68de22d324fba6ca01dc23023a9b81d926d622d0a2d7327076b83bfcf4cd7a7a93ec25446e78401f603b6906129e24741e7bfcd9cf328651bbbabd1f179403d23c12cc60e768571c75c232dd0318760622f1eff9add7f62e47c97e2987e6c4abf59f6d3731503e4e79b8086cf1234093ff4d69dfd6159029732944044eaaeeaf866d5e568721f5901e3b571cd3ad1ba49a1db3e161d402b784bc1c6b86f854aa785726a30dd047449fd2aee5178047169357bd258221c7afd928a34cdf4ef3ceeb66382dcadbcb56a7e11df7764f38b78feb2b14d0e26f88cca38c075444ea7b65e1371849b114717bbbb7a1d535f47371bdcf81a29a52fc7adca4a574228afa2fa5e91e3b7034a8ba430beda84436cdbb7dd2fcd3e03ce58f63b18a40472611e48171",
-        "timestamp": 1758995524356
-    },
-    "auth": {
-        "id": 9439321,
-        "username": "Fazer000",
-        "avatar": {
-            "filename": "80a1e08d-afe7-4e32-b593-ad3d0042bf83.jpg",
-            "url": "https://cover.imglib.info/uploads/users/9439321/80a1e08d-afe7-4e32-b593-ad3d0042bf83.jpg"
+    "data": {
+        "id": 19560,
+        "name": "Yofukashi no Uta",
+        "rus_name": "Песнь ночных сов",
+        "eng_name": "Call of the Night",
+        "model": "anime",
+        "slug": "yofukashi-no-uta-anime",
+        "slug_url": "19560--yofukashi-no-uta-anime",
+        "cover": {
+            "filename": "fe74307f-7565-4789-8dd3-fefc0568e60e",
+            "thumbnail": "https://cover.imglib.info/uploads/anime/19560/cover/fe74307f-7565-4789-8dd3-fefc0568e60e_thumb.jpg",
+            "default": "https://cover.imglib.info/uploads/anime/19560/cover/fe74307f-7565-4789-8dd3-fefc0568e60e.jpg",
+            "md": "https://cover.imglib.info/uploads/anime/19560/cover/fe74307f-7565-4789-8dd3-fefc0568e60e.jpg"
         },
-        "balance": 0,
-        "last_online_at": "2025-09-27T18:13:24.000000Z",
-        "teams": [],
-        "rolesInTeams": [],
-        "permissions": [],
-        "roles": [],
-        "metadata": {
-            "auth_domains": {
-                "0": "mangalib.me",
-                "1": "test-front.mangalib.me",
-                "2": "slashlib.me",
-                "3": "ranobelib.me",
-                "4": "hentailib.me",
-                "5": "v3.animelib.org"
-            }
+        "ageRestriction": {
+            "id": 2,
+            "label": "12+"
         },
-        "premium": {
-            "enabled": false
-        }
+        "site": 5,
+        "type": {
+            "id": 16,
+            "label": "TV Сериал"
+        },
+        "close_view": 0,
+        "releaseDate": "2022-07-08",
+        "rating": {
+            "average": "8.58",
+            "averageFormated": "8.6",
+            "votes": 2177,
+            "votesFormated": "2.2 K",
+            "user": 0
+        },
+        "is_licensed": false,
+        "status": {
+            "id": 2,
+            "label": "Завершён"
+        },
+        "items_count": {
+            "uploaded": 13,
+            "total": 13
+        },
+        "releaseDateString": "08 июля 2022 г.",
+        "shikimori_href": "https://shikimori.one/animes/50346",
+        "shiki_rate": 7.95
     },
-    "prevUrl": "",
-    "timestamp": 1758997508013
+    "meta": {
+        "country": "RU"
+    }
 }

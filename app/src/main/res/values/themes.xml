@@ -98,6 +98,9 @@
         <item name="primaryTextColor">@color/lt_primary_text_color</item>
         <item name="secondaryTextColor">@color/lt_secondary_text_color</item>
         <item name="accentTextColor">@color/lt_accent_text_color</item>
+        <item name="cardBackgroundColor">@color/lt_card_background</item>
+        <item name="cardElevationColor">@color/lt_card_elevation</item>
+        <item name="ratingStarColor">@color/lt_rating_star</item>
     </style>
 
     <style name="SpinnerTextStyle" parent="Widget.AppCompat.Spinner">
