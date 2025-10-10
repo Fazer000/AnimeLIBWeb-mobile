@@ -74,8 +74,13 @@ public class AnimeInfoResponse {
 
     public static class Rating {
         private String average;
+        
+        @SerializedName("averageFormated")
         private String averageFormated;
+        
         private int votes;
+        
+        @SerializedName("votesFormated")
         private String votesFormated;
 
         public String getAverage() { return average; }

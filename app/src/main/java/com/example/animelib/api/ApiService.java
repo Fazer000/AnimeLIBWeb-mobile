@@ -141,7 +141,7 @@ public class ApiService {
     public void fetchAnimeInfo(String animeSlugOrId, AnimeInfoCallback callback) {
         safeExecute(() -> {
             try {
-                String apiUrl = "https://api.cdnlibs.org/api/anime/" + animeSlugOrId;
+                String apiUrl = "https://api.cdnlibs.org/api/anime/" + animeSlugOrId + "?fields[]=rate&fields[]=rate_avg&fields[]=releaseDate&fields[]=episodes&fields[]=episodes_count&fields[]=close_view&fields[]=userRating";
                 Request request = buildApiRequest(apiUrl).build();
 
                 httpClient.newCall(request).enqueue(new Callback() {

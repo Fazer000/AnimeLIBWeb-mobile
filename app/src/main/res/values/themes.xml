@@ -101,6 +101,7 @@
         <item name="cardBackgroundColor">@color/lt_card_background</item>
         <item name="cardElevationColor">@color/lt_card_elevation</item>
         <item name="ratingStarColor">@color/lt_rating_star</item>
+        <item name="playerItemBackground">@color/lt_player_item_background</item>
     </style>
 
     <style name="SpinnerTextStyle" parent="Widget.AppCompat.Spinner">

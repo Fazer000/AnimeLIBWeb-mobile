@@ -51,11 +51,26 @@ public class GesturesManager {
     private long basePositionMs = 0L;
     private Float lastSwipeX = null;
     
+    // Переменные для edge swipes
+    private boolean isEdgeSwipe = false;
+    private int screenWidth = 0;
+    private int screenHeight = 0;
+    private static final int EDGE_SWIPE_THRESHOLD = 50; // dp для определения края экрана
+    private static final int BOTTOM_ZONE_HEIGHT = 150; // dp для нижней зоны (над таймбаром)
+    private static final int TOP_ZONE_HEIGHT = 150; // dp для верхней зоны (для закрытия эпизодов)
+    private int edgeSwipeThresholdPx = 0;
+    private int bottomZoneHeightPx = 0;
+    private int topZoneHeightPx = 0;
+    
     // Callback интерфейсы
     public interface GestureCallback {
         void onSeekGesture(long seekPosition);
         void onSpeedChange(float speed);
         void updatePlayLoadingIndicator(int playbackState);
+        void onEpisodesSwipeUp(); // Свайп снизу вверх для открытия эпизодов
+        void onEpisodesSwipeDown(); // Свайп сверху вниз для закрытия эпизодов
+        void onCommentsSwipeFromRight(); // Свайп справа для комментариев
+        void onPlayersSwipeFromRight(); // Свайп справа снизу для озвучек
     }
     
     private GestureCallback gestureCallback;
@@ -71,7 +86,20 @@ public class GesturesManager {
         ViewConfiguration config = ViewConfiguration.get(context);
         swipeTouchSlopPx = config.getScaledTouchSlop();
         
-        Log.d(TAG, "GesturesManager initialized with touch slop: " + swipeTouchSlopPx);
+        // Конвертируем dp в пиксели для edge swipes
+        float density = context.getResources().getDisplayMetrics().density;
+        edgeSwipeThresholdPx = (int) (EDGE_SWIPE_THRESHOLD * density);
+        bottomZoneHeightPx = (int) (BOTTOM_ZONE_HEIGHT * density);
+        topZoneHeightPx = (int) (TOP_ZONE_HEIGHT * density);
+        
+        // Получаем размеры экрана
+        screenWidth = context.getResources().getDisplayMetrics().widthPixels;
+        screenHeight = context.getResources().getDisplayMetrics().heightPixels;
+        
+        Log.d(TAG, "GesturesManager initialized - touch slop: " + swipeTouchSlopPx + 
+                ", edge threshold: " + edgeSwipeThresholdPx + 
+                ", bottom zone: " + bottomZoneHeightPx + ", top zone: " + topZoneHeightPx +
+                ", screen: " + screenWidth + "x" + screenHeight);
     }
     
     /**
@@ -145,6 +173,7 @@ public class GesturesManager {
                     
                      // Инициализируем переменные для жестов
                      isSwipingSeek = false;
+                     isEdgeSwipe = false;
                      isSpeedAdjustmentMode = false;
                      swipeAccumulatedDx = 0f;
                      assert player != null;
@@ -155,6 +184,9 @@ public class GesturesManager {
                      speedAdjustmentStartX = event.getX();
                      holdStartTime = System.currentTimeMillis();
                      currentSpeedMultiplier = 1.0f; // Сбрасываем скорость на 1.0x при новом касании
+                    
+                    // НЕ проверяем edge swipe в ACTION_DOWN - это блокирует обычные жесты
+                    // Проверка будет в ACTION_MOVE
                     
                     // Запускаем таймер для hold-to-speed
                     if (holdToSpeedRunnable != null) {
@@ -183,6 +215,20 @@ public class GesturesManager {
                     float totalDy = Math.abs(currentY - swipeStartY);
                     boolean passedDeadZone = totalDx > swipeTouchSlopPx && totalDx > totalDy * 1.5f;
 
+                    // Проверяем edge swipe ТОЛЬКО если начало было с края И есть движение
+                    if (!isEdgeSwipe && !isSwipingSeek && !isHoldToSpeed && 
+                        (totalDx > swipeTouchSlopPx || totalDy > swipeTouchSlopPx)) {
+                        // Проверяем, начался ли жест с края экрана
+                        if (isEdgeSwipeStart(swipeStartX, swipeStartY)) {
+                            EdgeSwipeType swipeType = detectEdgeSwipeType(swipeStartX, swipeStartY, currentX, currentY);
+                            if (swipeType != EdgeSwipeType.NONE) {
+                                isEdgeSwipe = true;
+                                handleEdgeSwipe(swipeType);
+                                return true;
+                            }
+                        }
+                    }
+
                     // Если есть движение, отменяем hold-to-speed
                     if (passedDeadZone && holdToSpeedRunnable != null) {
                         v.removeCallbacks(holdToSpeedRunnable);
@@ -192,6 +238,11 @@ public class GesturesManager {
                     // Обработка регулировки скорости при активном hold-to-speed
                     if (isHoldToSpeed) {
                         handleSpeedAdjustment(currentX);
+                        return true;
+                    }
+
+                    // Если уже обработали edge swipe, не продолжаем
+                    if (isEdgeSwipe) {
                         return true;
                     }
 
@@ -287,6 +338,7 @@ public class GesturesManager {
                     
                     // Сбрасываем состояние
                     isSwipingSeek = false;
+                    isEdgeSwipe = false;
                     swipeAccumulatedDx = 0f;
                     lastSwipeX = null;
                     
@@ -296,6 +348,103 @@ public class GesturesManager {
             }
             return false;
         });
+    }
+    
+    /**
+     * Типы edge swipes
+     */
+    private enum EdgeSwipeType {
+        NONE,
+        EPISODES_UP,        // Свайп снизу вверх для открытия эпизодов
+        EPISODES_DOWN,      // Свайп сверху вниз для закрытия эпизодов
+        COMMENTS_RIGHT,     // Свайп справа сверху для комментариев
+        PLAYERS_RIGHT       // Свайп справа снизу для озвучек
+    }
+    
+    /**
+     * Проверяет, начался ли жест с края экрана
+     */
+    private boolean isEdgeSwipeStart(float x, float y) {
+        // Проверяем правый край (для комментариев и озвучек)
+        boolean isRightEdge = x > (screenWidth - edgeSwipeThresholdPx);
+        
+        // Проверяем нижний край (для открытия эпизодов)
+        boolean isBottomEdge = y > (screenHeight - bottomZoneHeightPx);
+        
+        // Проверяем верхний край (для закрытия эпизодов)
+        boolean isTopEdge = y < topZoneHeightPx;
+        
+        return isRightEdge || isBottomEdge || isTopEdge;
+    }
+    
+    /**
+     * Определяет тип edge swipe на основе начальной и конечной позиции
+     */
+    private EdgeSwipeType detectEdgeSwipeType(float startX, float startY, float endX, float endY) {
+        float deltaX = endX - startX;
+        float deltaY = endY - startY;
+        float absDeltaX = Math.abs(deltaX);
+        float absDeltaY = Math.abs(deltaY);
+        
+        // Свайп снизу вверх для открытия эпизодов
+        if (startY > (screenHeight - bottomZoneHeightPx) && deltaY < -swipeTouchSlopPx && absDeltaY > absDeltaX) {
+            Log.d(TAG, "Detected EPISODES_UP swipe");
+            return EdgeSwipeType.EPISODES_UP;
+        }
+        
+        // Свайп сверху вниз для закрытия эпизодов
+        if (startY < topZoneHeightPx && deltaY > swipeTouchSlopPx && absDeltaY > absDeltaX) {
+            Log.d(TAG, "Detected EPISODES_DOWN swipe");
+            return EdgeSwipeType.EPISODES_DOWN;
+        }
+        
+        // Свайпы справа налево
+        if (startX > (screenWidth - edgeSwipeThresholdPx) && deltaX < -swipeTouchSlopPx && absDeltaX > absDeltaY) {
+            // Определяем верх или низ экрана
+            boolean isTopHalf = startY < (screenHeight / 2);
+            
+            if (isTopHalf) {
+                Log.d(TAG, "Detected COMMENTS_RIGHT swipe");
+                return EdgeSwipeType.COMMENTS_RIGHT;
+            } else {
+                Log.d(TAG, "Detected PLAYERS_RIGHT swipe");
+                return EdgeSwipeType.PLAYERS_RIGHT;
+            }
+        }
+        
+        return EdgeSwipeType.NONE;
+    }
+    
+    /**
+     * Обрабатывает edge swipe и вызывает соответствующий callback
+     */
+    private void handleEdgeSwipe(EdgeSwipeType swipeType) {
+        if (gestureCallback == null) {
+            Log.w(TAG, "GestureCallback is null, cannot handle edge swipe");
+            return;
+        }
+        
+        switch (swipeType) {
+            case EPISODES_UP:
+                Log.d(TAG, "Opening episodes panel");
+                gestureCallback.onEpisodesSwipeUp();
+                break;
+            case EPISODES_DOWN:
+                Log.d(TAG, "Closing episodes panel");
+                gestureCallback.onEpisodesSwipeDown();
+                break;
+            case COMMENTS_RIGHT:
+                Log.d(TAG, "Opening comments panel");
+                gestureCallback.onCommentsSwipeFromRight();
+                break;
+            case PLAYERS_RIGHT:
+                Log.d(TAG, "Opening players panel");
+                gestureCallback.onPlayersSwipeFromRight();
+                break;
+            case NONE:
+                // Ничего не делаем
+                break;
+        }
     }
     
     /**
@@ -487,6 +636,7 @@ public class GesturesManager {
         Log.d(TAG, "Stopping all gestures");
         
         isSwipingSeek = false;
+        isEdgeSwipe = false;
         isGestureCooldown = false; // Сбрасываем cooldown
         
         // Принудительно отменяем таймер

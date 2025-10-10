@@ -1,85 +1,112 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
+    android:layout_marginHorizontal="10dp"
+    android:layout_marginVertical="4dp"
+    app:cardCornerRadius="24dp"
+    app:cardElevation="4dp"
+    app:cardBackgroundColor="?attr/playerItemBackground"
     android:foreground="?attr/selectableItemBackground"
     android:clickable="true"
     android:focusable="true">
 
-    <!-- Player Header -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+        android:padding="8dp">
 
-        <TextView
-            android:id="@+id/firstRow"
-            android:paddingHorizontal="10dp"
-            android:paddingVertical="12dp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="?attr/primaryTextColor"
-            android:textSize="14sp"
-            android:fontFamily="@font/open_sans_semibold"
-            android:text="Anilibria.tv"
-            android:layout_marginEnd="12dp"
-            android:letterSpacing="0.01"/>
-
-        <View
+        <!-- Контейнер для названия и тегов -->
+        <LinearLayout
             android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_weight="1"/>
-
-        <TextView
-            android:id="@+id/subTag"
-            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:paddingHorizontal="8dp"
-            android:paddingVertical="4dp"
-            android:background="@drawable/tag_sub_background"
-            android:text="SUB"
-            android:textStyle="bold"
-            android:textSize="10sp"
-            android:textColor="?attr/blueColor"
-            android:visibility="gone"
-            android:layout_marginEnd="10dp"/>
+            android:layout_weight="1"
+            android:orientation="horizontal">
 
-        <TextView
-            android:id="@+id/fhdTag"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:paddingHorizontal="8dp"
-            android:paddingVertical="4dp"
-            android:background="@drawable/tag_fhd_background"
-            android:text="FHD"
-            android:textStyle="bold"
-            android:textSize="10sp"
-            android:textColor="?attr/secondaryTextColor"
-            android:visibility="gone"
-            android:layout_marginEnd="10dp"/>
+            <!-- Название плеера -->
+            <TextView
+                android:id="@+id/firstRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:text="Anilibria.tv"
+                android:textColor="?attr/primaryTextColor"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/open_sans_bold"
+                android:letterSpacing="0.01"
+                android:maxLines="1"
+                android:ellipsize="end"
+                tools:ignore="NestedWeights" />
 
-        <TextView
-            android:id="@+id/fourKTag"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:paddingHorizontal="8dp"
-            android:paddingVertical="4dp"
-            android:background="@drawable/tag_fhd_background"
-            android:text="4K"
-            android:textStyle="bold"
-            android:textSize="10sp"
-            android:textColor="?attr/secondaryTextColor"
-            android:visibility="gone"
-            android:layout_marginEnd="10dp"/>
+            <!-- Контейнер для тегов -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_gravity="center"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/subTag"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="3dp"
+                    android:background="@drawable/tag_sub_background"
+                    android:text="SUB"
+                    android:textStyle="bold"
+                    android:textSize="10sp"
+                    android:textColor="?attr/blueColor"
+                    android:visibility="gone"
+                    android:layout_marginEnd="6dp"/>
+
+                <TextView
+                    android:id="@+id/fhdTag"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="3dp"
+                    android:background="@drawable/tag_fhd_background"
+                    android:text="FHD"
+                    android:textStyle="bold"
+                    android:textSize="10sp"
+                    android:textColor="?attr/secondaryTextColor"
+                    android:visibility="visible"
+                    android:layout_marginEnd="6dp"/>
+
+                <TextView
+                    android:id="@+id/fourKTag"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="3dp"
+                    android:background="@drawable/tag_fhd_background"
+                    android:text="4K"
+                    android:textStyle="bold"
+                    android:textSize="10sp"
+                    android:textColor="?attr/secondaryTextColor"
+                    android:visibility="gone"
+                    android:layout_marginEnd="6dp"/>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+<!--        &lt;!&ndash; Шеврон справа &ndash;&gt;-->
+<!--        <ImageView-->
+<!--            android:layout_width="20dp"-->
+<!--            android:layout_height="20dp"-->
+<!--            android:layout_marginStart="8dp"-->
+<!--            android:src="@drawable/ic_chevron_right"-->
+<!--            app:tint="?attr/accentTextColor"-->
+<!--            android:contentDescription="Select player" />-->
 
     </LinearLayout>
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="0.5dp"
-        android:background="?attr/lineColor" />
-
-</LinearLayout>
+</androidx.cardview.widget.CardView>

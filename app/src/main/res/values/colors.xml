@@ -29,6 +29,9 @@
     <color name="dt_card_background">#252527</color>
     <color name="dt_card_elevation">#40000000</color>
     <color name="dt_rating_star">#FFD700</color>
+    
+    <!-- Player Item Background -->
+    <color name="dt_player_item_background">#222222</color>
 
 
     <!-- Light Theme -->
@@ -54,4 +57,7 @@
     <color name="lt_card_background">#FAFAFA</color>
     <color name="lt_card_elevation">#20000000</color>
     <color name="lt_rating_star">#FFA000</color>
+    
+    <!-- Player Item Background -->
+    <color name="lt_player_item_background">#747480</color>
 </resources>

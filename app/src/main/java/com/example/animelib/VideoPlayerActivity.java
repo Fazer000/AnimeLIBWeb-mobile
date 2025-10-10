@@ -1127,6 +1127,42 @@ public class VideoPlayerActivity extends AppCompatActivity {
             public void updatePlayLoadingIndicator(int playbackState) {
                 VideoPlayerActivity.this.updatePlayLoadingIndicator(playbackState);
             }
+            
+            @Override
+            public void onEpisodesSwipeUp() {
+                Log.d("VideoPlayer", "Episodes swipe up detected");
+                // Открываем панель эпизодов
+                if (episodesManager != null) {
+                    episodesManager.showEpisodesMenu();
+                }
+            }
+            
+            @Override
+            public void onEpisodesSwipeDown() {
+                Log.d("VideoPlayer", "Episodes swipe down detected");
+                // Закрываем панель эпизодов
+                if (episodesManager != null) {
+                    episodesManager.hideEpisodesMenu();
+                }
+            }
+            
+            @Override
+            public void onCommentsSwipeFromRight() {
+                Log.d("VideoPlayer", "Comments swipe from right detected");
+                // Открываем панель комментариев
+                if (commentsManager != null) {
+                    commentsManager.showCommentsPanel();
+                }
+            }
+            
+            @Override
+            public void onPlayersSwipeFromRight() {
+                Log.d("VideoPlayer", "Players swipe from right detected");
+                // Открываем панель озвучек
+                if (playersManager != null) {
+                    playersManager.showMenu();
+                }
+            }
         });
     }
     
@@ -1365,9 +1401,9 @@ public class VideoPlayerActivity extends AppCompatActivity {
         // Рейтинг
         Log.d("VideoPlayer", "Rating view: " + (animeInfoRating != null) + ", data: " + (data.getRating() != null));
         if (animeInfoRating != null) {
-            if (data.getRating() != null && data.getRating().getAverage() != null) {
-                animeInfoRating.setText(data.getRating().getAverage());
-                Log.d("VideoPlayer", "Set rating: " + data.getRating().getAverage());
+            if (data.getRating() != null && data.getRating().getAverageFormated() != null) {
+                animeInfoRating.setText(data.getRating().getAverageFormated());
+                Log.d("VideoPlayer", "Set rating: " + data.getRating().getAverageFormated());
             } else {
                 animeInfoRating.setText("—");
                 Log.d("VideoPlayer", "Rating data is null");
@@ -1377,12 +1413,12 @@ public class VideoPlayerActivity extends AppCompatActivity {
         // Количество эпизодов
         Log.d("VideoPlayer", "Episodes view: " + (animeInfoEpisodes != null) + ", data: " + (data.getItems_count() != null));
         if (animeInfoEpisodes != null) {
-            if (data.getItems_count() != null) {
-                animeInfoEpisodes.setText(data.getItems_count().getTotal() + " эпизодов");
-                Log.d("VideoPlayer", "Set episodes: " + data.getItems_count().getTotal());
+            if (data.getItems_count() != null && data.getItems_count().getUploaded() > 0) {
+                animeInfoEpisodes.setText(data.getItems_count().getUploaded() + " эпизодов");
+                Log.d("VideoPlayer", "Set episodes: " + data.getItems_count().getUploaded());
             } else {
                 animeInfoEpisodes.setText("—");
-                Log.d("VideoPlayer", "Episodes data is null");
+                Log.d("VideoPlayer", "Episodes data is null or 0");
             }
         }
         

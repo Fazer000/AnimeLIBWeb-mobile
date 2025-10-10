@@ -102,6 +102,7 @@
         <item name="cardBackgroundColor">@color/dt_card_background</item>
         <item name="cardElevationColor">@color/dt_card_elevation</item>
         <item name="ratingStarColor">@color/dt_rating_star</item>
+        <item name="playerItemBackground">@color/dt_player_item_background</item>
     </style>
 
     <style name="SpinnerTextStyle" parent="Widget.AppCompat.Spinner">

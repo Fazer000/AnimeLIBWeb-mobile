@@ -4,7 +4,7 @@
     <selectionStates>
       <SelectionState runConfigName="AnimeLib">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-10-08T15:53:44.599063500Z">
+        <DropdownSelection timestamp="2025-10-08T19:16:55.652009100Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="PhysicalDevice" identifier="serial=AYAV6R3B10015096" />
