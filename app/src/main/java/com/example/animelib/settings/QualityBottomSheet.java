@@ -88,6 +88,15 @@ public class QualityBottomSheet extends BottomSheetDialog {
         }
     }
     
+    /**
+     * Обновляет список доступных качеств
+     */
+    public void updateQualities(List<String> newQualities, String newCurrentQuality) {
+        if (adapter != null) {
+            adapter.updateQualities(newQualities, newCurrentQuality);
+        }
+    }
+    
     public void setOnBackPressedListener(OnBackPressedListener listener) {
         this.onBackPressedListener = listener;
     }

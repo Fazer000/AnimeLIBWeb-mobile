@@ -54,9 +54,11 @@ public class PlayersManager {
     private String preferredPlayerType; // "animelib" or "kodik"
     private EpisodeResponse.PlayerData preferredAnimelibPlayer;
     private EpisodeResponse.PlayerData preferredKodikPlayer;
+    private boolean enable4K = false; // Настройка 4K
     
     // Адаптер для табов
     private PlayerTabsAdapter playerTabsAdapter;
+    private TabLayoutMediator tabLayoutMediator;
     
     // Callback интерфейсы
     public interface PlayerSelectionCallback {
@@ -126,15 +128,31 @@ public class PlayersManager {
             );
             playersViewPager.setAdapter(playerTabsAdapter);
 
-            // Setup TabLayout with ViewPager
-            new TabLayoutMediator(playerTabLayout, playersViewPager,
+            // Setup TabLayout with ViewPager - используем динамические названия
+            setupTabLayoutMediator();
+        }
+    }
+    
+    /**
+     * Настройка TabLayoutMediator (создается заново при обновлении данных)
+     */
+    private void setupTabLayoutMediator() {
+        // Отключаем старый медиатор если он есть
+        if (tabLayoutMediator != null) {
+            tabLayoutMediator.detach();
+        }
+        
+        if (playerTabLayout != null && playersViewPager != null) {
+            tabLayoutMediator = new TabLayoutMediator(playerTabLayout, playersViewPager,
                     (tab, position) -> {
-                        if (position == 0) {
+                        String playerType = playerTabsAdapter.getPlayerTypeAtPosition(position);
+                        if ("animelib".equals(playerType)) {
                             tab.setText("AnimeLib");
-                        } else {
+                        } else if ("kodik".equals(playerType)) {
                             tab.setText("Kodik");
                         }
-                    }).attach();
+                    });
+            tabLayoutMediator.attach();
         }
     }
     
@@ -313,6 +331,8 @@ public class PlayersManager {
                     kodikPlayers != null ? kodikPlayers : new ArrayList<>(),
                     currentPlayerData
             );
+            // Пересоздаем TabLayoutMediator для обновления табов
+            setupTabLayoutMediator();
         }
     }
     
@@ -379,9 +399,9 @@ public class PlayersManager {
             if (currentPlayerData.getVideo() != null && currentPlayerData.getVideo().getQuality() != null) {
                 for (EpisodeResponse.QualityData qualityData : currentPlayerData.getVideo().getQuality()) {
                     String quality = String.valueOf(qualityData.getQuality());
-                    // Skip 4K unless enabled
-                    if ("2160".equals(quality) || "4K".equals(quality)) {
-                        // Skip 4K quality as it's disabled
+                    // Skip 4K if not enabled
+                    if (("2160".equals(quality) || "4K".equals(quality)) && !enable4K) {
+                        Log.d(TAG, "Skipping 4K quality (not enabled)");
                         continue;
                     }
                     qualities.add(quality + "p");
@@ -395,6 +415,14 @@ public class PlayersManager {
         }
 
         return qualities;
+    }
+    
+    /**
+     * Установка настройки 4K
+     */
+    public void setEnable4K(boolean enable4K) {
+        this.enable4K = enable4K;
+        Log.d(TAG, "4K setting updated: " + enable4K);
     }
     
     /**
@@ -549,5 +577,50 @@ public class PlayersManager {
         playerSelectionCallback = null;
         visibilityCallback = null;
         dataCallback = null;
+    }
+    
+    /**
+     * Завершает drag жест с решением открыть или закрыть панель плееров
+     */
+    public void completeDrag(boolean shouldOpen) {
+        Log.d(TAG, "Complete players drag: shouldOpen=" + shouldOpen);
+        
+        if (shouldOpen) {
+            // При drag открытии НЕ вызываем openMenuPanel() - панель уже открывается через DraggableSidePanel
+            // Только обновляем флаг
+            if (isMenuVisible) {
+                Log.w(TAG, "Players menu already visible, skipping");
+                return;
+            }
+            
+            isMenuVisible = true;
+            
+            // Уведомить о изменении видимости
+            if (visibilityCallback != null) {
+                visibilityCallback.onPlayersVisibilityChanged(true);
+            }
+        } else {
+            hideMenu();
+        }
+    }
+    
+    /**
+     * Обновляет состояние после drag (вызывается после завершения анимации DraggableSidePanel)
+     */
+    public void updateDragState(boolean isOpen) {
+        Log.d(TAG, "Update drag state: isOpen=" + isOpen);
+        
+        if (isOpen) {
+            isMenuVisible = true;
+            
+            if (visibilityCallback != null) {
+                visibilityCallback.onPlayersVisibilityChanged(true);
+            }
+        } else {
+            isMenuVisible = false;
+            if (visibilityCallback != null) {
+                visibilityCallback.onPlayersVisibilityChanged(false);
+            }
+        }
     }
 }

@@ -18,13 +18,13 @@ import java.nio.charset.StandardCharsets;
  * Класс для обработки нажатий кнопок плеера в WebView
  * Содержит JavaScript интерфейс и логику настройки слушателей
  */
-public class PlayerButtonHandler {
+public class JSInjectionsHandler {
     private static final String TAG = "PlayerButtonHandler";
     private static final String JS_INTERFACE_NAME = "AndroidInterface";
     
     private final Context context;
     
-    public PlayerButtonHandler(Context context) {
+    public JSInjectionsHandler(Context context) {
         this.context = context;
     }
     
@@ -90,8 +90,15 @@ public class PlayerButtonHandler {
         public void onPlayerButtonClicked(String buttonHref) {
             if (context instanceof android.app.Activity) {
                 ((android.app.Activity) context).runOnUiThread(() -> {
-                    Log.d("PlayerHandler", "Starting VideoPlayerActivity for URL: " + buttonHref);
-                    VideoPlayerActivity.startFromAnimePage((android.app.Activity) context, buttonHref);
+                    Log.d("PlayerHandler", "Getting auth token before starting VideoPlayerActivity for URL: " + buttonHref);
+                    // Получаем токен из localStorage перед запуском VideoPlayerActivity
+                    if (context instanceof com.example.animelib.MainActivity) {
+                        ((com.example.animelib.MainActivity) context).getAuthAndStartVideoPlayer(buttonHref);
+                    } else {
+                        // Fallback если это не MainActivity
+                        Log.w("PlayerHandler", "Context is not MainActivity, starting VideoPlayerActivity without token refresh");
+                        VideoPlayerActivity.startFromAnimePage((android.app.Activity) context, buttonHref);
+                    }
                 });
             } else {
                 Log.e(TAG, "Context is not an Activity, cannot start VideoPlayerActivity");

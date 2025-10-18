@@ -2,11 +2,8 @@ package com.example.animelib;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -34,12 +31,11 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.media3.common.util.UnstableApi;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
-import com.example.animelib.ui.PlayerButtonHandler;
+import com.example.animelib.ui.JSInjectionsHandler;
 import com.example.animelib.util.ThemeUtils;
 import com.example.animelib.viewmodel.AppSettingsViewModel;
 import com.example.animelib.api.ApiService;
 import com.example.animelib.dialogs.BookmarksPopupDialog;
-import com.example.animelib.models.BookmarksListResponse;
 import com.google.android.material.progressindicator.CircularProgressIndicator;
 
 import com.google.gson.Gson;
@@ -74,7 +70,7 @@ public class MainActivity extends AppCompatActivity {
     private Gson gson;
     private AppSettingsViewModel viewModel;
     private ApiService apiService;
-    private PlayerButtonHandler playerButtonHandler;
+    private JSInjectionsHandler JSInjectionsHandler;
     private BookmarksPopupDialog currentBookmarksDialog;
     private ThemeSelectionDialog themeDialog;
     private DatabaseManager databaseManager;
@@ -107,7 +103,7 @@ public class MainActivity extends AppCompatActivity {
         databaseManager = new DatabaseManager(this);
 
         // Initialize player button handler
-        playerButtonHandler = new PlayerButtonHandler(this);
+        JSInjectionsHandler = new JSInjectionsHandler(this);
 
         // Initialize theme manager
         themeDialog = new ThemeSelectionDialog(this, apiService);
@@ -358,7 +354,7 @@ public class MainActivity extends AppCompatActivity {
         CookieManager.setAcceptFileSchemeCookies(true);
 
         // Add JavaScript interface for video detection
-        playerButtonHandler.addJavaScriptInterface(webView);
+        JSInjectionsHandler.addJavaScriptInterface(webView);
 
         // Добавляем JavaScript для работы с cookies
         webView.addJavascriptInterface(new Object() {
@@ -398,16 +394,91 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
-                Log.d("WebView", "Checking URL for redirect: " + url);
+                Log.d("WebView", "=== shouldOverrideUrlLoading ===");
+                Log.d("WebView", "URL: " + url);
+                Log.d("WebView", "Current Domain: " + currentDomain);
+
+                // Обработка intent:// схем для открытия сторонних приложений
+                if (url.startsWith("intent://")) {
+                    try {
+                        Intent intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
+                        Log.d("WebView", "Parsed intent: " + intent.toString());
+                        
+                        // Пытаемся запустить приложение напрямую
+                        try {
+                            startActivity(intent);
+                            Log.d("WebView", "Started activity from intent");
+                            return true;
+                        } catch (android.content.ActivityNotFoundException e) {
+                            Log.w("WebView", "App not installed, trying fallback options");
+                            
+                            // Если приложение не установлено, пытаемся открыть fallback URL
+                            String fallbackUrl = intent.getStringExtra("browser_fallback_url");
+                            if (fallbackUrl != null) {
+                                Log.d("WebView", "Opening fallback URL: " + fallbackUrl);
+                                try {
+                                    Intent marketIntent = new Intent(Intent.ACTION_VIEW);
+                                    marketIntent.setData(android.net.Uri.parse(fallbackUrl));
+                                    startActivity(marketIntent);
+                                    return true;
+                                } catch (Exception ex) {
+                                    Log.e("WebView", "Failed to open fallback URL", ex);
+                                }
+                            }
+                            
+                            // Если нет fallback URL, пытаемся открыть в Play Market по package name
+                            String packageName = intent.getPackage();
+                            if (packageName != null) {
+                                Log.d("WebView", "Opening Play Market for package: " + packageName);
+                                try {
+                                    Intent marketIntent = new Intent(Intent.ACTION_VIEW);
+                                    marketIntent.setData(android.net.Uri.parse("market://details?id=" + packageName));
+                                    startActivity(marketIntent);
+                                    return true;
+                                } catch (Exception ex) {
+                                    Log.e("WebView", "Failed to open Play Market", ex);
+                                }
+                            }
+                            
+                            Toast.makeText(MainActivity.this, "Не удалось открыть приложение", Toast.LENGTH_SHORT).show();
+                        }
+                        
+                    } catch (Exception e) {
+                        Log.e("WebView", "Error parsing intent URL: " + url, e);
+                        Toast.makeText(MainActivity.this, "Ошибка обработки ссылки", Toast.LENGTH_SHORT).show();
+                    }
+                    return true;
+                }
+                
+                // Обработка других специальных схем (tel:, mailto:, etc.)
+                if (url.startsWith("tel:") || url.startsWith("mailto:") || 
+                    url.startsWith("sms:") || url.startsWith("market:")) {
+                    try {
+                        Intent intent = new Intent(Intent.ACTION_VIEW);
+                        intent.setData(android.net.Uri.parse(url));
+                        startActivity(intent);
+                        Log.d("WebView", "Opened special scheme: " + url);
+                        return true;
+                    } catch (Exception e) {
+                        Log.e("WebView", "Error handling special scheme: " + url, e);
+                        Toast.makeText(MainActivity.this, "Не удалось открыть ссылку", Toast.LENGTH_SHORT).show();
+                        return true;
+                    }
+                }
 
                 // Проверяем переход на другой домен
                 String newDomain = extractDomain(url);
+                Log.d("WebView", "New Domain: " + newDomain);
+                
+                // Показываем спиннер при смене домена
                 if (newDomain != null && currentDomain != null && !currentDomain.equals(newDomain)) {
-                    Log.d("WebView", "Domain change detected in shouldOverrideUrlLoading: " + currentDomain + " -> " + newDomain);
+                    Log.d("WebView", "DOMAIN CHANGE: " + currentDomain + " -> " + newDomain);
                     showDomainChangeSpinner();
                 }
-
-                // Allow other URLs to load normally
+                
+                // ВСЕГДА загружаем с headers для корректной работы
+                // (авторизация, куки, и т.д. могут зависеть от headers)
+                Log.d("WebView", "Loading URL with headers");
                 view.loadUrl(url, headers);
                 return true;
             }
@@ -421,12 +492,13 @@ public class MainActivity extends AppCompatActivity {
 
                 Log.w("WebView", "HTTP Error " + statusCode + " for URL: " + url);
 
-                // Автоматически возвращаемся назад при 404 ошибке
-                if (statusCode == 404) {
+                // Автоматически возвращаемся назад ТОЛЬКО если 404 для основного документа
+                // (не для ресурсов типа favicon.ico, картинок и т.д.)
+                if (statusCode == 404 && request.isForMainFrame()) {
                     runOnUiThread(() -> {
                         if (webView.canGoBack()) {
                             webView.goBack();
-                            Log.d("WebView", "Auto-back from 404 error");
+                            Log.d("WebView", "Auto-back from 404 error on main frame");
                         }
                     });
                 }
@@ -434,24 +506,28 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
+                Log.d("WebView", "=== onPageStarted ===");
+                Log.d("WebView", "URL: " + url);
+                
                 String newDomain = extractDomain(url);
+                Log.d("WebView", "Current domain before update: " + currentDomain);
+                Log.d("WebView", "New domain: " + newDomain);
 
                 // Показываем спиннер если это первая загрузка или переход на другой домен
                 if (isFirstLoad || (currentDomain != null && !currentDomain.equals(newDomain))) {
                     spinner.setVisibility(View.VISIBLE);
                     spinnerBackground.setVisibility(View.VISIBLE);
                     Log.d("WebView", "Spinner shown - First load: " + isFirstLoad +
-                          ", Domain changed: " + (currentDomain != null && !currentDomain.equals(newDomain)) +
-                          ", URL: " + url);
+                          ", Domain changed: " + (currentDomain != null && !currentDomain.equals(newDomain)));
                 }
 
                 // Обновляем текущий домен
                 currentDomain = newDomain;
+                Log.d("WebView", "Current domain updated to: " + currentDomain);
                 swipeRefreshLayout.setRefreshing(false);
 
                 // Always setup listeners - let JavaScript determine if it's needed
-                Log.d("WebView", "Setting up player button listeners for SPA");
-                playerButtonHandler.setupPlayerButtonListeners(view);
+                JSInjectionsHandler.setupPlayerButtonListeners(view);
             }
 
             @Override
@@ -623,6 +699,14 @@ public class MainActivity extends AppCompatActivity {
      * Получает значение auth из localStorage WebView и показывает в Toast
      */
     public void getAuthFromLocalStorage() {
+        getAuthFromLocalStorage(null);
+    }
+    
+    /**
+     * Получает auth токен из localStorage и вызывает callback после сохранения
+     * @param callback callback для выполнения после сохранения токена
+     */
+    public void getAuthFromLocalStorage(Runnable callback) {
         if (webView != null) {
             webView.evaluateJavascript(
                 "localStorage.getItem('auth')",
@@ -638,6 +722,10 @@ public class MainActivity extends AppCompatActivity {
                         
                         if ("null".equals(authValue)) {
                             Log.d("MainActivity", "Auth не найден в localStorage");
+                            // Вызываем callback даже если токен не найден
+                            if (callback != null) {
+                                callback.run();
+                            }
                         } else {
                             Log.d("MainActivity", "Auth получен из localStorage");
                             
@@ -648,17 +736,26 @@ public class MainActivity extends AppCompatActivity {
                                     Gson gson = new Gson();
                                     TokenResponse tokenResponse = gson.fromJson(authValue, TokenResponse.class);
                                     if (tokenResponse != null && tokenResponse.getToken() != null) {
-                                        saveTokensToDatabase(tokenResponse.getToken());
+                                        saveTokensToDatabase(tokenResponse.getToken(), callback);
                                         Log.d("MainActivity", "Successfully parsed and saved tokens");
                                     } else {
                                         Log.w("MainActivity", "Token data not found in auth response");
+                                        if (callback != null) {
+                                            callback.run();
+                                        }
                                     }
                                 } else {
                                     Log.w("MainActivity", "Auth value is not valid JSON: " + authValue.substring(0, Math.min(50, authValue.length())));
+                                    if (callback != null) {
+                                        callback.run();
+                                    }
                                 }
                             } catch (Exception e) {
                                 Log.e("MainActivity", "Error parsing auth JSON: " + e.getMessage());
                                 Log.e("MainActivity", "Auth value: " + authValue.substring(0, Math.min(100, authValue.length())));
+                                if (callback != null) {
+                                    callback.run();
+                                }
                             }
                         }
                         Log.d("MainActivity", "Auth from localStorage processed");
@@ -667,13 +764,38 @@ public class MainActivity extends AppCompatActivity {
             );
         } else {
             Log.d("MainActivity", "WebView не готов");
+            if (callback != null) {
+                callback.run();
+            }
         }
+    }
+    
+    /**
+     * Получает токен из localStorage и затем запускает VideoPlayerActivity
+     * @param animeUrl URL страницы аниме для воспроизведения
+     */
+    public void getAuthAndStartVideoPlayer(String animeUrl) {
+        Log.d("MainActivity", "Getting auth token before starting VideoPlayerActivity");
+        getAuthFromLocalStorage(() -> {
+            // После получения и сохранения токена запускаем VideoPlayerActivity
+            Log.d("MainActivity", "Starting VideoPlayerActivity with URL: " + animeUrl);
+            VideoPlayerActivity.startFromAnimePage(this, animeUrl);
+        });
     }
     
     /**
      * Сохраняет токены в базу данных
      */
     private void saveTokensToDatabase(TokenResponse.TokenData tokenData) {
+        saveTokensToDatabase(tokenData, null);
+    }
+    
+    /**
+     * Сохраняет токены в базу данных и вызывает callback после сохранения
+     * @param tokenData данные токена
+     * @param callback callback для выполнения после сохранения
+     */
+    private void saveTokensToDatabase(TokenResponse.TokenData tokenData, Runnable callback) {
         executor.execute(() -> {
             try {
                 TokenEntity tokenEntity = new TokenEntity(
@@ -687,8 +809,17 @@ public class MainActivity extends AppCompatActivity {
                 databaseManager.saveToken(tokenEntity);
                 Log.d("MainActivity", "Tokens saved to database successfully");
                 
+                // Вызываем callback в UI потоке
+                if (callback != null) {
+                    runOnUiThread(callback);
+                }
+                
             } catch (Exception e) {
                 Log.e("MainActivity", "Error saving tokens to database", e);
+                // Вызываем callback даже при ошибке
+                if (callback != null) {
+                    runOnUiThread(callback);
+                }
             }
         });
     }

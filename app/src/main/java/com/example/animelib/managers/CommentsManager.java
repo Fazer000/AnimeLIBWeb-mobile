@@ -581,4 +581,63 @@ public class CommentsManager {
         visibilityCallback = null;
         dataCallback = null;
     }
+    
+    /**
+     * Завершает drag жест с решением открыть или закрыть панель комментариев
+     */
+    public void completeDrag(boolean shouldOpen) {
+        Log.d(TAG, "Complete comments drag: shouldOpen=" + shouldOpen);
+        
+        if (shouldOpen) {
+            // При drag открытии НЕ вызываем openCommentsPanel() - панель уже открывается через DraggableSidePanel
+            // Только обновляем флаг и загружаем данные
+            if (isCommentsVisible) {
+                Log.w(TAG, "Comments panel already visible, skipping");
+                return;
+            }
+            
+            isCommentsVisible = true;
+            
+            // Загрузить первую страницу если комментарии пустые
+            if (!isLoadingComments && (commentsAdapter == null || commentsAdapter.getItemCount() == 0)) {
+                commentsCurrentPage = 1;
+                commentsHasNextPage = true;
+                loadCommentsPage(1);
+            }
+            
+            // Уведомить о изменении видимости
+            if (visibilityCallback != null) {
+                visibilityCallback.onCommentsVisibilityChanged(true);
+            }
+        } else {
+            hideCommentsPanel();
+        }
+    }
+    
+    /**
+     * Обновляет состояние после drag (вызывается после завершения анимации DraggableSidePanel)
+     */
+    public void updateDragState(boolean isOpen) {
+        Log.d(TAG, "Update drag state: isOpen=" + isOpen);
+        
+        if (isOpen) {
+            isCommentsVisible = true;
+            
+            // Загрузить первую страницу если комментарии пустые
+            if (!isLoadingComments && (commentsAdapter == null || commentsAdapter.getItemCount() == 0)) {
+                commentsCurrentPage = 1;
+                commentsHasNextPage = true;
+                loadCommentsPage(1);
+            }
+            
+            if (visibilityCallback != null) {
+                visibilityCallback.onCommentsVisibilityChanged(true);
+            }
+        } else {
+            isCommentsVisible = false;
+            if (visibilityCallback != null) {
+                visibilityCallback.onCommentsVisibilityChanged(false);
+            }
+        }
+    }
 }

@@ -11,7 +11,7 @@ android {
         minSdk 29
         targetSdk 35
         versionCode 1
-        versionName "1.3.0"
+        versionName "1.3.4"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -28,7 +28,12 @@ android {
         variant.outputs.all { output ->
             def buildType = variant.buildType.name
             def versionName = variant.versionName
-            def outputFileName = "AnimeLib-${versionName}-${buildType}.apk"
+            def outputFileName = ""
+            if (buildType === "debug") {
+                outputFileName = "AnimeLib-v${versionName}-${buildType}.apk"
+            } else {
+                outputFileName = "AnimeLib-v${versionName}.apk"
+            }
             outputFileName = outputFileName.replace("debug", "debug").replace("release", "release")
             output.outputFileName = outputFileName
         }

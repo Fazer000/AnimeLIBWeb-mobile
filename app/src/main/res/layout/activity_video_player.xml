@@ -97,6 +97,73 @@
         android:textStyle="bold"
         android:visibility="gone" />
 
+    <!-- Double tap skip indicator - Left (backward) -->
+    <LinearLayout
+        android:id="@+id/skipIndicatorLeft"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical|start"
+        android:layout_marginStart="130dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:alpha="0"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:src="@drawable/ic_skip"
+            android:rotation="180"
+            android:alpha="0.9"
+            app:tint="@color/white_color" />
+
+        <TextView
+            android:id="@+id/skipTextLeft"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/video_time_background"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="6dp"
+            android:text="-85 сек"
+            android:textColor="?attr/primaryTextColor"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Double tap skip indicator - Right (forward) -->
+    <LinearLayout
+        android:id="@+id/skipIndicatorRight"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical|end"
+        android:layout_marginEnd="130dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:alpha="0"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:src="@drawable/ic_skip"
+            android:alpha="0.9"
+            app:tint="@color/white_color" />
+
+        <TextView
+            android:id="@+id/skipTextRight"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/video_time_background"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="6dp"
+            android:text="+85 сек"
+            android:textColor="?attr/primaryTextColor"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
     <!-- Skip segment button -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/skipSegmentButton"

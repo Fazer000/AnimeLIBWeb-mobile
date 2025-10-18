@@ -78,6 +78,17 @@ public class QualityAdapter extends RecyclerView.Adapter<QualityAdapter.QualityV
         this.currentQuality = newCurrentQuality;
         notifyDataSetChanged();
     }
+    
+    /**
+     * Обновляет список качеств и текущее качество
+     */
+    @SuppressLint("NotifyDataSetChanged")
+    public void updateQualities(List<String> newQualities, String newCurrentQuality) {
+        this.qualities.clear();
+        this.qualities.addAll(newQualities);
+        this.currentQuality = newCurrentQuality;
+        notifyDataSetChanged();
+    }
 
     public static class QualityViewHolder extends RecyclerView.ViewHolder {
         TextView qualityText;

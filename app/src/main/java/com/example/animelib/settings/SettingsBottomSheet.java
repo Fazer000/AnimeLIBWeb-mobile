@@ -332,9 +332,9 @@ public class SettingsBottomSheet extends BottomSheetDialog {
             currentQualityText.setText(newCurrentQuality != null ? newCurrentQuality : "1080p");
         }
 
-        // Update quality dialog if it exists
+        // Update quality dialog if it exists - обновляем весь список, а не только текущее качество
         if (currentQualityBottomSheet != null) {
-            currentQualityBottomSheet.updateCurrentQuality(newCurrentQuality);
+            currentQualityBottomSheet.updateQualities(newQualities, newCurrentQuality);
         }
     }
 

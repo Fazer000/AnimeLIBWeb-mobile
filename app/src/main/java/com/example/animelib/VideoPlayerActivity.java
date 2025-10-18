@@ -33,11 +33,16 @@ import androidx.media3.common.MediaItem;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
 import androidx.media3.common.util.UnstableApi;
+import androidx.media3.common.C;
 import androidx.media3.datasource.DefaultHttpDataSource;
 import androidx.media3.datasource.okhttp.OkHttpDataSource;
 import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.exoplayer.DefaultLoadControl;
+import androidx.media3.exoplayer.LoadControl;
 import androidx.media3.exoplayer.hls.HlsMediaSource;
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector;
+import androidx.media3.exoplayer.trackselection.TrackSelector;
 import androidx.media3.ui.PlayerView;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
@@ -142,6 +147,8 @@ public class VideoPlayerActivity extends AppCompatActivity {
     private RecyclerView episodesHorizontalRecyclerView;
     private ImageButton commentsButton;
     private ImageButton bookmarkButton;
+    private View skipIndicatorLeft;
+    private View skipIndicatorRight;
 
     // Comments manager
     private CommentsManager commentsManager;
@@ -280,6 +287,16 @@ public class VideoPlayerActivity extends AppCompatActivity {
             longSkipDuration = apiService.loadLongSkipDurationSetting();
             currentTheme = apiService.loadThemeSetting();
             Log.d("VideoPlayer", "Loaded settings - 4K: " + enable4K + ", AutoPlay: " + autoPlay + ", SkipDuration: " + longSkipDuration + ", Theme: " + currentTheme);
+            
+            // Update skip indicators text and 4K setting on UI thread
+            runOnUiThread(() -> {
+                if (gesturesManager != null) {
+                    gesturesManager.updateSkipDurationText(longSkipDuration);
+                }
+                if (playersManager != null) {
+                    playersManager.setEnable4K(enable4K);
+                }
+            });
         });
 
         // Initialize HTTP data source with custom headers for video requests
@@ -688,6 +705,8 @@ public class VideoPlayerActivity extends AppCompatActivity {
         // Gesture components
         TextView seekPreviewText = findViewById(R.id.seekPreviewText);
         TextView holdSpeedToast = findViewById(R.id.holdSpeedToast);
+        View skipIndicatorLeft = findViewById(R.id.skipIndicatorLeft);
+        View skipIndicatorRight = findViewById(R.id.skipIndicatorRight);
         
         // Comments components
         View commentsPanel = findViewById(R.id.commentsPanel);
@@ -722,6 +741,8 @@ public class VideoPlayerActivity extends AppCompatActivity {
         this.seekPreviewText = seekPreviewText;
         this.holdSpeedToast = holdSpeedToast;
         this.pipButton = pipButton;
+        this.skipIndicatorLeft = skipIndicatorLeft;
+        this.skipIndicatorRight = skipIndicatorRight;
     }
     
     /**
@@ -850,7 +871,8 @@ public class VideoPlayerActivity extends AppCompatActivity {
      */
     private void initializeManagers() {
         // Initialize gestures manager
-        gesturesManager.initializeViews(playerView, null, holdSpeedToast, seekPreviewText);
+        gesturesManager.initializeViews(playerView, null, holdSpeedToast, seekPreviewText,
+                skipIndicatorLeft, skipIndicatorRight);
         
         // Setup draggable panels
         setupDraggablePanels();
@@ -1163,6 +1185,113 @@ public class VideoPlayerActivity extends AppCompatActivity {
                     playersManager.showMenu();
                 }
             }
+            
+            @Override
+            public void onEpisodesDragProgress(float progress) {
+                // Показываем интерфейс плеера при начале drag (первый вызов с progress > 0)
+                if (progress > 0 && playerView != null && !playerView.isControllerFullyVisible()) {
+                    playerView.showController();
+                    Log.d("VideoPlayer", "Showing controller on episodes drag start");
+                }
+                
+                // Обновляем прогресс вытягивания панели эпизодов
+                if (episodesManager != null) {
+                    episodesManager.setDragProgress(progress);
+                }
+            }
+            
+            @Override
+            public void onCommentsDragProgress(float progress) {
+                // Показываем интерфейс плеера при начале drag
+                if (progress > 0 && playerView != null && !playerView.isControllerFullyVisible()) {
+                    playerView.showController();
+                    Log.d("VideoPlayer", "Showing controller on comments drag start");
+                }
+                
+                // Обновляем прогресс вытягивания панели комментариев
+                if (commentsPanelContainer != null) {
+                    commentsPanelContainer.setDragProgress(progress);
+                }
+            }
+            
+            @Override
+            public void onPlayersDragProgress(float progress) {
+                // Показываем интерфейс плеера при начале drag
+                if (progress > 0 && playerView != null && !playerView.isControllerFullyVisible()) {
+                    playerView.showController();
+                    Log.d("VideoPlayer", "Showing controller on players drag start");
+                }
+                
+                // Обновляем прогресс вытягивания панели озвучек
+                if (menuPanelContainer != null) {
+                    menuPanelContainer.setDragProgress(progress);
+                }
+            }
+            
+            @Override
+            public void onPanelDragComplete(GesturesManager.EdgeSwipeType type, boolean shouldOpen) {
+                Log.d("VideoPlayer", "Panel drag complete: " + type + ", shouldOpen=" + shouldOpen);
+                
+                switch (type) {
+                    case EPISODES_UP:
+                    case EPISODES_DOWN:
+                        // Для эпизодов используем updateDragState чтобы избежать повторной анимации
+                        if (episodesManager != null) {
+                            episodesManager.updateDragState(shouldOpen);
+                        }
+                        break;
+                        
+                    case COMMENTS_RIGHT:
+                        // Даем DraggableSidePanel завершить анимацию, затем обновляем состояние
+                        if (commentsPanelContainer != null) {
+                            commentsPanelContainer.completeDrag(shouldOpen);
+                        }
+                        // Обновляем состояние менеджера после завершения анимации
+                        if (commentsManager != null) {
+                            commentsManager.updateDragState(shouldOpen);
+                        }
+                        break;
+                        
+                    case PLAYERS_RIGHT:
+                        // Даем DraggableSidePanel завершить анимацию, затем обновляем состояние
+                        if (menuPanelContainer != null) {
+                            menuPanelContainer.completeDrag(shouldOpen);
+                        }
+                        // Обновляем состояние менеджера после завершения анимации
+                        if (playersManager != null) {
+                            playersManager.updateDragState(shouldOpen);
+                        }
+                        break;
+                }
+            }
+            
+            @Override
+            public boolean isEpisodesMenuVisible() {
+                return episodesManager != null && episodesManager.isEpisodesMenuVisible();
+            }
+            
+            @Override
+            public void onDoubleTapSkip(boolean isForward, int skipDurationSeconds) {
+                if (player == null) {
+                    Log.w("VideoPlayer", "Player is null, cannot perform skip");
+                    return;
+                }
+                
+                long currentPosition = player.getCurrentPosition();
+                long skipDuration = longSkipDuration * 1000L; // Используем настройку из VideoPlayerActivity
+                long newPosition = isForward ? currentPosition + skipDuration : currentPosition - skipDuration;
+                long duration = player.getDuration();
+                
+                // Ограничиваем позицию границами видео
+                newPosition = Math.max(0, newPosition);
+                if (duration > 0) {
+                    newPosition = Math.min(newPosition, duration);
+                }
+                
+                player.seekTo(newPosition);
+                Log.d("VideoPlayer", "Double tap skip: " + (isForward ? "forward" : "backward") + 
+                      " to " + (newPosition / 1000) + "s (skip=" + (skipDuration / 1000) + "s)");
+            }
         });
     }
     
@@ -1265,7 +1394,9 @@ public class VideoPlayerActivity extends AppCompatActivity {
                 // Меню закрыто и нет выбранной озвучки - показываем placeholder
                 showAnimeInfoPlaceholder();
             }
-            // Update controller visibility if needed
+            
+            // НЕ показываем интерфейс плеера при drag - это неправильно
+            // Интерфейс должен показываться только при обычном открытии панели плееров
         });
         playersManager.setDataCallback(new PlayersManager.PlayersDataCallback() {
             @Override
@@ -1809,18 +1940,28 @@ public class VideoPlayerActivity extends AppCompatActivity {
                     enable4K = enabled;
                     // Save to database
                     apiService.save4KSetting(enabled);
-                    Log.d("VideoPlayer", "4K enabled: " + enabled);
+                    // Update PlayersManager with new 4K setting
+                    playersManager.setEnable4K(enabled);
+                    Log.d("VideoPlayer", "4K setting changed to: " + enabled);
                     // Refresh qualities when 4K setting changes
                     List<String> newQualities = playersManager.getAvailableQualities();
+                    Log.d("VideoPlayer", "New qualities after 4K toggle: " + newQualities);
                     if (!newQualities.isEmpty()) {
                         // Update preferred quality if current is not available
                         if (!newQualities.contains(preferredQuality)) {
+                            String oldQuality = preferredQuality;
                             preferredQuality = newQualities.get(0);
+                            Log.d("VideoPlayer", "Preferred quality changed from " + oldQuality + " to " + preferredQuality);
                         }
                         // Use currentSettingsDialog instead of dialog
                         if (currentSettingsBottomSheet != null) {
+                            Log.d("VideoPlayer", "Updating SettingsBottomSheet with new qualities");
                             currentSettingsBottomSheet.updateQualities(newQualities, preferredQuality);
+                        } else {
+                            Log.w("VideoPlayer", "currentSettingsBottomSheet is null, cannot update");
                         }
+                    } else {
+                        Log.w("VideoPlayer", "New qualities list is empty!");
                     }
                 },
                 autoPlay,
@@ -1835,6 +1976,10 @@ public class VideoPlayerActivity extends AppCompatActivity {
                     longSkipDuration = duration;
                     // Save to database
                     apiService.saveLongSkipDurationSetting(duration);
+                    // Update skip indicators text
+                    if (gesturesManager != null) {
+                        gesturesManager.updateSkipDurationText(duration);
+                    }
                     Log.d("VideoPlayer", "LongSkipDuration changed: " + duration);
                 },
                 currentTheme,
@@ -1924,11 +2069,27 @@ public class VideoPlayerActivity extends AppCompatActivity {
     }
 
     private void initializePlayer() {
-        // Create ExoPlayer with custom data source for video requests
+        // Create LoadControl with larger buffer for 4K support
+        LoadControl loadControl = new DefaultLoadControl.Builder()
+                .setBufferDurationsMs(
+                        50000,  // min buffer (50s для 4K)
+                        120000, // max buffer (120s для 4K)
+                        2500,   // buffer for playback
+                        5000    // buffer for playback after rebuffer
+                )
+                .build();
+        
+        // Create TrackSelector with 4K support
+        TrackSelector trackSelector = new DefaultTrackSelector(this);
+        
+        // Create ExoPlayer with custom data source and 4K support
         player = new ExoPlayer.Builder(this)
                 .setSeekBackIncrementMs(10000)
                 .setSeekForwardIncrementMs(10000)
                 .setMediaSourceFactory(new DefaultMediaSourceFactory(httpDataSourceFactory))
+                .setLoadControl(loadControl)
+                .setTrackSelector(trackSelector)
+                .setVideoScalingMode(C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING)
                 .build();
 
         playerView.setPlayer(player);
@@ -1962,9 +2123,41 @@ public class VideoPlayerActivity extends AppCompatActivity {
             @Override
             public void onPlayerError(@NonNull PlaybackException error) {
                 Log.e("VideoPlayer", "Playback error: " + error.getMessage(), error);
+                Log.e("VideoPlayer", "Error type: " + error.errorCode + ", current quality: " + preferredQuality);
                 String errorMsg = "Ошибка воспроизведения";
 
-                if (error.getMessage().contains("403")) {
+                // Check if this is a 4K playback error (Source error, decoder error, etc.)
+                boolean is4KError = (preferredQuality != null && (preferredQuality.equals("2160p") || preferredQuality.equals("4Kp"))) &&
+                        (error.getMessage().contains("Source error") || 
+                         error.getMessage().contains("Decoder") ||
+                         error.getMessage().contains("Video decoder error") ||
+                         error.errorCode == PlaybackException.ERROR_CODE_DECODING_FAILED ||
+                         error.errorCode == PlaybackException.ERROR_CODE_DECODER_INIT_FAILED);
+                
+                if (is4KError) {
+                    Log.w("VideoPlayer", "4K playback failed, attempting fallback to 1080p");
+                    errorMsg = "4K не поддерживается на этом устройстве. Переключаемся на 1080p...";
+                    Toast.makeText(VideoPlayerActivity.this, errorMsg, Toast.LENGTH_SHORT).show();
+                    
+                    // Try to fallback to 1080p
+                    List<String> availableQualities = playersManager.getAvailableQualities();
+                    if (availableQualities.contains("1080p")) {
+                        preferredQuality = "1080p";
+                        // Restart player with lower quality
+                        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                            long savedPosition = player.getCurrentPosition();
+                            restartPlayerWithNewQuality();
+                        }, 500);
+                        return; // Don't show error toast
+                    } else if (!availableQualities.isEmpty()) {
+                        // Use any available quality
+                        preferredQuality = availableQualities.get(0);
+                        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                            restartPlayerWithNewQuality();
+                        }, 500);
+                        return;
+                    }
+                } else if (error.getMessage().contains("403")) {
                     errorMsg += ": доступ запрещен (403). Пробуем без токена...";
                     Log.d("VideoPlayer", "403 Forbidden - trying URL without auth token");
 
@@ -2561,13 +2754,30 @@ public class VideoPlayerActivity extends AppCompatActivity {
         OkHttpDataSource.Factory okHttpDataSourceFactory = new OkHttpDataSource.Factory(okHttpClient);
 
         HlsMediaSource hlsMediaSource = new HlsMediaSource.Factory(okHttpDataSourceFactory)
+                .setAllowChunklessPreparation(true) // Для лучшей совместимости с 4K HLS
                 .createMediaSource(MediaItem.fromUri(hlsUrl));
 
-        // Create ExoPlayer
+        // Create LoadControl with larger buffer for 4K support
+        LoadControl loadControl = new DefaultLoadControl.Builder()
+                .setBufferDurationsMs(
+                        50000,  // min buffer (50s для 4K)
+                        120000, // max buffer (120s для 4K)
+                        2500,   // buffer for playback
+                        5000    // buffer for playback after rebuffer
+                )
+                .build();
+        
+        // Create TrackSelector with 4K support
+        TrackSelector trackSelector = new DefaultTrackSelector(this);
+        
+        // Create ExoPlayer with 4K support
         player = new ExoPlayer.Builder(this)
                 .setSeekBackIncrementMs(10000)
                 .setSeekForwardIncrementMs(10000)
                 .setMediaSourceFactory(new DefaultMediaSourceFactory(okHttpDataSourceFactory))
+                .setLoadControl(loadControl)
+                .setTrackSelector(trackSelector)
+                .setVideoScalingMode(C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING)
                 .build();
 
         playerView.setPlayer(player);
@@ -2597,9 +2807,29 @@ public class VideoPlayerActivity extends AppCompatActivity {
             @Override
             public void onPlayerError(@NonNull PlaybackException error) {
                 Log.e("HlsPlayer", "HLS playback error: " + error.getMessage(), error);
+                Log.e("HlsPlayer", "Error type: " + error.errorCode + ", current quality: " + preferredQuality);
                 String errorMsg = "Ошибка HLS воспроизведения";
 
-                if (error.getMessage().contains("403")) {
+                // Check if this is a 4K playback error
+                boolean is4KError = (preferredQuality != null && (preferredQuality.equals("2160p") || preferredQuality.equals("4Kp"))) &&
+                        (error.getMessage().contains("Source error") || 
+                         error.getMessage().contains("Decoder") ||
+                         error.getMessage().contains("Video decoder error") ||
+                         error.errorCode == PlaybackException.ERROR_CODE_DECODING_FAILED ||
+                         error.errorCode == PlaybackException.ERROR_CODE_DECODER_INIT_FAILED);
+                
+                if (is4KError) {
+                    Log.w("HlsPlayer", "4K HLS playback failed, attempting fallback to 720p");
+                    errorMsg = "4K не поддерживается на этом устройстве. Переключаемся на 720p...";
+                    Toast.makeText(VideoPlayerActivity.this, errorMsg, Toast.LENGTH_SHORT).show();
+                    
+                    // For Kodik HLS, fallback to 720p (standard Kodik quality)
+                    preferredQuality = "720p";
+                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                        restartPlayerWithNewQuality();
+                    }, 500);
+                    return; // Don't show error toast
+                } else if (error.getMessage().contains("403")) {
                     errorMsg += ": доступ запрещен (403). Проверьте HLS ссылку: " + currentVideoUrl;
                 } else if (error.getMessage().contains("404")) {
                     errorMsg += ": HLS плейлист не найден (404)";

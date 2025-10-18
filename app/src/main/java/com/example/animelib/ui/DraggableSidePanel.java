@@ -284,4 +284,72 @@ public class DraggableSidePanel extends FrameLayout {
             closePanel();
         }
     }
+    
+    /**
+     * Устанавливает прогресс drag (0.0 = закрыто, 1.0 = открыто)
+     * Используется для плавного вытягивания панели во время жеста
+     */
+    public void setDragProgress(float progress) {
+        if (animatedView == null) return;
+        
+        // Ограничиваем progress от 0.0 до 1.0
+        progress = Math.max(0f, Math.min(1f, progress));
+        
+        // Ждем когда view будет измерен
+        if (animatedView.getWidth() == 0) {
+            float finalProgress = progress;
+            animatedView.post(() -> updateDragProgress(finalProgress));
+        } else {
+            updateDragProgress(progress);
+        }
+    }
+    
+    /**
+     * Обновляет позицию панели на основе прогресса
+     */
+    private void updateDragProgress(float progress) {
+        if (animatedView == null) return;
+        
+        // Если панель не видима, делаем её видимой
+        if (getVisibility() != VISIBLE) {
+            setVisibility(VISIBLE);
+        }
+        
+        // Останавливаем текущую анимацию если есть
+        animatedView.animate().cancel();
+        
+        // Вычисляем translationX: 0 = полностью открыто, width = закрыто
+        float panelWidth = animatedView.getWidth();
+        float translationX = panelWidth * (1f - progress);
+        
+        animatedView.setTranslationX(translationX);
+        
+        // Уведомляем о скольжении
+        if (listener != null) {
+            listener.onPanelSliding(1f - progress);
+        }
+        
+        android.util.Log.d("DraggableSidePanel", "Drag progress: " + progress + ", translationX: " + translationX);
+    }
+    
+    /**
+     * Завершает drag жест с решением открыть или закрыть панель
+     */
+    public void completeDrag(boolean shouldOpen) {
+        if (animatedView == null) return;
+        
+        android.util.Log.d("DraggableSidePanel", "Complete drag: shouldOpen=" + shouldOpen);
+        
+        if (shouldOpen) {
+            // Открываем панель
+            isOpen = true;
+            animateToOpen();
+            if (listener != null) {
+                listener.onPanelOpened();
+            }
+        } else {
+            // Закрываем панель
+            animateClose();
+        }
+    }
 }

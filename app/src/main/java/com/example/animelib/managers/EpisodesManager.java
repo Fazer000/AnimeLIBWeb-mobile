@@ -123,11 +123,10 @@ public class EpisodesManager {
     private void initializeControlBarPosition() {
         if (playersControlBar == null) return;
 
-        // Изначально опускаем playersControlBar вниз на вычисленное смещение в px
-        Log.d(TAG, "EpisodesManager: Setting playersControlBar translationY to: " + totalOffsetPx + "px");
+        // Устанавливаем начальное смещение вниз (закрытое состояние)
         playersControlBar.setTranslationY(totalOffsetPx);
-
-        Log.d(TAG, "Initialized playersControlBar position with offset: " + totalOffsetPx + "px (" + totalOffsetDp + "dp)");
+        
+        Log.d(TAG, "Initialized playersControlBar translationY=" + totalOffsetPx + "px (closed state)");
     }
 
     /**
@@ -208,7 +207,7 @@ public class EpisodesManager {
         episodesRecyclerView.setScaleY(0.95f);
 
         // Анимация для playersControlBar - подъем с "пружинным" эффектом
-        Log.d(TAG, "EpisodesManager: Animating playersControlBar translationY to: 0px");
+        Log.d(TAG, "EpisodesManager: Animating playersControlBar translationY to: 0px (opened)");
         playersControlBar.animate()
                 .translationY(0)
                 .setDuration(300)
@@ -253,10 +252,14 @@ public class EpisodesManager {
                 .scaleY(0.95f)
                 .setDuration(150)
                 .setInterpolator(new AccelerateInterpolator())
+                .withEndAction(() -> {
+                    // Устанавливаем INVISIBLE чтобы сохранить место в layout
+                    episodesRecyclerView.setVisibility(View.INVISIBLE);
+                })
                 .start();
 
         // Анимация для playersControlBar - опускание с "антиципацией"
-        Log.d(TAG, "EpisodesManager: Animating playersControlBar translationY to: " + totalOffsetPx + "px");
+        Log.d(TAG, "EpisodesManager: Animating playersControlBar translationY to: " + totalOffsetPx + "px (closed)");
         playersControlBar.animate()
                 .translationY(totalOffsetPx)
                 .setDuration(250)
@@ -756,6 +759,110 @@ public class EpisodesManager {
         }
     }
 
+    /**
+     * Устанавливает прогресс drag (0.0 = закрыто, 1.0 = открыто)
+     * Используется для плавного вытягивания панели во время жеста
+     */
+    public void setDragProgress(float progress) {
+        if (playersControlBar == null || episodesRecyclerView == null) return;
+        
+        // Ограничиваем progress от 0.0 до 1.0
+        progress = Math.max(0f, Math.min(1f, progress));
+        
+        // Показываем элементы если progress > 0
+        if (progress > 0f && episodesRecyclerView.getVisibility() != View.VISIBLE) {
+            episodesRecyclerView.setVisibility(View.VISIBLE);
+        }
+        
+        // Останавливаем текущие анимации
+        playersControlBar.animate().cancel();
+        episodesRecyclerView.animate().cancel();
+        
+        // Вычисляем смещение: 
+        // progress = 0 (закрыто): translationY = totalOffsetPx (опущено вниз)
+        // progress = 1 (открыто): translationY = 0 (на своей позиции)
+        // Строго ограничиваем: от 0 до totalOffsetPx (60dp)
+        float translationY = Math.max(0f, Math.min(totalOffsetPx, totalOffsetPx * (1f - progress)));
+        playersControlBar.setTranslationY(translationY);
+        
+        // Обновляем прозрачность и масштаб списка эпизодов
+        episodesRecyclerView.setAlpha(progress);
+        episodesRecyclerView.setScaleX(0.95f + 0.05f * progress);
+        episodesRecyclerView.setScaleY(0.95f + 0.05f * progress);
+        
+        // НЕ используем GONE - это ломает layout!
+        // Используем INVISIBLE чтобы сохранить место в layout
+        if (progress == 0f && episodesRecyclerView.getVisibility() == View.VISIBLE) {
+            episodesRecyclerView.setVisibility(View.INVISIBLE);
+        } else if (progress > 0f && episodesRecyclerView.getVisibility() == View.INVISIBLE) {
+            episodesRecyclerView.setVisibility(View.VISIBLE);
+        }
+        
+        Log.d(TAG, "Episodes drag progress: " + progress + ", translationY: " + translationY + 
+              ", isVisible=" + isEpisodesMenuVisible);
+    }
+    
+    /**
+     * Завершает drag жест с решением открыть или закрыть панель эпизодов
+     */
+    public void completeDrag(boolean shouldOpen) {
+        Log.d(TAG, "Complete episodes drag: shouldOpen=" + shouldOpen);
+        
+        if (shouldOpen) {
+            showEpisodesMenu();
+        } else {
+            hideEpisodesMenu();
+        }
+    }
+    
+    /**
+     * Обновляет состояние после drag без повторной анимации
+     */
+    public void updateDragState(boolean shouldOpen) {
+        Log.d(TAG, "Update episodes drag state: shouldOpen=" + shouldOpen);
+        
+        if (shouldOpen && !isEpisodesMenuVisible) {
+            // Обновляем флаг и завершаем анимацию БЕЗ повторного запуска
+            isEpisodesMenuVisible = true;
+            
+            // Отключаем автоскрытие контролов
+            if (playerControlsCallback != null) {
+                playerControlsCallback.onPlayerControlsAutoHideChanged(false);
+            }
+            
+            // Уведомляем
+            if (visibilityCallback != null) {
+                visibilityCallback.onEpisodesVisibilityChanged(true);
+            }
+            
+            updateEpisodeNavigationButtonsVisibility();
+            
+            // Завершаем анимацию до конечного состояния С АНИМАЦИЕЙ
+            if (playersControlBar != null && episodesRecyclerView != null) {
+                playersControlBar.animate().cancel();
+                episodesRecyclerView.animate().cancel();
+                
+                // Анимируем к конечным значениям
+                playersControlBar.animate()
+                    .translationY(0f)
+                    .setDuration(200)
+                    .setInterpolator(new DecelerateInterpolator())
+                    .start();
+                
+                episodesRecyclerView.setVisibility(View.VISIBLE);
+                episodesRecyclerView.animate()
+                    .alpha(1f)
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(200)
+                    .setInterpolator(new DecelerateInterpolator())
+                    .start();
+            }
+        } else if (!shouldOpen && isEpisodesMenuVisible) {
+            hideEpisodesMenu();
+        }
+    }
+    
     /**
      * Очистка ресурсов
      */

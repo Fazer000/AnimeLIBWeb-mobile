@@ -213,7 +213,6 @@
         android:id="@+id/playersControlBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:translationY="60dp"
         android:layout_gravity="bottom"
         android:orientation="vertical">
 

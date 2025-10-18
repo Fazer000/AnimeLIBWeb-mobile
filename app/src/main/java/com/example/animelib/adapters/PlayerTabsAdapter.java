@@ -25,6 +25,9 @@ public class PlayerTabsAdapter extends RecyclerView.Adapter<PlayerTabsAdapter.Pl
     private List<EpisodeResponse.PlayerData> kodikPlayers;
     private EpisodeResponse.PlayerData currentPlayer;
     private final PlayerOptionsAdapter.OnPlayerSelectedListener playerListener;
+    
+    // Список активных вкладок (только с озвучками)
+    private List<String> activeTabs;
 
     public PlayerTabsAdapter(List<EpisodeResponse.PlayerData> animelibPlayers,
                            List<EpisodeResponse.PlayerData> kodikPlayers,
@@ -34,6 +37,7 @@ public class PlayerTabsAdapter extends RecyclerView.Adapter<PlayerTabsAdapter.Pl
         this.kodikPlayers = kodikPlayers;
         this.currentPlayer = currentPlayer;
         this.playerListener = playerListener;
+        updateActiveTabs();
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -43,7 +47,31 @@ public class PlayerTabsAdapter extends RecyclerView.Adapter<PlayerTabsAdapter.Pl
         this.animelibPlayers = animelibPlayers;
         this.kodikPlayers = kodikPlayers;
         this.currentPlayer = currentPlayer;
+        updateActiveTabs();
         notifyDataSetChanged();
+    }
+    
+    /**
+     * Обновляет список активных вкладок (только с озвучками)
+     */
+    private void updateActiveTabs() {
+        activeTabs = new java.util.ArrayList<>();
+        if (animelibPlayers != null && !animelibPlayers.isEmpty()) {
+            activeTabs.add("animelib");
+        }
+        if (kodikPlayers != null && !kodikPlayers.isEmpty()) {
+            activeTabs.add("kodik");
+        }
+    }
+    
+    /**
+     * Получает тип плеера по позиции
+     */
+    public String getPlayerTypeAtPosition(int position) {
+        if (position >= 0 && position < activeTabs.size()) {
+            return activeTabs.get(position);
+        }
+        return null;
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -53,6 +81,7 @@ public class PlayerTabsAdapter extends RecyclerView.Adapter<PlayerTabsAdapter.Pl
         this.animelibPlayers = animelibPlayers;
         this.kodikPlayers = kodikPlayers;
         this.currentPlayer = currentPlayer;
+        updateActiveTabs();
         notifyDataSetChanged();
     }
 
@@ -66,11 +95,10 @@ public class PlayerTabsAdapter extends RecyclerView.Adapter<PlayerTabsAdapter.Pl
 
     @Override
     public void onBindViewHolder(@NonNull PlayerTabViewHolder holder, int position) {
-        if (position == 0) {
-            // AnimeLib tab
+        String playerType = getPlayerTypeAtPosition(position);
+        if ("animelib".equals(playerType)) {
             setupPlayerTab(holder, animelibPlayers, "animelib");
-        } else {
-            // Kodik tab
+        } else if ("kodik".equals(playerType)) {
             setupPlayerTab(holder, kodikPlayers, "kodik");
         }
     }
@@ -88,7 +116,7 @@ public class PlayerTabsAdapter extends RecyclerView.Adapter<PlayerTabsAdapter.Pl
 
     @Override
     public int getItemCount() {
-        return 2; // Two tabs: AnimeLib and Kodik
+        return activeTabs != null ? activeTabs.size() : 0;
     }
 
     public static class PlayerTabViewHolder extends RecyclerView.ViewHolder {
