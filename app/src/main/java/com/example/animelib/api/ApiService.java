@@ -50,6 +50,11 @@ public class ApiService {
         void onError(String error);
     }
     
+    public interface RelatedTitlesCallback {
+        void onRelatedTitlesReceived(RelatedTitlesResponse response);
+        void onError(String error);
+    }
+    
     public interface EpisodeCommentsCallback {
         void onCommentsReceived(CommentsResponse response);
         void onError(String error);
@@ -570,6 +575,14 @@ public class ApiService {
         return databaseManager.load4KSetting();
     }
     
+    public void saveAmbientLightSetting(boolean enableAmbientLight) {
+        databaseManager.saveAmbientLightSetting(enableAmbientLight);
+    }
+    
+    public boolean loadAmbientLightSetting() {
+        return databaseManager.loadAmbientLightSetting();
+    }
+    
     public void saveAutoPlaySetting(boolean autoPlay) {
         databaseManager.saveAutoPlaySetting(autoPlay);
     }
@@ -592,6 +605,18 @@ public class ApiService {
     
     public int loadThemeSetting() {
         return databaseManager.loadThemeSetting();
+    }
+    
+    public void savePlayerPreferences(String player, Integer teamId) {
+        databaseManager.savePlayerPreferences(player, teamId);
+    }
+    
+    public void savePlayerPreferences(String player, Integer teamId, String preferredQuality) {
+        databaseManager.savePlayerPreferences(player, teamId, preferredQuality);
+    }
+    
+    public com.example.animelib.data.entity.PlayerPreferences loadPlayerPreferences() {
+        return databaseManager.loadPlayerPreferences();
     }
     
     public com.example.animelib.data.DatabaseManager getDatabaseManager() {
@@ -989,6 +1014,58 @@ public class ApiService {
                 Log.e("ApiService", "Error in fallback callback", ex);
             }
         }
+    }
+
+    /**
+     * Получает связанные тайтлы для аниме
+     * @param animeSlug Слаг аниме
+     * @param callback Callback для получения результата
+     */
+    public void getRelatedTitles(String animeSlug, RelatedTitlesCallback callback) {
+        safeExecute(() -> {
+            try {
+                String url = "https://api.cdnlibs.org/api/anime/" + animeSlug + "/relations";
+                Log.d("ApiService", "Fetching related titles from: " + url);
+
+                Request request = buildApiRequest(url).build();
+
+                httpClient.newCall(request).enqueue(new Callback() {
+                    @Override
+                    public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                        Log.e("ApiService", "Failed to fetch related titles", e);
+                        callback.onError("Network error: " + e.getMessage());
+                    }
+
+                    @Override
+                    public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                        try {
+                            if (response.isSuccessful()) {
+                                String responseBody = response.body().string();
+                                Log.d("ApiService", "Related titles response: " + responseBody);
+
+                                Gson gson = new Gson();
+                                RelatedTitlesResponse relatedTitlesResponse = gson.fromJson(responseBody, RelatedTitlesResponse.class);
+
+                                callback.onRelatedTitlesReceived(relatedTitlesResponse);
+                            } else {
+                                String errorBody = response.body() != null ? response.body().string() : "Unknown error";
+                                Log.e("ApiService", "Failed to fetch related titles: " + response.code() + " - " + errorBody);
+                                callback.onError("Server error: " + response.code());
+                            }
+                        } catch (Exception e) {
+                            Log.e("ApiService", "Error parsing related titles response", e);
+                            callback.onError("Parse error: " + e.getMessage());
+                        } finally {
+                            response.close();
+                        }
+                    }
+                });
+
+            } catch (Exception e) {
+                Log.e("ApiService", "Error in getRelatedTitles", e);
+                callback.onError("Request error: " + e.getMessage());
+            }
+        });
     }
 
     public void shutdown() {

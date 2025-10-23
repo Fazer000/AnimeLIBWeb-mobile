@@ -255,7 +255,66 @@ public class PlayersManager {
                     hideLoading();
                     
                     if (response.getData() != null && response.getData().getPlayers() != null) {
-                        setPlayersData(response.getData().getPlayers());
+                        List<EpisodeResponse.PlayerData> players = response.getData().getPlayers();
+                        
+                        // Попытка автоматического выбора плеера на основе сохраненных предпочтений
+                        com.example.animelib.data.entity.PlayerPreferences prefs = apiService.loadPlayerPreferences();
+                        
+                        Log.d(TAG, "Loaded preferences from DB: " + (prefs != null ? 
+                              ("player=" + prefs.getPlayer() + ", teamId=" + prefs.getTeamId() + ", quality=" + prefs.getPreferredQuality()) : 
+                              "null"));
+                        
+                        EpisodeResponse.PlayerData matchingPlayer = null;
+                        
+                        if (prefs != null && prefs.getPlayer() != null && prefs.getTeamId() != null) {
+                            Log.d(TAG, "Found saved preferences: player=" + prefs.getPlayer() + ", teamId=" + prefs.getTeamId());
+                            
+                            // Сначала ищем точное совпадение (сохраненный плеер + озвучка)
+                            for (EpisodeResponse.PlayerData player : players) {
+                                if (player.getPlayer() != null && 
+                                    player.getPlayer().equals(prefs.getPlayer()) && 
+                                    player.getTeam() != null && 
+                                    player.getTeam().getId() == prefs.getTeamId()) {
+                                    matchingPlayer = player;
+                                    Log.d(TAG, "Found exact match in saved player: " + player.getPlayer() + 
+                                          ", team: " + player.getTeam().getName());
+                                    break;
+                                }
+                            }
+                            
+                            // Если не найдено в сохраненном плеере, ищем озвучку в других плеерах
+                            if (matchingPlayer == null) {
+                                Log.d(TAG, "Team not found in saved player, searching in other players");
+                                for (EpisodeResponse.PlayerData player : players) {
+                                    if (player.getTeam() != null && 
+                                        player.getTeam().getId() == prefs.getTeamId()) {
+                                        matchingPlayer = player;
+                                        Log.d(TAG, "Found team in different player: " + player.getPlayer() + 
+                                              ", team: " + player.getTeam().getName());
+                                        break;
+                                    }
+                                }
+                            }
+                        } else {
+                            Log.d(TAG, "No saved player preferences found");
+                        }
+                        
+                        if (matchingPlayer != null) {
+                            // Автоматически выбираем найденный плеер БЕЗ показа меню
+                            Log.d(TAG, "Auto-selecting player for episode change");
+                            
+                            // Сохраняем данные плееров БЕЗ показа меню
+                            setPlayersDataSilent(players);
+                            
+                            // Вызываем callback для выбора плеера
+                            if (playerSelectionCallback != null) {
+                                playerSelectionCallback.onPlayerSelected(matchingPlayer);
+                            }
+                        } else {
+                            // Показываем меню выбора только если автовыбор не сработал
+                            Log.d(TAG, "No matching player found for episode, showing selection menu");
+                            setPlayersData(players);
+                        }
                         
                         if (dataCallback != null) {
                             dataCallback.onPlayersLoaded(allPlayers);
@@ -319,6 +378,32 @@ public class PlayersManager {
             // Show menu for user to select player manually
             showMenu();
         }
+    }
+    
+    /**
+     * Устанавливает данные плееров БЕЗ показа меню
+     * Используется при автовыборе через сохраненные предпочтения
+     */
+    public void setPlayersDataSilent(List<EpisodeResponse.PlayerData> players) {
+        Log.d(TAG, "Setting players data silently (no menu): " + players.size() + " players");
+        
+        // Store all players data
+        allPlayers.clear();
+        allPlayers.addAll(players);
+        
+        // Separate players by type (case-insensitive)
+        animelibPlayers = allPlayers.stream()
+                .filter(p -> p.getPlayer() != null && "animelib".equalsIgnoreCase(p.getPlayer()))
+                .collect(Collectors.toList());
+
+        kodikPlayers = allPlayers.stream()
+                .filter(p -> p.getPlayer() != null && "kodik".equalsIgnoreCase(p.getPlayer()))
+                .collect(Collectors.toList());
+        
+        Log.d(TAG, "AnimeLib players: " + animelibPlayers.size() + ", Kodik players: " + kodikPlayers.size());
+        
+        // Update menu with players (but don't show it)
+        updateMenuWithData();
     }
     
     /**

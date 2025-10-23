@@ -84,6 +84,38 @@ public class DatabaseManager {
     }
     
     /**
+     * Сохраняет настройку ambient light
+     */
+    public void saveAmbientLightSetting(boolean enableAmbientLight) {
+        executor.execute(() -> {
+            try {
+                AppSettings settings = db.appSettingsDao().getSettingsSync();
+                if (settings == null) {
+                    settings = new AppSettings();
+                }
+                settings.setEnableAmbientLight(enableAmbientLight);
+                db.appSettingsDao().upsert(settings);
+                Log.d(TAG, "Saved ambient light setting: " + enableAmbientLight);
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to save ambient light setting", e);
+            }
+        });
+    }
+    
+    /**
+     * Загружает настройку ambient light
+     */
+    public boolean loadAmbientLightSetting() {
+        try {
+            AppSettings settings = db.appSettingsDao().getSettingsSync();
+            return settings != null && settings.isEnableAmbientLight();
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to load ambient light setting", e);
+            return false;
+        }
+    }
+    
+    /**
      * Сохраняет настройку автовоспроизведения
      */
     public void saveAutoPlaySetting(boolean autoPlay) {
@@ -231,6 +263,79 @@ public class DatabaseManager {
     
     // ========== CurrentEpisode операции ==========
     
+    // ========== PlayerPreferences операции ==========
+    
+    /**
+     * Сохраняет предпочтения по выбору плеера и озвучки
+     */
+    public void savePlayerPreferences(String player, Integer teamId) {
+        executor.execute(() -> {
+            try {
+                // Загружаем существующую запись или создаем новую
+                com.example.animelib.data.entity.PlayerPreferences preferences = 
+                    db.playerPreferencesDao().getPreferencesSync();
+                
+                if (preferences == null) {
+                    preferences = new com.example.animelib.data.entity.PlayerPreferences();
+                }
+                
+                // Обновляем данные
+                preferences.setPlayer(player);
+                preferences.setTeamId(teamId);
+                
+                db.playerPreferencesDao().upsert(preferences);
+                Log.d(TAG, "Saved player preferences: player=" + player + ", teamId=" + teamId);
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to save player preferences", e);
+            }
+        });
+    }
+    
+    /**
+     * Сохраняет предпочтения по выбору плеера, озвучки и качества
+     */
+    public void savePlayerPreferences(String player, Integer teamId, String preferredQuality) {
+        executor.execute(() -> {
+            try {
+                // Загружаем существующую запись или создаем новую
+                com.example.animelib.data.entity.PlayerPreferences preferences = 
+                    db.playerPreferencesDao().getPreferencesSync();
+                
+                if (preferences == null) {
+                    preferences = new com.example.animelib.data.entity.PlayerPreferences();
+                }
+                
+                // Обновляем данные
+                preferences.setPlayer(player);
+                preferences.setTeamId(teamId);
+                preferences.setPreferredQuality(preferredQuality);
+                
+                db.playerPreferencesDao().upsert(preferences);
+                Log.d(TAG, "Saved player preferences: player=" + player + ", teamId=" + teamId + 
+                      ", quality=" + preferredQuality);
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to save player preferences", e);
+            }
+        });
+    }
+    
+    /**
+     * Загружает предпочтения по выбору плеера и озвучки
+     */
+    public com.example.animelib.data.entity.PlayerPreferences loadPlayerPreferences() {
+        try {
+            com.example.animelib.data.entity.PlayerPreferences prefs = db.playerPreferencesDao().getPreferencesSync();
+            if (prefs != null) {
+                Log.d(TAG, "Loaded player preferences: player=" + prefs.getPlayer() + ", teamId=" + prefs.getTeamId());
+            } else {
+                Log.d(TAG, "No player preferences found in database");
+            }
+            return prefs;
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to load player preferences", e);
+            return null;
+        }
+    }
     
     /**
      * Закрывает executor при завершении работы

@@ -6,14 +6,17 @@ import androidx.room.Room;
 import androidx.room.RoomDatabase;
 
 import com.example.animelib.data.dao.TokenDao;
+import com.example.animelib.data.dao.PlayerPreferencesDao;
 import com.example.animelib.data.entity.TokenEntity;
+import com.example.animelib.data.entity.PlayerPreferences;
 
-@Database(entities = {AppSettings.class, TokenEntity.class}, version = 9, exportSchema = false)
+@Database(entities = {AppSettings.class, TokenEntity.class, PlayerPreferences.class}, version = 12, exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
     private static volatile AppDatabase INSTANCE;
 
     public abstract AppSettingsDao appSettingsDao();
     public abstract TokenDao tokenDao();
+    public abstract PlayerPreferencesDao playerPreferencesDao();
 
     public static AppDatabase getDatabase(final Context context) {
         if (INSTANCE == null) {

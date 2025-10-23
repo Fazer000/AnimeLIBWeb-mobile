@@ -34,6 +34,13 @@
 
     </LinearLayout>
 
+    <!-- Ambient Light Effect (behind video) -->
+    <com.example.animelib.ui.AmbientLightView
+        android:id="@+id/ambientLightView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
+
     <!-- Video Player View -->
     <androidx.media3.ui.PlayerView
         android:id="@+id/playerView"
@@ -215,4 +222,234 @@
         <include layout="@layout/panel_comments" />
         
     </com.example.animelib.ui.DraggableSidePanel>
+
+    <!-- Затемняющий overlay для связанных тайтлов -->
+    <View
+        android:id="@+id/relatedTitlesDimOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#80000000"
+        android:visibility="gone"
+        android:clickable="true"
+        android:focusable="true" />
+
+    <!-- Related Titles Overlay (поверх всего, открывается сверху) -->
+    <FrameLayout
+        android:id="@+id/relatedTitlesOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="top"
+        android:clipToPadding="false"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:paddingTop="16dp"
+            android:paddingBottom="10dp">
+
+            <!-- Информация об аниме (ВЫШЕ заголовка) -->
+            <LinearLayout
+                android:id="@+id/relatedAnimeInfoContainer"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal"
+                android:paddingHorizontal="16dp"
+                android:paddingBottom="16dp"
+                android:alpha="0">
+
+                <!-- Обложка аниме (вертикальная) -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="140dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginEnd="14dp"
+                    app:cardCornerRadius="10dp"
+                    app:cardElevation="4dp">
+                    
+                    <ImageView
+                        android:id="@+id/relatedAnimeCover"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:scaleType="centerCrop"
+                        android:contentDescription="Anime Cover" />
+                        
+                </androidx.cardview.widget.CardView>
+
+                <!-- Информация справа от обложки -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:paddingTop="4dp">
+
+                        <!-- Название аниме -->
+                        <TextView
+                            android:id="@+id/relatedAnimeTitle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textColor="?attr/relatedTitleColor"
+                            android:textSize="19sp"
+                            android:textStyle="bold"
+                            android:maxLines="3"
+                            android:ellipsize="end"
+                            android:lineSpacingMultiplier="1.1" />
+
+                        <!-- Английское название -->
+                        <TextView
+                            android:id="@+id/relatedAnimeEngTitle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:textColor="?attr/relatedSubtitleColor"
+                            android:textSize="13sp"
+                            android:maxLines="2"
+                            android:ellipsize="end"
+                            android:visibility="gone" />
+
+                        <!-- Чипы с метаинформацией -->
+                        <com.google.android.material.chip.ChipGroup
+                            android:id="@+id/relatedAnimeChipGroup"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            app:chipSpacingHorizontal="6dp"
+                            app:chipSpacingVertical="4dp"
+                            app:singleLine="false">
+
+                            <!-- Тип (ТВ Сериал, Фильм и т.д.) -->
+                            <com.google.android.material.chip.Chip
+                                android:id="@+id/relatedAnimeTypeChip"
+                                style="@style/Widget.Material3.Chip.Assist"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textSize="12sp"
+                                android:textColor="?attr/relatedTitleColor"
+                                app:chipBackgroundColor="?attr/alphaPrimaryColor"
+                                app:chipStrokeColor="?attr/alphaBorderColor"
+                                app:chipStrokeWidth="0.5dp"
+                                app:chipMinHeight="28dp"
+                                app:ensureMinTouchTargetSize="false" />
+
+                            <!-- Статус (Онгоинг, Вышло и т.д.) -->
+                            <com.google.android.material.chip.Chip
+                                android:id="@+id/relatedAnimeStatusChip"
+                                style="@style/Widget.Material3.Chip.Assist"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textSize="12sp"
+                                android:textColor="?attr/relatedTitleColor"
+                                app:chipBackgroundColor="?attr/alphaPrimaryColor"
+                                app:chipStrokeColor="?attr/alphaBorderColor"
+                                app:chipStrokeWidth="0.5dp"
+                                app:chipMinHeight="28dp"
+                                app:ensureMinTouchTargetSize="false" />
+
+                            <!-- Год выхода -->
+                            <com.google.android.material.chip.Chip
+                                android:id="@+id/relatedAnimeYearChip"
+                                style="@style/Widget.Material3.Chip.Assist"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textSize="12sp"
+                                android:textColor="?attr/relatedTitleColor"
+                                app:chipBackgroundColor="?attr/alphaPrimaryColor"
+                                app:chipStrokeColor="?attr/alphaBorderColor"
+                                app:chipStrokeWidth="0.5dp"
+                                app:chipMinHeight="28dp"
+                                app:ensureMinTouchTargetSize="false"
+                                android:visibility="gone" />
+
+                            <!-- Возрастной рейтинг -->
+                            <com.google.android.material.chip.Chip
+                                android:id="@+id/relatedAnimeAgeChip"
+                                style="@style/Widget.Material3.Chip.Assist"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textSize="12sp"
+                                android:textColor="?attr/relatedTitleColor"
+                                app:chipBackgroundColor="?attr/alphaPrimaryColor"
+                                app:chipStrokeColor="?attr/alphaBorderColor"
+                                app:chipStrokeWidth="0.5dp"
+                                app:chipMinHeight="28dp"
+                                app:ensureMinTouchTargetSize="false"
+                                android:visibility="gone" />
+
+                        </com.google.android.material.chip.ChipGroup>
+
+                        <!-- Рейтинг -->
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="★"
+                                android:textColor="?attr/ratingStarColor"
+                                android:textSize="17sp"
+                                android:layout_marginEnd="6dp" />
+
+                            <TextView
+                                android:id="@+id/relatedAnimeRating"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textColor="?attr/relatedTitleColor"
+                                android:textSize="17sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/relatedAnimeVotes"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="8dp"
+                                android:textColor="?attr/relatedSubtitleColor"
+                                android:textSize="13sp" />
+
+                        </LinearLayout>
+
+                        <!-- Количество эпизодов -->
+                        <TextView
+                            android:id="@+id/relatedAnimeEpisodes"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:textColor="?attr/relatedSubtitleColor"
+                            android:textSize="14sp" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- Заголовок "Связанные тайтлы" -->
+            <TextView
+                android:id="@+id/relatedTitlesHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginBottom="12dp"
+                android:text="Связанные тайтлы"
+                android:textColor="?attr/primaryTextColor"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:alpha="0" />
+
+            <!-- RecyclerView для связанных тайтлов -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/relatedTitlesRecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="130dp"
+                android:clipToPadding="false"
+                android:fadeScrollbars="true"
+                android:paddingHorizontal="16dp"/>
+
+        </LinearLayout>
+
+    </FrameLayout>
+
 </FrameLayout>

@@ -17,6 +17,7 @@ lifecycle = "2.7.0"
 exoplayer = "2.19.1"
 media3 = "1.4.1"
 media3ExoplayerHls = "1.8.0"
+palette = "1.0.0"
 
 [libraries]
 core = { module = "androidx.core:core", version.ref = "core" }
@@ -44,6 +45,7 @@ media3-common = { module = "androidx.media3:media3-common", version.ref = "media
 media3-datasource = { module = "androidx.media3:media3-datasource", version.ref = "media3" }
 media3-datasource-okhttp = { module = "androidx.media3:media3-datasource-okhttp", version.ref = "media3" }
 media3-exoplayer-hls = { group = "androidx.media3", name = "media3-exoplayer-hls", version.ref = "media3ExoplayerHls" }
+palette = { module = "androidx.palette:palette", version.ref = "palette" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

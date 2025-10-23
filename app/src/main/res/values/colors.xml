@@ -32,6 +32,11 @@
     
     <!-- Player Item Background -->
     <color name="dt_player_item_background">#222222</color>
+    
+    <!-- Related Titles Panel -->
+    <color name="dt_related_panel_background">#1A1A1A</color>
+    <color name="dt_related_title_color">#E0E0E0</color>
+    <color name="dt_related_subtitle_color">#999999</color>
 
 
     <!-- Light Theme -->
@@ -60,4 +65,9 @@
     
     <!-- Player Item Background -->
     <color name="lt_player_item_background">#747480</color>
+    
+    <!-- Related Titles Panel -->
+    <color name="lt_related_panel_background">#F5F5F5</color>
+    <color name="lt_related_title_color">#212121</color>
+    <color name="lt_related_subtitle_color">#757575</color>
 </resources>

@@ -672,6 +672,20 @@ public class EpisodesManager {
     public boolean isEpisodesMenuVisible() {
         return isEpisodesMenuVisible;
     }
+    
+    /**
+     * Сбрасывает позицию контроллера (используется при конфликтах со связанными тайтлами)
+     */
+    public void resetControllerPosition() {
+        if (playersControlBar != null) {
+            playersControlBar.animate().cancel();
+            playersControlBar.setTranslationY(0f);
+        }
+        if (episodesRecyclerView != null) {
+            episodesRecyclerView.setVisibility(View.GONE);
+        }
+        isEpisodesMenuVisible = false;
+    }
 
     /**
      * Скрытие всех UI элементов эпизодов (для PiP режима)

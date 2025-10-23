@@ -41,6 +41,8 @@ public class SettingsBottomSheet extends BottomSheetDialog {
     private final SpeedBottomSheet.OnSpeedChangedListener speedListener;
     private boolean enable4K = false;
     private final On4KToggledListener on4KToggledListener;
+    private boolean enableAmbientLight = false;
+    private final OnAmbientLightToggledListener onAmbientLightToggledListener;
     private boolean autoPlay = true;
     private final OnAutoPlayToggledListener onAutoPlayToggledListener;
     private int longSkipDuration = 85; // seconds
@@ -56,6 +58,8 @@ public class SettingsBottomSheet extends BottomSheetDialog {
                                SpeedBottomSheet.OnSpeedChangedListener speedListener,
                                boolean enable4K,
                                On4KToggledListener on4KToggledListener,
+                               boolean enableAmbientLight,
+                               OnAmbientLightToggledListener onAmbientLightToggledListener,
                                boolean autoPlay,
                                OnAutoPlayToggledListener onAutoPlayToggledListener,
                                int longSkipDuration,
@@ -70,6 +74,8 @@ public class SettingsBottomSheet extends BottomSheetDialog {
         this.speedListener = speedListener;
         this.enable4K = enable4K;
         this.on4KToggledListener = on4KToggledListener;
+        this.enableAmbientLight = enableAmbientLight;
+        this.onAmbientLightToggledListener = onAmbientLightToggledListener;
         this.autoPlay = autoPlay;
         this.onAutoPlayToggledListener = onAutoPlayToggledListener;
         this.longSkipDuration = longSkipDuration;
@@ -123,6 +129,7 @@ public class SettingsBottomSheet extends BottomSheetDialog {
         LinearLayout qualityOption = view.findViewById(R.id.qualityOption);
         LinearLayout speedOption = view.findViewById(R.id.speedOption);
         LinearLayout fourKOption = view.findViewById(R.id.fourKOption);
+        LinearLayout ambientLightOption = view.findViewById(R.id.ambientLightOption);
         LinearLayout autoPlayOption = view.findViewById(R.id.autoPlayOption);
         LinearLayout skipDurationOption = view.findViewById(R.id.skipDurationOption);
         LinearLayout themeOption = view.findViewById(R.id.themeOption);
@@ -132,6 +139,7 @@ public class SettingsBottomSheet extends BottomSheetDialog {
         TextView currentSkipDurationText = view.findViewById(R.id.currentSkipDurationText);
         TextView currentThemeText = view.findViewById(R.id.currentThemeText);
         MaterialSwitch fourKSwitch = view.findViewById(R.id.fourKSwitch);
+        MaterialSwitch ambientLightSwitch = view.findViewById(R.id.ambientLightSwitch);
         MaterialSwitch autoPlaySwitch = view.findViewById(R.id.autoPlaySwitch);
 
         ImageView ivTheme = findViewById(R.id.ivTheme);
@@ -141,6 +149,7 @@ public class SettingsBottomSheet extends BottomSheetDialog {
         currentQualityText.setText(currentQuality != null ? currentQuality : "1080p");
         currentSpeedText.setText(String.format("%.1fx", currentPlaybackSpeed));
         fourKSwitch.setChecked(enable4K);
+        ambientLightSwitch.setChecked(enableAmbientLight);
         autoPlaySwitch.setChecked(autoPlay);
         currentSkipDurationText.setText(formatDuration(longSkipDuration));
         currentThemeText.setText(getThemeText(currentTheme));
@@ -187,6 +196,17 @@ public class SettingsBottomSheet extends BottomSheetDialog {
             enable4K = isChecked;
             if (on4KToggledListener != null) {
                 on4KToggledListener.on4KToggled(isChecked);
+            }
+        });
+
+        // Ambient light option click
+        ambientLightOption.setOnClickListener(v -> ambientLightSwitch.setChecked(!ambientLightSwitch.isChecked()));
+
+        // Ambient light switch listener
+        ambientLightSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            enableAmbientLight = isChecked;
+            if (onAmbientLightToggledListener != null) {
+                onAmbientLightToggledListener.onAmbientLightToggled(isChecked);
             }
         });
 
@@ -340,6 +360,10 @@ public class SettingsBottomSheet extends BottomSheetDialog {
 
     public interface On4KToggledListener {
         void on4KToggled(boolean enabled);
+    }
+
+    public interface OnAmbientLightToggledListener {
+        void onAmbientLightToggled(boolean enabled);
     }
 
     public interface OnAutoPlayToggledListener {

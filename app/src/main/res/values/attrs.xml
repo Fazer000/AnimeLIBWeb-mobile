@@ -23,6 +23,11 @@
     
     <!-- Player item -->
     <attr name="playerItemBackground" format="color" />
+    
+    <!-- Related Titles Panel -->
+    <attr name="relatedPanelBackground" format="color" />
+    <attr name="relatedTitleColor" format="color" />
+    <attr name="relatedSubtitleColor" format="color" />
 
     <attr name="logoDrawable" format="reference" />
 </resources>

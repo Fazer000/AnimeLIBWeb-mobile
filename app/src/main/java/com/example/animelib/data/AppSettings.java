@@ -9,6 +9,7 @@ public class AppSettings {
     private int id;
     private String siteUrl;
     private boolean enable4K = false;
+    private boolean enableAmbientLight = false;
     private boolean autoPlay = true;
     private int longSkipDuration = 85; // seconds
     private int themeMode = 0; // 0 = light, 1 = dark, 2 = system
@@ -39,6 +40,14 @@ public class AppSettings {
 
     public void setEnable4K(boolean enable4K) {
         this.enable4K = enable4K;
+    }
+
+    public boolean isEnableAmbientLight() {
+        return enableAmbientLight;
+    }
+
+    public void setEnableAmbientLight(boolean enableAmbientLight) {
+        this.enableAmbientLight = enableAmbientLight;
     }
 
     public boolean isAutoPlay() {

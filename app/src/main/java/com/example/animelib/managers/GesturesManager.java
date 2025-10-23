@@ -74,30 +74,34 @@ public class GesturesManager {
     // GestureDetector для двойного нажатия
     private GestureDetector doubleTapDetector;
     
-    // Callback интерфейсы
+    // Callback интерфейсы (только для горизонтальных жестов и других не-вертикальных действий)
     public interface GestureCallback {
         void onSeekGesture(long seekPosition);
         void onSpeedChange(float speed);
         void updatePlayLoadingIndicator(int playbackState);
-        void onEpisodesSwipeUp(); // Свайп снизу вверх для открытия эпизодов
-        void onEpisodesSwipeDown(); // Свайп сверху вниз для закрытия эпизодов
         void onCommentsSwipeFromRight(); // Свайп справа для комментариев
         void onPlayersSwipeFromRight(); // Свайп справа снизу для озвучек
         
-        // Новые методы для drag-to-open панелей
-        void onEpisodesDragProgress(float progress); // Прогресс вытягивания панели эпизодов (0.0 - 1.0)
+        // Методы для drag-to-open панелей (только горизонтальные)
         void onCommentsDragProgress(float progress); // Прогресс вытягивания панели комментариев
         void onPlayersDragProgress(float progress); // Прогресс вытягивания панели озвучек
         void onPanelDragComplete(EdgeSwipeType type, boolean shouldOpen); // Завершение drag жеста
         
-        // Методы для получения состояния панелей
-        boolean isEpisodesMenuVisible(); // Открыто ли меню эпизодов
-        
         // Метод для двойного нажатия (длинная перемотка)
         void onDoubleTapSkip(boolean isForward, int skipDurationSeconds); // Двойное нажатие для длинной перемотки
+        
+        // УСТАРЕВШИЕ методы - оставлены для совместимости, но не используются
+        // Вертикальные жесты теперь в VerticalGesturesManager
+        @Deprecated default void onEpisodesSwipeUp() {}
+        @Deprecated default void onEpisodesSwipeDown() {}
+        @Deprecated default void onEpisodesDragProgress(float progress) {}
+        @Deprecated default void onRelatedTitlesDragProgress(float progress) {}
+        @Deprecated default boolean isEpisodesMenuVisible() { return false; }
+        @Deprecated default boolean isRelatedTitlesMenuVisible() { return false; }
     }
     
     private GestureCallback gestureCallback;
+    private VerticalGesturesManager verticalGesturesManager;
     
     /**
      * Конструктор GesturesManager
@@ -232,7 +236,14 @@ public class GesturesManager {
         playerView.setOnTouchListener((v, event) -> {
             if (player == null) return false;
             
-            // Пробуем обработать через GestureDetector для двойного нажатия
+            // ПРИОРИТЕТ 1: Вертикальные жесты (эпизоды и панель с инфо) обрабатываются ПЕРВЫМИ
+            if (verticalGesturesManager != null && verticalGesturesManager.onTouchEvent(event)) {
+                Log.d(TAG, "Event handled by VerticalGesturesManager");
+                // Если вертикальный жест обработан, не продолжаем с другими жестами
+                return true;
+            }
+            
+            // ПРИОРИТЕТ 2: Пробуем обработать через GestureDetector для двойного нажатия
             if (doubleTapDetector != null && doubleTapDetector.onTouchEvent(event)) {
                 Log.d(TAG, "Event handled by GestureDetector");
                 // Если это двойное нажатие, не продолжаем обработку других жестов
@@ -448,24 +459,10 @@ public class GesturesManager {
                         handledGesture = true;
                     }
                     
-                    // Handle edge drag completion
+                    // Handle edge drag completion (только для горизонтальных свайпов)
                     if (isEdgeSwipe && currentEdgeSwipeType != EdgeSwipeType.NONE) {
                         float finalProgress = calculateEdgeDragProgress(currentEdgeSwipeType, event.getX(), event.getY());
                         boolean shouldOpen = finalProgress >= EDGE_DRAG_THRESHOLD;
-                        
-                        // Специальная логика для эпизодов: учитываем направление движения
-                        if (currentEdgeSwipeType == EdgeSwipeType.EPISODES_UP || currentEdgeSwipeType == EdgeSwipeType.EPISODES_DOWN) {
-                            boolean isEpisodesOpen = gestureCallback != null && gestureCallback.isEpisodesMenuVisible();
-                            float verticalDistance = edgeDragStartY - event.getY();
-                            
-                            if (!isEpisodesOpen && verticalDistance > 0) {
-                                // Панель была закрыта и тянули вверх - открываем
-                                shouldOpen = true;
-                            } else if (isEpisodesOpen && verticalDistance < 0) {
-                                // Панель была открыта и тянули вниз - закрываем
-                                shouldOpen = false;
-                            }
-                        }
                         
                         Log.d(TAG, "Edge drag completed: " + currentEdgeSwipeType + 
                               ", progress=" + finalProgress + ", shouldOpen=" + shouldOpen);
@@ -493,30 +490,21 @@ public class GesturesManager {
     }
     
     /**
-     * Типы edge swipes
+     * Типы edge swipes (только горизонтальные - вертикальные в VerticalGesturesManager)
      */
     public enum EdgeSwipeType {
         NONE,
-        EPISODES_UP,        // Свайп снизу вверх для открытия эпизодов
-        EPISODES_DOWN,      // Свайп сверху вниз для закрытия эпизодов
         COMMENTS_RIGHT,     // Свайп справа сверху для комментариев
         PLAYERS_RIGHT       // Свайп справа снизу для озвучек
     }
     
     /**
-     * Проверяет, начался ли жест с края экрана
+     * Проверяет, начался ли жест с края экрана (только правый край для горизонтальных свайпов)
      */
     private boolean isEdgeSwipeStart(float x, float y) {
-        // Проверяем правый край (для комментариев и озвучек)
-        boolean isRightEdge = x > (screenWidth - edgeSwipeThresholdPx);
-        
-        // Проверяем нижний край (для эпизодов - работает в обе стороны)
-        // Если панель открыта, расширяем зону детекта вверх (в 2 раза)
-        boolean isEpisodesOpen = gestureCallback != null && gestureCallback.isEpisodesMenuVisible();
-        int effectiveBottomZone = isEpisodesOpen ? (bottomZoneHeightPx * 2) : bottomZoneHeightPx;
-        boolean isBottomEdge = y > (screenHeight - effectiveBottomZone);
-        
-        return isRightEdge || isBottomEdge;
+        // Проверяем только правый край (для комментариев и озвучек)
+        // Вертикальные жесты обрабатываются в VerticalGesturesManager
+        return x > (screenWidth - edgeSwipeThresholdPx);
     }
     
     /**
@@ -528,16 +516,8 @@ public class GesturesManager {
         float absDeltaX = Math.abs(deltaX);
         float absDeltaY = Math.abs(deltaY);
         
-        // Свайп снизу - вертикальный жест для эпизодов (работает в обе стороны)
-        // Если панель открыта, расширяем зону детекта вверх
-        boolean isEpisodesOpen = gestureCallback != null && gestureCallback.isEpisodesMenuVisible();
-        int effectiveBottomZone = isEpisodesOpen ? (bottomZoneHeightPx * 2) : bottomZoneHeightPx;
-        
-        if (startY > (screenHeight - effectiveBottomZone) && absDeltaY > swipeTouchSlopPx && absDeltaY > absDeltaX) {
-            // Вверх = открытие, вниз = закрытие (определится по прогрессу)
-            Log.d(TAG, "Detected EPISODES vertical swipe (zone=" + effectiveBottomZone + "px)");
-            return EdgeSwipeType.EPISODES_UP;
-        }
+        // ВЕРТИКАЛЬНЫЕ ЖЕСТЫ (эпизоды и панель с инфо) ОБРАБАТЫВАЮТСЯ В VerticalGesturesManager
+        // Здесь остаются только горизонтальные свайпы справа (комментарии и озвучки)
         
         // Свайпы справа налево
         if (startX > (screenWidth - edgeSwipeThresholdPx) && deltaX < -swipeTouchSlopPx && absDeltaX > absDeltaY) {
@@ -566,7 +546,6 @@ public class GesturesManager {
             return;
         }
         
-        // Для эпизодов используем только drag-to-open, старые callback'и не вызываем
         switch (swipeType) {
             case COMMENTS_RIGHT:
                 Log.d(TAG, "Opening comments panel");
@@ -576,46 +555,20 @@ public class GesturesManager {
                 Log.d(TAG, "Opening players panel");
                 gestureCallback.onPlayersSwipeFromRight();
                 break;
-            case EPISODES_UP:
-            case EPISODES_DOWN:
             case NONE:
-                // Эпизоды обрабатываются через drag-to-open
+                // Ничего не делаем
                 break;
         }
     }
     
     /**
      * Вычисляет прогресс drag для edge swipe (0.0 - 1.0)
+     * Только для горизонтальных свайпов (комментарии и озвучки)
      */
     private float calculateEdgeDragProgress(EdgeSwipeType swipeType, float currentX, float currentY) {
         float progress = 0f;
         
         switch (swipeType) {
-            case EPISODES_UP:
-            case EPISODES_DOWN:
-                // Проверяем текущее состояние панели эпизодов
-                boolean isEpisodesOpen = gestureCallback != null && gestureCallback.isEpisodesMenuVisible();
-                
-                // Вертикальный свайп для эпизодов
-                float verticalDistance = edgeDragStartY - currentY;
-                float rawProgress = verticalDistance / (screenHeight * 0.15f);
-                
-                if (isEpisodesOpen) {
-                    // Панель открыта: начинаем с 1.0
-                    // Движение вниз (отрицательное значение) = закрытие
-                    // Движение вверх (положительное) = остается открыто на 1.0
-                    progress = Math.max(0f, Math.min(1f, 1.0f + rawProgress));
-                } else {
-                    // Панель закрыта: начинаем с 0.0
-                    // Движение вверх (положительное) = открытие
-                    // Движение вниз (отрицательное) = остается закрыто на 0.0
-                    progress = Math.max(0f, Math.min(1f, rawProgress));
-                }
-                
-                Log.d(TAG, "Episodes drag: isOpen=" + isEpisodesOpen + ", vertDist=" + verticalDistance + 
-                      ", rawProgress=" + rawProgress + ", finalProgress=" + progress);
-                break;
-                
             case COMMENTS_RIGHT:
             case PLAYERS_RIGHT:
                 // Свайп справа налево - чем левее сдвинулся палец, тем больше прогресс
@@ -634,16 +587,12 @@ public class GesturesManager {
     
     /**
      * Обновляет прогресс drag и вызывает соответствующий callback
+     * Только для горизонтальных свайпов (комментарии и озвучки)
      */
     private void updateEdgeDragProgress(EdgeSwipeType swipeType, float progress) {
         if (gestureCallback == null) return;
         
         switch (swipeType) {
-            case EPISODES_UP:
-            case EPISODES_DOWN:
-                gestureCallback.onEpisodesDragProgress(progress);
-                break;
-                
             case COMMENTS_RIGHT:
                 gestureCallback.onCommentsDragProgress(progress);
                 break;
@@ -979,6 +928,21 @@ public class GesturesManager {
     // Getters and Setters
     public void setGestureCallback(GestureCallback callback) {
         this.gestureCallback = callback;
+    }
+    
+    public void setVerticalGesturesManager(VerticalGesturesManager manager) {
+        this.verticalGesturesManager = manager;
+    }
+    
+    /**
+     * Отменяет таймер hold-to-speed (вызывается из VerticalGesturesManager)
+     */
+    public void cancelHoldToSpeedTimer() {
+        if (holdToSpeedRunnable != null && playerView != null) {
+            playerView.removeCallbacks(holdToSpeedRunnable);
+            holdToSpeedRunnable = null;
+            Log.d(TAG, "Hold-to-speed timer cancelled by VerticalGesturesManager");
+        }
     }
     
     public void setHoldSpeedToast(View holdSpeedToast) {

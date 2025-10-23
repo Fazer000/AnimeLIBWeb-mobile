@@ -1,50 +1,114 @@
 {
-    "data": {
-        "id": 19560,
-        "name": "Yofukashi no Uta",
-        "rus_name": "Песнь ночных сов",
-        "eng_name": "Call of the Night",
-        "model": "anime",
-        "slug": "yofukashi-no-uta-anime",
-        "slug_url": "19560--yofukashi-no-uta-anime",
-        "cover": {
-            "filename": "fe74307f-7565-4789-8dd3-fefc0568e60e",
-            "thumbnail": "https://cover.imglib.info/uploads/anime/19560/cover/fe74307f-7565-4789-8dd3-fefc0568e60e_thumb.jpg",
-            "default": "https://cover.imglib.info/uploads/anime/19560/cover/fe74307f-7565-4789-8dd3-fefc0568e60e.jpg",
-            "md": "https://cover.imglib.info/uploads/anime/19560/cover/fe74307f-7565-4789-8dd3-fefc0568e60e.jpg"
+    "data": [
+        {
+            "order": 135,
+            "related_type": {
+                "id": 2,
+                "label": "Источник"
+            },
+            "media": {
+                "id": 148916,
+                "name": "Gintama: Year 3 Class Z, Ginpachi Sensei (Novel)",
+                "rus_name": "Гинтама: 3-Z класс Гинпачи-сенсея (Новелла)",
+                "eng_name": "Gintama: Year 3 Class Z, Ginpachi Sensei",
+                "model": "manga",
+                "slug": "gintama-year-3-class-z-ginpachi-sensei",
+                "slug_url": "148916--gintama-year-3-class-z-ginpachi-sensei",
+                "cover": {
+                    "filename": "4QIzOsIyUbk3",
+                    "thumbnail": "https://cover.imglib.info/uploads/cover/gintama-year-3-class-z-ginpachi-sensei/cover/4QIzOsIyUbk3_thumb.jpg",
+                    "default": "https://cover.imglib.info/uploads/cover/gintama-year-3-class-z-ginpachi-sensei/cover/4QIzOsIyUbk3_250x350.jpg",
+                    "md": "https://cover.imglib.info/uploads/cover/gintama-year-3-class-z-ginpachi-sensei/cover/4QIzOsIyUbk3_250x350.jpg"
+                },
+                "ageRestriction": {
+                    "id": 0,
+                    "label": "Нет"
+                },
+                "site": 3,
+                "type": {
+                    "id": 10,
+                    "label": "Япония"
+                },
+                "status": {
+                    "id": 2,
+                    "label": "Завершён"
+                },
+                "releaseDateString": ""
+            }
         },
-        "ageRestriction": {
-            "id": 2,
-            "label": "12+"
+        {
+            "order": 136,
+            "related_type": {
+                "id": 10,
+                "label": "Другое"
+            },
+            "media": {
+                "id": 834,
+                "name": "Gintama",
+                "rus_name": "Гинтама",
+                "eng_name": "Gintama",
+                "model": "anime",
+                "slug": "gintama-anime",
+                "slug_url": "834--gintama-anime",
+                "cover": {
+                    "filename": "74b89b94-6395-4461-b75a-d1771e1345c9",
+                    "thumbnail": "https://cover.imglib.info/uploads/anime/834/cover/74b89b94-6395-4461-b75a-d1771e1345c9_thumb.jpg",
+                    "default": "https://cover.imglib.info/uploads/anime/834/cover/74b89b94-6395-4461-b75a-d1771e1345c9.jpg",
+                    "md": "https://cover.imglib.info/uploads/anime/834/cover/74b89b94-6395-4461-b75a-d1771e1345c9.jpg"
+                },
+                "ageRestriction": {
+                    "id": 2,
+                    "label": "12+"
+                },
+                "site": 5,
+                "type": {
+                    "id": 16,
+                    "label": "TV Сериал"
+                },
+                "status": {
+                    "id": 2,
+                    "label": "Завершён"
+                },
+                "releaseDateString": "",
+                "shiki_rate": null
+            }
         },
-        "site": 5,
-        "type": {
-            "id": 16,
-            "label": "TV Сериал"
-        },
-        "close_view": 0,
-        "releaseDate": "2022-07-08",
-        "rating": {
-            "average": "8.58",
-            "averageFormated": "8.6",
-            "votes": 2177,
-            "votesFormated": "2.2 K",
-            "user": 0
-        },
-        "is_licensed": false,
-        "status": {
-            "id": 2,
-            "label": "Завершён"
-        },
-        "items_count": {
-            "uploaded": 13,
-            "total": 13
-        },
-        "releaseDateString": "08 июля 2022 г.",
-        "shikimori_href": "https://shikimori.one/animes/50346",
-        "shiki_rate": 7.95
-    },
-    "meta": {
-        "country": "RU"
-    }
+        {
+            "order": 137,
+            "related_type": {
+                "id": 10,
+                "label": "Другое"
+            },
+            "media": {
+                "id": 22368,
+                "name": "3-nen Z-gumi Ginpachi-sensei Announcement Special",
+                "rus_name": "Гинтама: 3-Z класс Гинпачи-сэнсэя — Спецвыпуск",
+                "eng_name": null,
+                "model": "anime",
+                "slug": "3-nen-z-gumi-ginpachi-sensei-announcement-special-anime",
+                "slug_url": "22368--3-nen-z-gumi-ginpachi-sensei-announcement-special-anime",
+                "cover": {
+                    "filename": "0df60a9a-c51c-4517-a3fc-6f585d1acb38",
+                    "thumbnail": "https://cover.imglib.info/uploads/anime/22368/cover/0df60a9a-c51c-4517-a3fc-6f585d1acb38_thumb.jpg",
+                    "default": "https://cover.imglib.info/uploads/anime/22368/cover/0df60a9a-c51c-4517-a3fc-6f585d1acb38.jpg",
+                    "md": "https://cover.imglib.info/uploads/anime/22368/cover/0df60a9a-c51c-4517-a3fc-6f585d1acb38.jpg"
+                },
+                "ageRestriction": {
+                    "id": 2,
+                    "label": "12+"
+                },
+                "site": 5,
+                "type": {
+                    "id": 19,
+                    "label": "Спешл"
+                },
+                "status": {
+                    "id": 2,
+                    "label": "Завершён"
+                },
+                "releaseDateString": "",
+                "shiki_rate": null
+            }
+        }
+    ]
 }
