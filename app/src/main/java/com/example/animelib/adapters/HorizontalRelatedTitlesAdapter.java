@@ -26,12 +26,16 @@ public class HorizontalRelatedTitlesAdapter extends RecyclerView.Adapter<Horizon
     private final OnRelatedTitleSelectedListener listener;
 
     public interface OnRelatedTitleSelectedListener {
-        void onRelatedTitleSelected(RelatedTitlesResponse.RelatedTitle relatedTitle);
+        /**
+         * Вызывается при клике на связанный тайтл
+         * @param slugUrl URL тайтла для навигации
+         */
+        void onRelatedTitleSelected(String slugUrl);
     }
 
     public HorizontalRelatedTitlesAdapter(List<RelatedTitlesResponse.RelatedTitle> relatedTitles,
                                         OnRelatedTitleSelectedListener listener) {
-        this.relatedTitles = relatedTitles;
+        this.relatedTitles = filterValidTitles(relatedTitles);
         this.listener = listener;
     }
 
@@ -48,10 +52,7 @@ public class HorizontalRelatedTitlesAdapter extends RecyclerView.Adapter<Horizon
         RelatedTitlesResponse.RelatedTitle relatedTitle = relatedTitles.get(position);
         RelatedTitlesResponse.Media media = relatedTitle.getMedia();
 
-        if (media == null) {
-            return;
-        }
-
+        // media не может быть null, т.к. мы фильтруем список в filterValidTitles()
         String relatedType = getRelatedType(relatedTitle);
         holder.relatedTypeText.setText(relatedType);
 
@@ -66,12 +67,34 @@ public class HorizontalRelatedTitlesAdapter extends RecyclerView.Adapter<Horizon
         // Загружаем обложку
         loadCoverImage(holder.coverImage, media);
 
-        // Устанавливаем обработчик клика
-        holder.itemView.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onRelatedTitleSelected(relatedTitle);
-            }
-        });
+        // Проверяем является ли это аниме
+        boolean isAnime = "anime".equalsIgnoreCase(media.getModel());
+        String slugUrl = media.getSlugUrl();
+        
+        android.util.Log.d("HorizontalRelatedAdapter", "Binding item [" + position + "]: " +
+                "title=" + title + 
+                ", model=" + media.getModel() + 
+                ", isAnime=" + isAnime +
+                ", slugUrl=" + slugUrl);
+        
+        // Устанавливаем обработчик клика и внешний вид в зависимости от типа
+        if (isAnime && slugUrl != null && !slugUrl.trim().isEmpty()) {
+            // Аниме - активный элемент
+            holder.itemView.setAlpha(1.0f);
+            holder.itemView.setEnabled(true);
+            holder.itemView.setOnClickListener(v -> {
+                android.util.Log.d("HorizontalRelatedAdapter", "Related anime clicked: " + title + " -> " + slugUrl);
+                if (listener != null) {
+                    listener.onRelatedTitleSelected(slugUrl);
+                }
+            });
+        } else {
+            // Не аниме (манга и т.д.) - неактивный элемент
+            android.util.Log.d("HorizontalRelatedAdapter", "Non-anime item (inactive): " + title + ", model=" + media.getModel());
+            holder.itemView.setAlpha(0.5f);
+            holder.itemView.setEnabled(false);
+            holder.itemView.setOnClickListener(null);
+        }
     }
 
     @Override
@@ -80,8 +103,25 @@ public class HorizontalRelatedTitlesAdapter extends RecyclerView.Adapter<Horizon
     }
 
     public void updateData(List<RelatedTitlesResponse.RelatedTitle> newRelatedTitles) {
-        this.relatedTitles = newRelatedTitles;
+        this.relatedTitles = filterValidTitles(newRelatedTitles);
         notifyDataSetChanged();
+    }
+
+    /**
+     * Фильтрует список, оставляя только тайтлы с валидным media
+     */
+    private List<RelatedTitlesResponse.RelatedTitle> filterValidTitles(List<RelatedTitlesResponse.RelatedTitle> titles) {
+        if (titles == null) {
+            return null;
+        }
+        
+        List<RelatedTitlesResponse.RelatedTitle> filtered = new java.util.ArrayList<>();
+        for (RelatedTitlesResponse.RelatedTitle title : titles) {
+            if (title != null && title.getMedia() != null) {
+                filtered.add(title);
+            }
+        }
+        return filtered;
     }
 
     private String getRelatedType(RelatedTitlesResponse.RelatedTitle relatedTitle) {

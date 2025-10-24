@@ -160,10 +160,14 @@ public class PlayersManager {
      * Обработка выбора плеера
      */
     private void onPlayerSelected(EpisodeResponse.PlayerData playerData) {
-        Log.d(TAG, "Player selected: " + playerData.getPlayer());
+        Log.d(TAG, "Player selected: " + playerData.getPlayer() + 
+              ", Team: " + (playerData.getTeam() != null ? playerData.getTeam().getName() : "null"));
         
         // Update current player data
         currentPlayerData = playerData;
+        
+        // Обновляем меню с новым currentPlayerData для правильной подсветки
+        updateMenuWithData();
         
         // Save user preference
         if (playerData.getPlayer() != null) {
@@ -191,6 +195,9 @@ public class PlayersManager {
         if (!isMenuVisible) {
             Log.d(TAG, "Showing players menu");
             isMenuVisible = true;
+            
+            // Обновляем данные в меню перед показом
+            updateMenuWithData();
             
             // Use VideoPlayerActivity's method to open draggable panel
             if (context instanceof com.example.animelib.VideoPlayerActivity) {
@@ -301,19 +308,41 @@ public class PlayersManager {
                         
                         if (matchingPlayer != null) {
                             // Автоматически выбираем найденный плеер БЕЗ показа меню
-                            Log.d(TAG, "Auto-selecting player for episode change");
+                            Log.d(TAG, "Auto-selecting player for episode change: " + 
+                                  matchingPlayer.getPlayer() + ", Team: " + 
+                                  (matchingPlayer.getTeam() != null ? matchingPlayer.getTeam().getName() : "null"));
                             
                             // Сохраняем данные плееров БЕЗ показа меню
                             setPlayersDataSilent(players);
                             
+                            Log.d(TAG, "Players data saved, now calling playerSelectionCallback");
+                            
                             // Вызываем callback для выбора плеера
                             if (playerSelectionCallback != null) {
                                 playerSelectionCallback.onPlayerSelected(matchingPlayer);
+                            } else {
+                                Log.w(TAG, "playerSelectionCallback is null!");
                             }
                         } else {
-                            // Показываем меню выбора только если автовыбор не сработал
-                            Log.d(TAG, "No matching player found for episode, showing selection menu");
-                            setPlayersData(players);
+                            // НЕ показываем меню при переключении эпизода
+                            // Автоматически выбираем первую доступную озвучку
+                            Log.d(TAG, "No matching player found for episode, auto-selecting first available");
+                            setPlayersDataSilent(players);
+                            
+                            // Выбираем первую доступную озвучку
+                            if (!players.isEmpty()) {
+                                EpisodeResponse.PlayerData firstPlayer = players.get(0);
+                                Log.d(TAG, "Auto-selecting first player: " + firstPlayer.getPlayer() + 
+                                      ", Team: " + (firstPlayer.getTeam() != null ? firstPlayer.getTeam().getName() : "null"));
+                                
+                                if (playerSelectionCallback != null) {
+                                    playerSelectionCallback.onPlayerSelected(firstPlayer);
+                                } else {
+                                    Log.w(TAG, "playerSelectionCallback is null!");
+                                }
+                            } else {
+                                Log.e(TAG, "No players available to auto-select!");
+                            }
                         }
                         
                         if (dataCallback != null) {
@@ -346,11 +375,25 @@ public class PlayersManager {
      * Установка данных плееров
      */
     public void setPlayersData(List<EpisodeResponse.PlayerData> players) {
-        Log.d(TAG, "Setting players data: " + players.size() + " players");
+        Log.d(TAG, "=== setPlayersData START ===");
+        Log.d(TAG, "Input players count: " + (players != null ? players.size() : "null"));
+        
+        if (players == null || players.isEmpty()) {
+            Log.e(TAG, "ERROR: players list is null or empty!");
+            return;
+        }
         
         // Store all players data
         allPlayers.clear();
         allPlayers.addAll(players);
+        Log.d(TAG, "allPlayers size after adding: " + allPlayers.size());
+        
+        // Debug: print all players
+        for (int i = 0; i < players.size(); i++) {
+            EpisodeResponse.PlayerData p = players.get(i);
+            Log.d(TAG, "  [" + i + "] Player: " + (p.getPlayer() != null ? p.getPlayer() : "null") + 
+                  ", Team: " + (p.getTeam() != null ? p.getTeam().getName() : "null"));
+        }
         
         // Separate players by type (case-insensitive)
         animelibPlayers = allPlayers.stream()
@@ -361,7 +404,7 @@ public class PlayersManager {
                 .filter(p -> p.getPlayer() != null && "kodik".equalsIgnoreCase(p.getPlayer()))
                 .collect(Collectors.toList());
         
-        Log.d(TAG, "AnimeLib players: " + animelibPlayers.size() + ", Kodik players: " + kodikPlayers.size());
+        Log.d(TAG, "After filtering - AnimeLib: " + animelibPlayers.size() + ", Kodik: " + kodikPlayers.size());
         
         // Update menu with players
         updateMenuWithData();
@@ -376,8 +419,11 @@ public class PlayersManager {
             }, 500);
         } else {
             // Show menu for user to select player manually
+            Log.d(TAG, "No preferred player found, showing menu");
             showMenu();
         }
+        
+        Log.d(TAG, "=== setPlayersData END ===");
     }
     
     /**
@@ -390,6 +436,12 @@ public class PlayersManager {
         // Store all players data
         allPlayers.clear();
         allPlayers.addAll(players);
+        
+        // Debug: print all players
+        for (EpisodeResponse.PlayerData p : players) {
+            Log.d(TAG, "  Player: " + p.getPlayer() + ", Team: " + 
+                  (p.getTeam() != null ? p.getTeam().getName() : "null"));
+        }
         
         // Separate players by type (case-insensitive)
         animelibPlayers = allPlayers.stream()
@@ -411,6 +463,11 @@ public class PlayersManager {
      */
     private void updateMenuWithData() {
         if (playerTabsAdapter != null) {
+            Log.d(TAG, "Updating menu data - AnimeLib: " + 
+                  (animelibPlayers != null ? animelibPlayers.size() : 0) + 
+                  ", Kodik: " + (kodikPlayers != null ? kodikPlayers.size() : 0) +
+                  ", Current: " + (currentPlayerData != null ? currentPlayerData.getPlayer() : "null"));
+            
             playerTabsAdapter.updateData(
                     animelibPlayers != null ? animelibPlayers : new ArrayList<>(),
                     kodikPlayers != null ? kodikPlayers : new ArrayList<>(),
@@ -418,6 +475,8 @@ public class PlayersManager {
             );
             // Пересоздаем TabLayoutMediator для обновления табов
             setupTabLayoutMediator();
+        } else {
+            Log.w(TAG, "Cannot update menu - playerTabsAdapter is null");
         }
     }
     

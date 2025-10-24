@@ -1295,24 +1295,41 @@ public class VideoPlayerActivity extends AppCompatActivity {
                                          ageRating, rating, votes, episodes);
     }
     
-    private void onRelatedTitleSelected(RelatedTitlesResponse.RelatedTitle relatedTitle) {
-        if (relatedTitle.getMedia() == null) {
-            Log.w("VideoPlayer", "Related title media is null");
+    /**
+     * Обработчик выбора связанного тайтла
+     * @param slugUrl URL выбранного аниме (только для model="anime")
+     */
+    private void onRelatedTitleSelected(String slugUrl) {
+        if (slugUrl == null || slugUrl.trim().isEmpty()) {
+            Log.w("VideoPlayer", "Related title slug URL is null or empty");
             return;
         }
         
-        RelatedTitlesResponse.Media media = relatedTitle.getMedia();
-        Log.d("VideoPlayer", "Related title selected: " + media.getName());
+        Log.d("VideoPlayer", "Related title selected with slug URL: " + slugUrl);
         
         // Hide related titles
         if (relatedTitlesManager != null) {
             relatedTitlesManager.hideRelatedTitles();
         }
         
-        // TODO: Navigate to the selected related title
-        // This would require implementing navigation to anime page
-        Toast.makeText(this, "Выбран: " + (media.getRusName() != null ? media.getRusName() : media.getName()), 
-                Toast.LENGTH_SHORT).show();
+        // Stop current player
+        if (player != null) {
+            player.stop();
+            player.clearMediaItems();
+        }
+        
+        // Reset state
+        currentVideoUrl = null;
+        currentAnimeId = null;
+        
+        // Show loading
+        showLoading("Загрузка аниме...");
+        
+        // Load new anime
+        animeUrl = slugUrl;
+        loadAnimeFromUrl(slugUrl);
+        
+        Log.d("VideoPlayer", "Loading new anime from slug URL: " + slugUrl);
     }
 
     /**
@@ -1607,40 +1624,14 @@ public class VideoPlayerActivity extends AppCompatActivity {
             
             @Override
             public void onEpisodesDragProgress(float progress) {
-                // Приостанавливаем ambient подсветку при начале drag
-                if (progress > 0 && ambientLightManager != null) {
-                    ambientLightManager.suspend();
-                }
-                
-                // Показываем интерфейс плеера при начале drag (первый вызов с progress > 0)
-                if (progress > 0 && playerView != null && !playerView.isControllerFullyVisible()) {
-                    playerView.showController();
-                    Log.d("VideoPlayer", "Showing controller on episodes drag start");
-                }
-                
-                // Обновляем прогресс вытягивания панели эпизодов
-                if (episodesManager != null) {
-                    episodesManager.setDragProgress(progress);
-                }
+                // ВЕРТИКАЛЬНЫЕ ЖЕСТЫ: Эпизоды теперь обрабатываются в VerticalGesturesManager
+                // Этот метод больше не вызывается для вертикальных свайпов
             }
             
             @Override
             public void onRelatedTitlesDragProgress(float progress) {
-                // Приостанавливаем ambient подсветку при начале drag
-                if (progress > 0 && ambientLightManager != null) {
-                    ambientLightManager.suspend();
-                }
-                
-                // Показываем интерфейс плеера при начале drag
-                if (progress > 0 && playerView != null && !playerView.isControllerFullyVisible()) {
-                    playerView.showController();
-                    Log.d("VideoPlayer", "Showing controller on related titles drag start");
-                }
-                
-                // Обновляем прогресс drag через RelatedTitlesManager
-                if (relatedTitlesManager != null) {
-                    relatedTitlesManager.setDragProgress(progress);
-                }
+                // ВЕРТИКАЛЬНЫЕ ЖЕСТЫ: Related titles теперь обрабатываются в VerticalGesturesManager
+                // Этот метод больше не вызывается для вертикальных свайпов
             }
             
             @Override
@@ -1759,6 +1750,17 @@ public class VideoPlayerActivity extends AppCompatActivity {
         verticalGesturesManager.setCallback(new VerticalGesturesManager.VerticalGestureCallback() {
             @Override
             public void onEpisodesDragProgress(float progress) {
+                // Приостанавливаем ambient подсветку при начале drag
+                if (progress > 0 && ambientLightManager != null) {
+                    ambientLightManager.suspend();
+                }
+                
+                // Показываем интерфейс плеера при начале drag (первый вызов с progress > 0)
+                if (progress > 0 && playerView != null && !playerView.isControllerFullyVisible()) {
+                    playerView.showController();
+                    Log.d("VideoPlayer", "Showing controller on episodes drag start");
+                }
+                
                 if (episodesManager != null) {
                     episodesManager.setDragProgress(progress);
                 }
@@ -1766,6 +1768,17 @@ public class VideoPlayerActivity extends AppCompatActivity {
             
             @Override
             public void onRelatedInfoDragProgress(float progress) {
+                // Приостанавливаем ambient подсветку при начале drag
+                if (progress > 0 && ambientLightManager != null) {
+                    ambientLightManager.suspend();
+                }
+                
+                // Показываем интерфейс плеера при начале drag
+                if (progress > 0 && playerView != null && !playerView.isControllerFullyVisible()) {
+                    playerView.showController();
+                    Log.d("VideoPlayer", "Showing controller on related titles drag start");
+                }
+                
                 if (relatedTitlesManager != null) {
                     relatedTitlesManager.setDragProgress(progress);
                 }
@@ -1775,7 +1788,8 @@ public class VideoPlayerActivity extends AppCompatActivity {
             public void onEpisodesDragComplete(boolean shouldOpen) {
                 Log.d("VideoPlayer", "Episodes drag complete: shouldOpen=" + shouldOpen);
                 if (episodesManager != null) {
-                    episodesManager.completeDrag(shouldOpen);
+                    // Используем updateDragState вместо completeDrag чтобы избежать перезапуска анимации
+                    episodesManager.updateDragState(shouldOpen);
                 }
                 // Возобновляем ambient подсветку только если панель закрыта
                 if (!shouldOpen && ambientLightManager != null) {
@@ -1878,6 +1892,8 @@ public class VideoPlayerActivity extends AppCompatActivity {
                                     // СРАЗУ обновляем заголовок с номером эпизода
                                     updateEpisodeHeaderQuick();
                                     
+                                    // ВАЖНО: Загружаем плееры для ПРАВИЛЬНОГО эпизода
+                                    Log.d("VideoPlayer", "Loading players for bookmarked episode: " + episode.getId());
                                     playersManager.loadPlayersForEpisode(episode.getId());
                                 }
                                 
@@ -1908,6 +1924,33 @@ public class VideoPlayerActivity extends AppCompatActivity {
         // Players manager callbacks
         playersManager.setPlayerSelectionCallback(this::onPlayerSelected);
         
+        // Устанавливаем callback для загрузки плееров
+        playersManager.setDataCallback(new PlayersManager.PlayersDataCallback() {
+            @Override
+            public void onPlayersLoaded(List<EpisodeResponse.PlayerData> players) {
+                Log.d("VideoPlayer", "Players loaded: " + players.size() + " for episode: " + 
+                      (episodesManager.getCurrentEpisode() != null ? episodesManager.getCurrentEpisode().getNumber() : "unknown"));
+                
+                // Проверяем нужно ли показывать меню
+                // Показываем только если нет выбранной озвучки (первая загрузка)
+                if (playersManager.getCurrentPlayerData() == null) {
+                    Log.d("VideoPlayer", "No player selected yet, showing menu for first time");
+                    showPlayerSelectionDialogWithAutoSelect(players);
+                } else {
+                    Log.d("VideoPlayer", "Player already selected, skipping menu (episode switch)");
+                    // При переключении эпизода меню не показываем
+                    // Автовыбор уже сработал в PlayersManager
+                    if (menuLoadingOverlay != null) menuLoadingOverlay.setVisibility(View.GONE);
+                }
+            }
+            
+            @Override
+            public void onPlayersError(String error) {
+                Log.e("VideoPlayer", "Error loading players: " + error);
+                Toast.makeText(VideoPlayerActivity.this, "Ошибка загрузки плееров: " + error, Toast.LENGTH_SHORT).show();
+            }
+        });
+        
         // Показываем placeholder когда нет выбранной озвучки
         playersManager.setVisibilityCallback(isVisible -> {
             if (!isVisible && playersManager.getCurrentPlayerData() == null) {
@@ -1917,18 +1960,6 @@ public class VideoPlayerActivity extends AppCompatActivity {
             
             // НЕ показываем интерфейс плеера при drag - это неправильно
             // Интерфейс должен показываться только при обычном открытии панели плееров
-        });
-        playersManager.setDataCallback(new PlayersManager.PlayersDataCallback() {
-            @Override
-            public void onPlayersLoaded(List<EpisodeResponse.PlayerData> players) {
-                Log.d("VideoPlayer", "Players loaded: " + players.size());
-            }
-            
-            @Override
-            public void onPlayersError(String error) {
-                Log.e("VideoPlayer", "Error loading players: " + error);
-                Toast.makeText(VideoPlayerActivity.this, "Ошибка загрузки плееров: " + error, Toast.LENGTH_SHORT).show();
-            }
         });
     }
     
@@ -2817,43 +2848,33 @@ public class VideoPlayerActivity extends AppCompatActivity {
     }
 
     private void loadAnimeFromUrl(String url) {
-        apiService.loadAnimeFromUrl(url, new ApiService.EpisodeDataCallback() {
-            @Override
-            public void onEpisodeDataReceived(EpisodeResponse response) {
-                safeRunOnUiThread(() -> {
-                    hideLoading();
-                    if (response.getData() != null && response.getData().getPlayers() != null) {
-                        showPlayerSelectionDialog(response.getData().getPlayers());
-                    } else {
-                        Toast.makeText(VideoPlayerActivity.this, "Плееры не найдены", Toast.LENGTH_SHORT).show();
-                        finish();
-                    }
-                });
-            }
-
-            @Override
-            public void onError(String error) {
-                safeRunOnUiThread(() -> {
-                    hideLoading();
-                    Toast.makeText(VideoPlayerActivity.this, error, Toast.LENGTH_SHORT).show();
-                    finish();
-                });
-            }
-        });
+        // Извлекаем anime ID из URL
+        currentAnimeId = apiService.extractAnimeId(url);
+        Log.d("VideoPlayer", "Extracted anime ID from URL: " + currentAnimeId);
+        
+        if (currentAnimeId == null) {
+            Toast.makeText(this, "Не удалось извлечь ID аниме из URL", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+        
+        // Load related titles
+        loadRelatedTitles();
+        
+        // ВАЖНО: Сначала загружаем эпизоды, потом плееры!
+        // Это позволит правильно определить эпизод из закладки
+        Log.d("VideoPlayer", "Loading episodes first, then players will be loaded for correct episode");
+        loadEpisodes(currentAnimeId);
     }
 
-    private void showPlayerSelectionDialog(List<EpisodeResponse.PlayerData> players) {
+    private void showPlayerSelectionDialogWithAutoSelect(List<EpisodeResponse.PlayerData> players) {
         hideLoading();
 
-        currentAnimeId = apiService.extractAnimeId(animeUrl);
-        Log.d("VideoPlayer", "Extracted anime ID: " + currentAnimeId + " from URL: " + animeUrl);
-        
-        // Load related titles now that we have anime ID
-        if (currentAnimeId != null) {
-            loadRelatedTitles();
-        }
+        Log.d("VideoPlayer", "showPlayerSelectionDialogWithAutoSelect called with " + players.size() + " players");
+        Log.d("VideoPlayer", "NOTE: setPlayersData already called by PlayersManager, only checking for auto-select");
 
         // Попытка автоматического выбора плеера на основе сохраненных предпочтений
+        // ВАЖНО: setPlayersData уже вызван в PlayersManager.loadPlayersForEpisode()!
         executor.execute(() -> {
             com.example.animelib.data.entity.PlayerPreferences prefs = apiService.loadPlayerPreferences();
             
@@ -2900,38 +2921,19 @@ public class VideoPlayerActivity extends AppCompatActivity {
             EpisodeResponse.PlayerData finalMatchingPlayer = matchingPlayer;
             safeRunOnUiThread(() -> {
                 if (finalMatchingPlayer != null) {
-                    // Автоматически выбираем найденный плеер БЕЗ показа меню
-                    Log.d("VideoPlayer", "Auto-selecting player based on preferences");
+                    // Автоматически выбираем найденный плеер
+                    Log.d("VideoPlayer", "Auto-selecting player based on preferences (menu already shown by PlayersManager)");
                     
-                    // Сохраняем данные плееров БЕЗ показа меню
-                    playersManager.setPlayersDataSilent(players);
-                    
-                    // ВАЖНО: Скрываем меню после silent установки данных
-                    if (menuLoadingOverlay != null) menuLoadingOverlay.setVisibility(View.GONE);
-                    playersManager.hideMenu();
-                    
-                    // Запускаем плеер
+                    // Меню уже показано через PlayersManager.setPlayersData()
+                    // Просто запускаем плеер
                     onPlayerSelected(finalMatchingPlayer);
                 } else {
-                    // Показываем меню выбора только если автовыбор не сработал
-                    Log.d("VideoPlayer", "No matching player found, showing selection menu");
-                    playersManager.setPlayersData(players);
+                    // Меню уже показано через PlayersManager.setPlayersData()
+                    Log.d("VideoPlayer", "No matching player found, menu already visible from PlayersManager");
                 }
                 
-                // Load episodes только после попытки автовыбора
-                if (episodesManager.getEpisodes().isEmpty() && currentAnimeId != null) {
-                    loadEpisodes(currentAnimeId);
-                } else {
-                    // Episodes already loaded, ensure CommentsManager has current episode
-                    EpisodesListResponse.EpisodeItem currentEpisode = episodesManager.getCurrentEpisode();
-                    if (currentEpisode != null) {
-                        Log.d("VideoPlayer", "Setting current episode in CommentsManager (episodes already loaded): " + currentEpisode.getNumber());
-                        commentsManager.setCurrentEpisode(currentEpisode);
-                    }
-                    if (finalMatchingPlayer == null) {
-                        initializeMenuWithoutAutoPlay();
-                    }
-                }
+                // Скрываем loading overlay в любом случае
+                if (menuLoadingOverlay != null) menuLoadingOverlay.setVisibility(View.GONE);
             });
         });
     }

@@ -39,6 +39,7 @@ public class GesturesManager {
     private boolean isSwipingSeek = false;
     private boolean isHoldToSpeed = false;
     private boolean isGestureCooldown = false;
+    private boolean isHorizontalGestureActive = false; // Флаг для блокировки вертикальных жестов
     private float swipeStartX = 0f;
     private float swipeStartY = 0f;
     private int swipeTouchSlopPx = 0;
@@ -237,10 +238,16 @@ public class GesturesManager {
             if (player == null) return false;
             
             // ПРИОРИТЕТ 1: Вертикальные жесты (эпизоды и панель с инфо) обрабатываются ПЕРВЫМИ
-            if (verticalGesturesManager != null && verticalGesturesManager.onTouchEvent(event)) {
+            // НО: блокируем если уже активен горизонтальный жест
+            if (!isHorizontalGestureActive && verticalGesturesManager != null && verticalGesturesManager.onTouchEvent(event)) {
                 Log.d(TAG, "Event handled by VerticalGesturesManager");
                 // Если вертикальный жест обработан, не продолжаем с другими жестами
                 return true;
+            }
+            
+            // Если активен вертикальный жест, блокируем горизонтальные
+            if (verticalGesturesManager != null && verticalGesturesManager.isDragging()) {
+                return false; // Пропускаем горизонтальную обработку
             }
             
             // ПРИОРИТЕТ 2: Пробуем обработать через GestureDetector для двойного нажатия
@@ -266,6 +273,7 @@ public class GesturesManager {
                      // Инициализируем переменные для жестов
                      isSwipingSeek = false;
                      isEdgeSwipe = false;
+                     isHorizontalGestureActive = false; // Сбрасываем флаг блокировки
                      currentEdgeSwipeType = EdgeSwipeType.NONE;
                      isSpeedAdjustmentMode = false;
                      swipeAccumulatedDx = 0f;
@@ -316,6 +324,7 @@ public class GesturesManager {
                             EdgeSwipeType swipeType = detectEdgeSwipeType(swipeStartX, swipeStartY, currentX, currentY);
                             if (swipeType != EdgeSwipeType.NONE) {
                                 isEdgeSwipe = true;
+                                isHorizontalGestureActive = true; // Блокируем вертикальные жесты
                                 currentEdgeSwipeType = swipeType;
                                 edgeDragStartX = swipeStartX;
                                 edgeDragStartY = swipeStartY;
@@ -338,7 +347,7 @@ public class GesturesManager {
                                 boolean isBottomSwipe = swipeStartY > (screenHeight - bottomZoneHeightPx);
                                 Log.d(TAG, "Is bottom swipe: " + isBottomSwipe);
                                 
-                                Log.d(TAG, "Edge drag started: " + swipeType);
+                                Log.d(TAG, "Edge drag started: " + swipeType + " - blocking vertical gestures");
                                 return true;
                             }
                         }
@@ -372,6 +381,7 @@ public class GesturesManager {
                     if (!isSwipingSeek && !isEdgeSwipe) {
                         if (passedDeadZone) {
                             isSwipingSeek = true; // Устанавливаем сразу без задержки
+                            isHorizontalGestureActive = true; // Блокируем вертикальные жесты
                             // блокируем перехват родителями (ViewPager и т.п.)
                             android.view.ViewParent p = v.getParent();
                             if (p != null) p.requestDisallowInterceptTouchEvent(true);
@@ -387,6 +397,7 @@ public class GesturesManager {
                                 playerView.showController();
                             }
                             
+                            Log.d(TAG, "Swipe seek started - blocking vertical gestures");
                             return true;
                         } else {
                             return false; // НЕ перехватываем событие для обычных касаний
@@ -477,6 +488,7 @@ public class GesturesManager {
                     // Сбрасываем состояние
                     isSwipingSeek = false;
                     isEdgeSwipe = false;
+                    isHorizontalGestureActive = false; // Разблокируем вертикальные жесты
                     currentEdgeSwipeType = EdgeSwipeType.NONE;
                     swipeAccumulatedDx = 0f;
                     lastSwipeX = null;
@@ -612,6 +624,7 @@ public class GesturesManager {
      */
     private void activateHoldToSpeed() {
         isHoldToSpeed = true;
+        isHorizontalGestureActive = true; // Блокируем вертикальные жесты
         currentSpeedMultiplier = 2.0f;
         
         // Set playback speed to 2x
@@ -634,7 +647,7 @@ public class GesturesManager {
             gestureCallback.onSpeedChange(currentSpeedMultiplier);
         }
         
-        Log.d(TAG, "Hold to speed activated with speed: " + currentSpeedMultiplier);
+        Log.d(TAG, "Hold to speed activated with speed: " + currentSpeedMultiplier + " - blocking vertical gestures");
     }
     
     /**
@@ -852,6 +865,14 @@ public class GesturesManager {
     }
     
     /**
+     * Проверка, активен ли любой горизонтальный жест
+     * @return true если активен горизонтальный жест (seek, edge swipe, hold-to-speed)
+     */
+    public boolean isHorizontalGestureActive() {
+        return isHorizontalGestureActive || isSwipingSeek || isHoldToSpeed || isEdgeSwipe;
+    }
+    
+    /**
      * Принудительная остановка всех жестов
      */
     public void stopAllGestures() {
@@ -859,6 +880,7 @@ public class GesturesManager {
         
         isSwipingSeek = false;
         isEdgeSwipe = false;
+        isHorizontalGestureActive = false; // Разблокируем вертикальные жесты
         isGestureCooldown = false; // Сбрасываем cooldown
         
         // Принудительно отменяем таймер

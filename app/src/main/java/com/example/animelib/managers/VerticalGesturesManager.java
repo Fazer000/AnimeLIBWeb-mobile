@@ -125,6 +125,12 @@ public class VerticalGesturesManager {
         
         // Определяем тип панели если еще не определен
         if (!isDragging) {
+            // ВАЖНО: Блокируем вертикальные жесты если активен горизонтальный
+            if (gesturesManager != null && gesturesManager.isHorizontalGestureActive()) {
+                Log.d(TAG, "Horizontal gesture is active, blocking vertical gesture");
+                return false;
+            }
+            
             Log.d(TAG, "Checking vertical gesture: deltaY=" + deltaY + ", deltaX=" + deltaX + 
                   ", absDeltaY=" + absDeltaY + ", absDeltaX=" + absDeltaX);
             

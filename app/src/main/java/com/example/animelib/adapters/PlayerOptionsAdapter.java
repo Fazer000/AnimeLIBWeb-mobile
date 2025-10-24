@@ -1,6 +1,7 @@
 package com.example.animelib.adapters;
 
 import android.content.res.Resources;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -10,7 +11,6 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.OptIn;
-import androidx.media3.common.util.Log;
 import androidx.media3.common.util.UnstableApi;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -20,6 +20,7 @@ import com.example.animelib.models.EpisodeResponse;
 import java.util.List;
 
 public class PlayerOptionsAdapter extends RecyclerView.Adapter<PlayerOptionsAdapter.PlayerViewHolder> {
+    private static final String TAG = "PlayerOptionsAdapter";
 
     private List<EpisodeResponse.PlayerData> players;
     private EpisodeResponse.PlayerData currentPlayer;
@@ -35,6 +36,15 @@ public class PlayerOptionsAdapter extends RecyclerView.Adapter<PlayerOptionsAdap
         this.players = players;
         this.currentPlayer = currentPlayer;
         this.listener = listener;
+        
+        Log.d(TAG, "Constructor - players: " + (players != null ? players.size() : "null"));
+        if (players != null) {
+            for (int i = 0; i < players.size(); i++) {
+                EpisodeResponse.PlayerData p = players.get(i);
+                Log.d(TAG, "  [" + i + "] " + p.getPlayer() + " - " + 
+                      (p.getTeam() != null ? p.getTeam().getName() : "no team"));
+            }
+        }
     }
 
     public void updatePlayers(List<EpisodeResponse.PlayerData> players, EpisodeResponse.PlayerData currentPlayer) {
@@ -106,7 +116,6 @@ public class PlayerOptionsAdapter extends RecyclerView.Adapter<PlayerOptionsAdap
         if (holder.subTag != null && translationTypeId != 0) {
             holder.subTag.setVisibility(translationTypeId == 1 ? View.VISIBLE : View.GONE);
         }
-        Log.d("translationTypeId", translationTypeId + teamInfo);
 
         // Show current player indicator
         boolean isCurrentPlayer = currentPlayer != null &&
@@ -145,7 +154,9 @@ public class PlayerOptionsAdapter extends RecyclerView.Adapter<PlayerOptionsAdap
 
     @Override
     public int getItemCount() {
-        return players != null ? players.size() : 0;
+        int count = players != null ? players.size() : 0;
+        Log.d(TAG, "getItemCount: " + count);
+        return count;
     }
 
     public static class PlayerViewHolder extends RecyclerView.ViewHolder {

@@ -24,8 +24,12 @@ public class DraggableSidePanel extends FrameLayout {
     private OnPanelStateChangeListener listener;
     
     private float initialTouchX;
+    private float initialTouchY;
     private float initialTranslationX;
     private boolean isDragging = false;
+    private boolean isDragStarted = false; // Флаг что драг действительно начался (прошли порог)
+    private int touchSlop = 0; // Минимальное расстояние для начала драга
+    private float dragStartOffset = 0; // Смещение на момент начала драга
     
     public interface OnPanelStateChangeListener {
         void onPanelOpened();
@@ -43,14 +47,24 @@ public class DraggableSidePanel extends FrameLayout {
     
     public DraggableSidePanel(@NonNull Context context) {
         super(context);
+        init(context);
     }
     
     public DraggableSidePanel(@NonNull Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
+        init(context);
     }
     
     public DraggableSidePanel(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
+        init(context);
+    }
+    
+    private void init(Context context) {
+        // Получаем touch slop из конфигурации системы
+        android.view.ViewConfiguration config = android.view.ViewConfiguration.get(context);
+        touchSlop = config.getScaledTouchSlop();
+        android.util.Log.d("DraggableSidePanel", "Touch slop initialized: " + touchSlop + "px");
     }
     
     @Override
@@ -103,8 +117,11 @@ public class DraggableSidePanel extends FrameLayout {
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 initialTouchX = event.getRawX();
+                initialTouchY = event.getRawY();
                 initialTranslationX = animatedView.getTranslationX();
                 isDragging = true;
+                isDragStarted = false; // Сбрасываем флаг начала драга
+                dragStartOffset = 0;
                 
                 // Останавливаем текущую анимацию если есть
                 animatedView.animate().cancel();
@@ -114,7 +131,28 @@ public class DraggableSidePanel extends FrameLayout {
                 if (!isDragging) return false;
                 
                 float deltaX = event.getRawX() - initialTouchX;
-                float newTranslationX = initialTranslationX + deltaX;
+                float deltaY = event.getRawY() - initialTouchY;
+                
+                // Проверяем прошли ли порог для начала драга
+                if (!isDragStarted) {
+                    float totalDelta = (float) Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                    
+                    if (totalDelta < touchSlop) {
+                        // Еще не прошли порог - просто ждем
+                        return true;
+                    }
+                    
+                    // Порог пройден - запоминаем текущее смещение
+                    isDragStarted = true;
+                    dragStartOffset = deltaX;
+                    
+                    android.util.Log.d("DraggableSidePanel", "Drag started. touchSlop=" + touchSlop + 
+                                     ", totalDelta=" + totalDelta + ", dragStartOffset=" + dragStartOffset);
+                }
+                
+                // Вычисляем новую позицию с учетом смещения на момент начала
+                float adjustedDeltaX = deltaX - dragStartOffset;
+                float newTranslationX = initialTranslationX + adjustedDeltaX;
                 
                 // Ограничиваем: от 0 (открыто) до width (закрыто)
                 newTranslationX = Math.max(0, Math.min(newTranslationX, animatedView.getWidth()));
@@ -130,7 +168,18 @@ public class DraggableSidePanel extends FrameLayout {
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
                     if (!isDragging) return false;
+                    
+                    // Сохраняем состояние до сброса
+                    boolean dragWasStarted = isDragStarted;
+                    
                     isDragging = false;
+                    isDragStarted = false; // Сбрасываем флаг
+                    
+                    // Если драг не начался (не прошли touchSlop), не обрабатываем как drag gesture
+                    if (!dragWasStarted && event.getAction() == MotionEvent.ACTION_UP) {
+                        android.util.Log.d("DraggableSidePanel", "Touch released without starting drag (touchSlop not passed)");
+                        return false; // Позволяем обработать как обычное нажатие
+                    }
                     
                     float currentTranslationX = animatedView.getTranslationX();
                     float panelWidth = animatedView.getWidth();

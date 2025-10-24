@@ -201,7 +201,7 @@ public class CommentsManager {
             button.setTextColor(primaryTextColor);
             button.setBackgroundColor(android.graphics.Color.TRANSPARENT);
             button.setStrokeWidth(0);
-            button.setRippleColor(android.content.res.ColorStateList.valueOf(0x20FFFFFF));
+            button.setRippleColor(null);
             button.setForeground(selectableItemBackground);
             button.setCornerRadius(0);
             button.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);

@@ -1,6 +1,7 @@
 package com.example.animelib.adapters;
 
 import android.annotation.SuppressLint;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,6 +17,7 @@ import com.example.animelib.models.EpisodesListResponse;
 import java.util.List;
 
 public class PlayerTabsAdapter extends RecyclerView.Adapter<PlayerTabsAdapter.PlayerTabViewHolder> {
+    private static final String TAG = "PlayerTabsAdapter";
 
     public interface OnEpisodeSelectedListener {
         void onEpisodeSelected(EpisodesListResponse.EpisodeItem episode);
@@ -44,10 +46,17 @@ public class PlayerTabsAdapter extends RecyclerView.Adapter<PlayerTabsAdapter.Pl
     public void updateData(List<EpisodeResponse.PlayerData> animelibPlayers,
                           List<EpisodeResponse.PlayerData> kodikPlayers,
                           EpisodeResponse.PlayerData currentPlayer) {
+        Log.d(TAG, "updateData called - AnimeLib: " + (animelibPlayers != null ? animelibPlayers.size() : "null") + 
+              ", Kodik: " + (kodikPlayers != null ? kodikPlayers.size() : "null"));
+        
         this.animelibPlayers = animelibPlayers;
         this.kodikPlayers = kodikPlayers;
         this.currentPlayer = currentPlayer;
         updateActiveTabs();
+        
+        Log.d(TAG, "Active tabs: " + (activeTabs != null ? activeTabs.size() : "null") + 
+              ", items: " + (activeTabs != null ? activeTabs : "null"));
+        
         notifyDataSetChanged();
     }
     
@@ -96,9 +105,13 @@ public class PlayerTabsAdapter extends RecyclerView.Adapter<PlayerTabsAdapter.Pl
     @Override
     public void onBindViewHolder(@NonNull PlayerTabViewHolder holder, int position) {
         String playerType = getPlayerTypeAtPosition(position);
+        Log.d(TAG, "onBindViewHolder position=" + position + ", playerType=" + playerType);
+        
         if ("animelib".equals(playerType)) {
+            Log.d(TAG, "Setting up AnimeLib tab with " + (animelibPlayers != null ? animelibPlayers.size() : "null") + " players");
             setupPlayerTab(holder, animelibPlayers, "animelib");
         } else if ("kodik".equals(playerType)) {
+            Log.d(TAG, "Setting up Kodik tab with " + (kodikPlayers != null ? kodikPlayers.size() : "null") + " players");
             setupPlayerTab(holder, kodikPlayers, "kodik");
         }
     }
@@ -107,12 +120,21 @@ public class PlayerTabsAdapter extends RecyclerView.Adapter<PlayerTabsAdapter.Pl
     private void setupPlayerTab(PlayerTabViewHolder holder,
                                 List<EpisodeResponse.PlayerData> players,
                                 String playerType) {
-        // Setup RecyclerView
+        Log.d(TAG, "setupPlayerTab for " + playerType + " with " + (players != null ? players.size() : "null") + " players");
+        
+        // Setup RecyclerView with LayoutManager
+        if (holder.playersRecyclerView.getLayoutManager() == null) {
+            Log.d(TAG, "Setting up LayoutManager for " + playerType);
+            holder.playersRecyclerView.setLayoutManager(
+                new androidx.recyclerview.widget.LinearLayoutManager(holder.itemView.getContext())
+            );
+        }
+        
         PlayerOptionsAdapter adapter = new PlayerOptionsAdapter(players, currentPlayer, playerListener);
         holder.playersRecyclerView.setAdapter(adapter);
+        
+        Log.d(TAG, "Adapter set for " + playerType + ", adapter itemCount=" + adapter.getItemCount());
     }
-
-    @SuppressLint("SetTextI18n")
 
     @Override
     public int getItemCount() {
