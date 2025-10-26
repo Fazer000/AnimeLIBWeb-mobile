@@ -696,6 +696,52 @@ public class MainActivity extends AppCompatActivity {
     }
     
     /**
+     * Показывает фрагмент быстрого поиска с анимацией из центра
+     */
+    public void showSearchFragment() {
+        SearchFragment searchFragment = new SearchFragment();
+        
+        getSupportFragmentManager().beginTransaction()
+                .setCustomAnimations(
+                        R.anim.fragment_scale_fade_in,  // enter
+                        R.anim.fragment_scale_fade_out, // exit
+                        R.anim.fragment_scale_fade_in,  // popEnter
+                        R.anim.fragment_scale_fade_out  // popExit
+                )
+                .add(R.id.fragment_container, searchFragment)
+                .addToBackStack(null)
+                .commit();
+        
+        Log.d("MainActivity", "Search fragment shown with scale-fade animation");
+    }
+    
+    /**
+     * Загружает URL в WebView
+     * @param url Относительный или абсолютный URL для загрузки
+     */
+    public void loadUrlInWebView(String url) {
+        if (webView == null) {
+            Log.e("MainActivity", "WebView is null, cannot load URL");
+            return;
+        }
+        
+        Log.d("MainActivity", "Loading URL in WebView: " + url);
+        
+        // Если URL относительный, добавляем базовый домен
+        String fullUrl = url;
+        if (url.startsWith("/")) {
+            String baseUrl = databaseManager.getSiteUrl();
+            if (baseUrl == null || baseUrl.isEmpty()) {
+                baseUrl = "https://anilib.one";
+            }
+            fullUrl = baseUrl + url;
+        }
+        
+        Log.d("MainActivity", "Full URL: " + fullUrl);
+        webView.loadUrl(fullUrl);
+    }
+    
+    /**
      * Получает значение auth из localStorage WebView и показывает в Toast
      */
     public void getAuthFromLocalStorage() {

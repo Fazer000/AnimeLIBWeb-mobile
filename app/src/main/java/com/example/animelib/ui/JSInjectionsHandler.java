@@ -49,6 +49,7 @@ public class JSInjectionsHandler {
         loadAndExecuteJS(webView, "js/custom-select-handler.js", "Custom select handler");
         loadAndExecuteJS(webView, "js/domain-change-handler.js", "Domain change handler");
         loadAndExecuteJS(webView, "js/auth-handler.js", "Auth handler");
+        loadAndExecuteJS(webView, "js/search-button-listener.js", "Search button listener");
 //        loadAndExecuteJS(webView, "js/back-button-handler.js", "Back button handler");
         loadAndExecuteJS(webView, "js/debug-info.js", "Debug info");
         loadAndExecuteJS(webView, "js/button-checker.js", "Button checker");
@@ -200,6 +201,20 @@ public class JSInjectionsHandler {
                 });
             } else {
                 Log.e(TAG, "Context is not an Activity, cannot get auth from localStorage");
+            }
+        }
+        
+        @JavascriptInterface
+        public void onSearchButtonClicked() {
+            if (context instanceof android.app.Activity) {
+                ((android.app.Activity) context).runOnUiThread(() -> {
+                    Log.d("PlayerHandler", "Search button clicked from WebView");
+                    if (context instanceof com.example.animelib.MainActivity) {
+                        ((com.example.animelib.MainActivity) context).showSearchFragment();
+                    }
+                });
+            } else {
+                Log.e(TAG, "Context is not an Activity, cannot handle search button click");
             }
         }
     }

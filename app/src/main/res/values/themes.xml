@@ -19,6 +19,8 @@
         <item name="secondaryTextColor">@color/lt_secondary_text_color</item>
         <item name="accentTextColor">@color/lt_accent_text_color</item>
 
+        <item name="rvItemBackground">@color/lt_player_item_background</item>
+
         <!-- System Color -->
         <item name="colorPrimary">@color/lt_primary_color</item>
         <item name="colorPrimaryVariant">@color/lt_alpha_primary_color</item>
@@ -115,8 +117,15 @@
     <!-- Кастомный стиль для спиннера -->
     <style name="CustomProgressIndicator" parent="Widget.Material3.CircularProgressIndicator">
         <item name="indicatorColor">?attr/secondaryColor</item>
-        <item name="trackColor">?attr/alphaPrimaryColor</item>
+        <item name="trackColor">@android:color/transparent</item>
         <item name="trackThickness">4dp</item>
         <item name="indicatorSize">48dp</item>
+    </style>
+
+    <!-- Стиль для текста табов поиска -->
+    <style name="SearchTabTextAppearance" parent="TextAppearance.Design.Tab">
+        <item name="android:textSize">14sp</item>
+        <item name="textAllCaps">false</item>
+        <item name="android:textAllCaps">false</item>
     </style>
 </resources>

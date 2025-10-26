@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/primaryColor"
+    android:clickable="true"
+    android:focusable="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Header with close button -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="?attr/statusBarColor"
+            android:elevation="6dp">
+
+            <ImageButton
+                android:id="@+id/closeButton"
+                android:layout_width="25dp"
+                android:layout_height="25dp"
+                android:layout_margin="10dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_arrow_back"
+                android:contentDescription="Закрыть"
+                app:tint="?attr/primaryTextColor" />
+
+            <EditText
+                android:id="@+id/searchInput"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:layout_marginEnd="12dp"
+                android:background="@android:color/transparent"
+                android:hint="Поиск тайтлов"
+                android:textSize="16sp"
+                android:textColor="?attr/primaryTextColor"
+                android:textColorHint="?attr/accentTextColor"
+                android:inputType="text"
+                android:imeOptions="actionSearch"
+                android:maxLines="1" />
+
+            <ImageButton
+                android:id="@+id/clearButton"
+                android:layout_width="25dp"
+                android:layout_height="25dp"
+                android:layout_margin="10dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_close"
+                app:tint="?attr/accentTextColor"
+                android:contentDescription="Очистить"
+                android:visibility="gone" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:elevation="4dp"
+            android:background="@drawable/nr_bb_background">
+            <!-- Tab Layout -->
+            <com.google.android.material.tabs.TabLayout
+                android:id="@+id/searchTabLayout"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:background="?attr/primaryColor"
+                app:tabMode="scrollable"
+                app:tabGravity="start"
+                app:tabIndicator="@drawable/tab_indicator_rounded"
+                app:tabIndicatorColor="?attr/secondaryColor"
+                app:tabIndicatorGravity="bottom"
+                app:tabIndicatorHeight="3dp"
+                app:tabIndicatorFullWidth="false"
+                app:tabSelectedTextColor="?attr/primaryTextColor"
+                app:tabTextColor="?attr/accentTextColor"
+                app:tabTextAppearance="@style/SearchTabTextAppearance"
+                app:tabPaddingStart="16dp"
+                app:tabPaddingEnd="16dp">
+
+                <com.google.android.material.tabs.TabItem
+                    android:id="@+id/tabTitles"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Тайтлы" />
+
+            </com.google.android.material.tabs.TabLayout>
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0.5dp"
+                android:background="?attr/alphaBorderColor" />
+        </LinearLayout>
+
+<!--        <LinearLayout-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:layout_marginVertical="4dp"-->
+<!--            android:gravity="center_vertical"-->
+<!--            android:orientation="horizontal">-->
+<!--            <ImageView-->
+<!--                android:layout_width="30dp"-->
+<!--                android:layout_height="30dp"-->
+<!--                android:scaleX="2"-->
+<!--                android:scaleY="2"-->
+<!--                android:layout_marginEnd="6dp"-->
+<!--                android:src="@drawable/ic_animelib_logo_non_back" />-->
+<!--            <TextView-->
+<!--                android:layout_width="wrap_content"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:text="AnimeLIB"-->
+<!--                android:textSize="18dp"-->
+<!--                android:textStyle="bold"-->
+<!--                android:textColor="?attr/primaryTextColor" />-->
+<!--        </LinearLayout>-->
+
+        <!-- Search results -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/searchResults"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:padding="8dp" />
+
+        <!-- Empty state -->
+        <LinearLayout
+            android:id="@+id/emptyState"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="32dp"
+            android:visibility="visible">
+
+            <ImageView
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                android:src="@drawable/ic_search"
+                app:tint="?attr/accentTextColor"
+                android:alpha="0.3"
+                android:contentDescription="Поиск" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Начните вводить название аниме"
+                android:textSize="16sp"
+                android:textColor="?attr/accentTextColor"
+                android:layout_marginTop="16dp" />
+
+        </LinearLayout>
+
+        <!-- Loading indicator -->
+        <FrameLayout
+            android:id="@+id/loadingIndicator"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:visibility="gone">
+
+            <com.google.android.material.progressindicator.CircularProgressIndicator
+                style="@style/CustomProgressIndicator"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:fitsSystemWindows="true"
+                app:trackCornerRadius="20dp"
+                android:layout_gravity="center"
+                android:indeterminate="true"/>
+        </FrameLayout>
+
+    </LinearLayout>
+
+</FrameLayout>
+

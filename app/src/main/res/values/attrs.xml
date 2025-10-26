@@ -20,7 +20,9 @@
     <attr name="cardBackgroundColor" format="color" />
     <attr name="cardElevationColor" format="color" />
     <attr name="ratingStarColor" format="color" />
-    
+
+    <attr name="rvItemBackground" format="color" />
+
     <!-- Player item -->
     <attr name="playerItemBackground" format="color" />
     

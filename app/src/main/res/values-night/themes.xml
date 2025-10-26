@@ -19,7 +19,7 @@
         <item name="secondaryTextColor">@color/dt_secondary_text_color</item>
         <item name="accentTextColor">@color/dt_accent_text_color</item>
 
-
+        <item name="rvItemBackground">@color/dt_player_item_background</item>
 
         <!-- System Color -->
         <item name="colorPrimary">@color/dt_primary_color</item>
@@ -116,7 +116,7 @@
     <!-- Кастомный стиль для спиннера (темная тема) -->
     <style name="CustomProgressIndicator" parent="Widget.Material3.CircularProgressIndicator">
         <item name="indicatorColor">?attr/secondaryColor</item>
-        <item name="trackColor">?attr/alphaPrimaryColor</item>
+        <item name="trackColor">@android:color/transparent</item>
         <item name="trackThickness">4dp</item>
         <item name="indicatorSize">48dp</item>
     </style>

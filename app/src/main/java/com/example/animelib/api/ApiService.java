@@ -59,6 +59,11 @@ public class ApiService {
         void onCommentsReceived(CommentsResponse response);
         void onError(String error);
     }
+    
+    public interface SearchCallback {
+        void onSearchResults(SearchResponse response);
+        void onError(String error);
+    }
 
 
     public interface ToastCheckCallback {
@@ -120,6 +125,32 @@ public class ApiService {
                 .addHeader("Client-Time-Zone", "Europe/Samara")
                 .addHeader("Priority", "u=1, i");
     }
+    
+    /**
+     * Строит API запрос для поиска (без Site-Id заголовка)
+     */
+    private Request.Builder buildSearchApiRequest(String url) {
+        // Получаем URL из базы данных
+        String siteUrl = getSiteUrlFromDb();
+        
+        return new Request.Builder()
+                .url(url)
+                .addHeader("Authorization", "Bearer " + getBearerToken())
+                .addHeader("Accept", "*/*")
+                .addHeader("Accept-Language", "ru,en;q=0.9,de;q=0.8,zh;q=0.7")
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Origin", siteUrl)
+                .addHeader("Referer", siteUrl + "/")
+                .addHeader("Sec-Ch-Ua", "\"Google Chrome\";v=\"131\", \"Chromium\";v=\"131\", \"Not_A Brand\";v=\"24\"")
+                .addHeader("Sec-Ch-Ua-Mobile", "?1")
+                .addHeader("Sec-Ch-Ua-Platform", "\"Android\"")
+                .addHeader("Sec-Fetch-Dest", "empty")
+                .addHeader("Sec-Fetch-Mode", "cors")
+                .addHeader("Sec-Fetch-Site", "cross-site")
+                .addHeader("User-Agent", "Mozilla/5.0 (Linux; Android 14; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36")
+                .addHeader("Client-Time-Zone", "Europe/Samara")
+                .addHeader("Priority", "u=1, i");
+    }
 
     private String getSiteUrlFromDb() {
         return databaseManager.getSiteUrl();
@@ -172,6 +203,56 @@ public class ApiService {
                     }
                 });
             } catch (Exception e) {
+                callback.onError("Ошибка запроса: " + e.getMessage());
+            }
+        });
+    }
+    
+    /**
+     * Поиск аниме по запросу
+     * @param query Поисковый запрос
+     * @param callback Callback для обработки результатов
+     */
+    public void searchAnime(String query, SearchCallback callback) {
+        safeExecute(() -> {
+            try {
+                // URL-encode query
+                String encodedQuery = java.net.URLEncoder.encode(query, "UTF-8");
+                String apiUrl = "https://api.cdnlibs.org/api/anime?fields[]=rate_avg&fields[]=rate&fields[]=releaseDate&q=" + encodedQuery;
+                Log.d("ApiService", "Searching anime with query: " + query);
+                
+                // Используем buildSearchApiRequest без Site-Id заголовка
+                Request request = buildSearchApiRequest(apiUrl).build();
+
+                httpClient.newCall(request).enqueue(new Callback() {
+                    @Override
+                    public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                        Log.e("ApiService", "Search request failed", e);
+                        callback.onError("Ошибка сети: " + e.getMessage());
+                    }
+
+                    @Override
+                    public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                        if (!response.isSuccessful()) {
+                            Log.e("ApiService", "Search failed with code: " + response.code());
+                            callback.onError("HTTP " + response.code());
+                            return;
+                        }
+                        assert response.body() != null;
+                        String body = response.body().string();
+                        Log.d("ApiService", "Search response received, parsing...");
+                        try {
+                            SearchResponse searchResponse = gson.fromJson(body, SearchResponse.class);
+                            Log.d("ApiService", "Search results: " + (searchResponse.getData() != null ? searchResponse.getData().size() : 0) + " items");
+                            callback.onSearchResults(searchResponse);
+                        } catch (Exception ex) {
+                            Log.e("ApiService", "Search parsing error", ex);
+                            callback.onError("Ошибка парсинга: " + ex.getMessage());
+                        }
+                    }
+                });
+            } catch (Exception e) {
+                Log.e("ApiService", "Search request error", e);
                 callback.onError("Ошибка запроса: " + e.getMessage());
             }
         });
