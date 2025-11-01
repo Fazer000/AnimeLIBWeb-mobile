@@ -177,7 +177,7 @@ public class VerticalGesturesManager {
         
         // Вычисляем финальный прогресс используя getRawY() для абсолютных координат
         float finalProgress = calculateProgress(currentPanel, event.getRawY());
-        boolean shouldOpen = finalProgress >= OPEN_THRESHOLD;
+        boolean shouldOpen = finalProgress > OPEN_THRESHOLD;
         
         Log.d(TAG, "Drag completed: " + currentPanel + ", progress=" + finalProgress + ", shouldOpen=" + shouldOpen);
         

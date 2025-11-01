@@ -820,12 +820,80 @@ public class EpisodesManager {
      * Завершает drag жест с решением открыть или закрыть панель эпизодов
      */
     public void completeDrag(boolean shouldOpen) {
-        Log.d(TAG, "Complete episodes drag: shouldOpen=" + shouldOpen);
+        if (playersControlBar == null || episodesRecyclerView == null) return;
+        
+        Log.d(TAG, "Complete episodes drag: shouldOpen=" + shouldOpen + ", current isVisible=" + isEpisodesMenuVisible);
+        
+        // Отменяем текущие анимации
+        playersControlBar.animate().cancel();
+        episodesRecyclerView.animate().cancel();
         
         if (shouldOpen) {
-            showEpisodesMenu();
+            // Открываем панель
+            isEpisodesMenuVisible = true;
+            
+            // Отключаем автоматическое скрытие интерфейса плеера
+            if (playerControlsCallback != null) {
+                playerControlsCallback.onPlayerControlsAutoHideChanged(false);
+            }
+            
+            // Показываем RecyclerView если скрыт
+            if (episodesRecyclerView.getVisibility() != View.VISIBLE) {
+                episodesRecyclerView.setVisibility(View.VISIBLE);
+            }
+            
+            // Анимация к открытому состоянию
+            playersControlBar.animate()
+                    .translationY(0f)
+                    .setDuration(300)
+                    .setInterpolator(new OvershootInterpolator(0.6f))
+                    .start();
+            
+            episodesRecyclerView.animate()
+                    .alpha(1f)
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(250)
+                    .setInterpolator(new DecelerateInterpolator())
+                    .start();
+            
+            updateEpisodeNavigationButtonsVisibility();
+            
+            if (visibilityCallback != null) {
+                visibilityCallback.onEpisodesVisibilityChanged(true);
+            }
         } else {
-            hideEpisodesMenu();
+            // Закрываем панель
+            isEpisodesMenuVisible = false;
+            
+            // Включаем автоматическое скрытие интерфейса плеера
+            if (playerControlsCallback != null) {
+                playerControlsCallback.onPlayerControlsAutoHideChanged(true);
+            }
+            
+            // Анимация к закрытому состоянию
+            episodesRecyclerView.animate()
+                    .alpha(0f)
+                    .scaleX(0.95f)
+                    .scaleY(0.95f)
+                    .setDuration(150)
+                    .setInterpolator(new AccelerateInterpolator())
+                    .withEndAction(() -> {
+                        episodesRecyclerView.setVisibility(View.INVISIBLE);
+                    })
+                    .start();
+            
+            playersControlBar.animate()
+                    .translationY(totalOffsetPx)
+                    .setDuration(250)
+                    .setInterpolator(new AnticipateInterpolator(1f))
+                    .start();
+            
+            updateEpisodeNavigationButtonsVisibility();
+            
+            if (visibilityCallback != null) {
+                visibilityCallback.onEpisodesVisibilityChanged(false);
+            }
         }
     }
     

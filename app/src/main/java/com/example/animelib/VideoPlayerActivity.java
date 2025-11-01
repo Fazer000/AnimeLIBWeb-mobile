@@ -1788,8 +1788,8 @@ public class VideoPlayerActivity extends AppCompatActivity {
             public void onEpisodesDragComplete(boolean shouldOpen) {
                 Log.d("VideoPlayer", "Episodes drag complete: shouldOpen=" + shouldOpen);
                 if (episodesManager != null) {
-                    // Используем updateDragState вместо completeDrag чтобы избежать перезапуска анимации
-                    episodesManager.updateDragState(shouldOpen);
+                    // Используем completeDrag для корректного завершения анимации
+                    episodesManager.completeDrag(shouldOpen);
                 }
                 // Возобновляем ambient подсветку только если панель закрыта
                 if (!shouldOpen && ambientLightManager != null) {
@@ -2354,8 +2354,13 @@ public class VideoPlayerActivity extends AppCompatActivity {
         // СРАЗУ обновляем заголовок с номером эпизода (синхронно, без API запроса)
         updateEpisodeHeaderQuick();
         
-        // НЕ сохраняем предпочтения здесь! Сохранение происходит позже вместе с качеством
-        // чтобы не перезаписывать сохраненное качество на null
+        // СРАЗУ сохраняем предпочтения плеера и озвучки (БЕЗ качества пока)
+        // Качество добавится позже, когда будет выбрано
+        if (playerData.getPlayer() != null && playerData.getTeam() != null) {
+            apiService.savePlayerPreferences(playerData.getPlayer(), playerData.getTeam().getId());
+            Log.d("VideoPlayer", "Immediately saved player preferences: player=" + playerData.getPlayer() + 
+                  ", teamId=" + playerData.getTeam().getId());
+        }
 
         // Сохраняем текущую позицию перед сменой плеера
         if (player != null) {
@@ -2402,10 +2407,10 @@ public class VideoPlayerActivity extends AppCompatActivity {
                     preferredQuality = newPreferredQuality;
                     Log.d("VideoPlayer", "Updated preferred quality to: " + newPreferredQuality + " for player: " + playerData.getPlayer());
                     
-                    // Сохраняем предпочтения ПОСЛЕ выбора качества
+                    // Обновляем сохраненные предпочтения С качеством
                     if (playerData.getPlayer() != null && playerData.getTeam() != null) {
                         apiService.savePlayerPreferences(playerData.getPlayer(), playerData.getTeam().getId(), preferredQuality);
-                        Log.d("VideoPlayer", "Saved player preferences with quality: player=" + playerData.getPlayer() + 
+                        Log.d("VideoPlayer", "Updated player preferences with quality: player=" + playerData.getPlayer() + 
                               ", teamId=" + playerData.getTeam().getId() + ", quality=" + preferredQuality);
                     }
                     
@@ -3039,8 +3044,13 @@ public class VideoPlayerActivity extends AppCompatActivity {
             fetchKodikVideoLinks(kodikSrc, seekToPosition);
         } else {
             Log.w("KodikPlayer", "No src found in Kodik player data");
-            Toast.makeText(this, "Ошибка: ссылка Kodik недоступна", Toast.LENGTH_SHORT).show();
-            finish();
+            Toast.makeText(this, "Ошибка: ссылка Kodik недоступна.\nПопробуйте позже или выберите другую озвучку!", Toast.LENGTH_LONG).show();
+            showAnimeInfoPlaceholder();
+            if (player != null) {
+                player.stop();
+                player.clearMediaItems();
+            }
+            if (menuLoadingOverlay != null) menuLoadingOverlay.setVisibility(View.GONE);
         }
     }
 
@@ -3061,8 +3071,15 @@ public class VideoPlayerActivity extends AppCompatActivity {
             public void onError(String error) {
                 safeRunOnUiThread(() -> {
                     hideLoading();
-                    Toast.makeText(VideoPlayerActivity.this, error, Toast.LENGTH_SHORT).show();
-                    finish();
+                    Toast.makeText(VideoPlayerActivity.this, "Ошибка загрузки видео с Kodik: попробуйте позже или выберите другую озвучку!\n" + error, Toast.LENGTH_LONG).show();
+                    showAnimeInfoPlaceholder();
+                    // Clean player state
+                    if (player != null) {
+                        player.stop();
+                        player.clearMediaItems();
+                    }
+                    // Очистить возможные UI меню/загрузка
+                    if (menuLoadingOverlay != null) menuLoadingOverlay.setVisibility(View.GONE);
                 });
             }
         });

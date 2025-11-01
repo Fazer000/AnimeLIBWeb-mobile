@@ -59,7 +59,7 @@ public class ApiService {
         void onCommentsReceived(CommentsResponse response);
         void onError(String error);
     }
-    
+
     public interface SearchCallback {
         void onSearchResults(SearchResponse response);
         void onError(String error);

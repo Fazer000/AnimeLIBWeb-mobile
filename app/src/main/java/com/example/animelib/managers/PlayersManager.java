@@ -258,59 +258,65 @@ public class PlayersManager {
         apiService.fetchEpisodeData(episodeId, new ApiService.EpisodeDataCallback() {
             @Override
             public void onEpisodeDataReceived(EpisodeResponse response) {
-                safeRunOnUiThread(() -> {
-                    hideLoading();
+                // ВАЖНО: onEpisodeDataReceived вызывается в фоновом потоке (от OkHttp callback)
+                // Поэтому loadPlayerPreferences вызывается БЕЗ проблем здесь
+                if (response.getData() != null && response.getData().getPlayers() != null) {
+                    List<EpisodeResponse.PlayerData> players = response.getData().getPlayers();
                     
-                    if (response.getData() != null && response.getData().getPlayers() != null) {
-                        List<EpisodeResponse.PlayerData> players = response.getData().getPlayers();
+                    // Попытка автоматического выбора плеера на основе сохраненных предпочтений
+                    com.example.animelib.data.entity.PlayerPreferences prefs = apiService.loadPlayerPreferences();
+                    
+                    Log.d(TAG, "Loaded preferences from DB: " + (prefs != null ? 
+                          ("player=" + prefs.getPlayer() + ", teamId=" + prefs.getTeamId() + ", quality=" + prefs.getPreferredQuality()) : 
+                          "null"));
+                    
+                    EpisodeResponse.PlayerData matchingPlayer = null;
+                    
+                    if (prefs != null && prefs.getPlayer() != null && prefs.getTeamId() != null) {
+                        Log.d(TAG, "Found saved preferences: player=" + prefs.getPlayer() + ", teamId=" + prefs.getTeamId());
                         
-                        // Попытка автоматического выбора плеера на основе сохраненных предпочтений
-                        com.example.animelib.data.entity.PlayerPreferences prefs = apiService.loadPlayerPreferences();
+                        // Сначала ищем точное совпадение (сохраненный плеер + озвучка)
+                        for (EpisodeResponse.PlayerData player : players) {
+                            if (player.getPlayer() != null && 
+                                player.getPlayer().equals(prefs.getPlayer()) && 
+                                player.getTeam() != null && 
+                                player.getTeam().getId() == prefs.getTeamId()) {
+                                matchingPlayer = player;
+                                Log.d(TAG, "Found exact match in saved player: " + player.getPlayer() + 
+                                      ", team: " + player.getTeam().getName());
+                                break;
+                            }
+                        }
                         
-                        Log.d(TAG, "Loaded preferences from DB: " + (prefs != null ? 
-                              ("player=" + prefs.getPlayer() + ", teamId=" + prefs.getTeamId() + ", quality=" + prefs.getPreferredQuality()) : 
-                              "null"));
-                        
-                        EpisodeResponse.PlayerData matchingPlayer = null;
-                        
-                        if (prefs != null && prefs.getPlayer() != null && prefs.getTeamId() != null) {
-                            Log.d(TAG, "Found saved preferences: player=" + prefs.getPlayer() + ", teamId=" + prefs.getTeamId());
-                            
-                            // Сначала ищем точное совпадение (сохраненный плеер + озвучка)
+                        // Если не найдено в сохраненном плеере, ищем озвучку в других плеерах
+                        if (matchingPlayer == null) {
+                            Log.d(TAG, "Team not found in saved player, searching in other players");
                             for (EpisodeResponse.PlayerData player : players) {
-                                if (player.getPlayer() != null && 
-                                    player.getPlayer().equals(prefs.getPlayer()) && 
-                                    player.getTeam() != null && 
+                                if (player.getTeam() != null && 
                                     player.getTeam().getId() == prefs.getTeamId()) {
                                     matchingPlayer = player;
-                                    Log.d(TAG, "Found exact match in saved player: " + player.getPlayer() + 
+                                    Log.d(TAG, "Found team in different player: " + player.getPlayer() + 
                                           ", team: " + player.getTeam().getName());
                                     break;
                                 }
                             }
-                            
-                            // Если не найдено в сохраненном плеере, ищем озвучку в других плеерах
-                            if (matchingPlayer == null) {
-                                Log.d(TAG, "Team not found in saved player, searching in other players");
-                                for (EpisodeResponse.PlayerData player : players) {
-                                    if (player.getTeam() != null && 
-                                        player.getTeam().getId() == prefs.getTeamId()) {
-                                        matchingPlayer = player;
-                                        Log.d(TAG, "Found team in different player: " + player.getPlayer() + 
-                                              ", team: " + player.getTeam().getName());
-                                        break;
-                                    }
-                                }
-                            }
-                        } else {
-                            Log.d(TAG, "No saved player preferences found");
                         }
+                    } else {
+                        Log.d(TAG, "No saved player preferences found");
+                    }
+                    
+                    // Сохраняем финальный результат для передачи в UI поток
+                    EpisodeResponse.PlayerData finalMatchingPlayer = matchingPlayer;
+                    
+                    // Переключаемся в UI поток для обновления интерфейса
+                    safeRunOnUiThread(() -> {
+                        hideLoading();
                         
-                        if (matchingPlayer != null) {
+                        if (finalMatchingPlayer != null) {
                             // Автоматически выбираем найденный плеер БЕЗ показа меню
                             Log.d(TAG, "Auto-selecting player for episode change: " + 
-                                  matchingPlayer.getPlayer() + ", Team: " + 
-                                  (matchingPlayer.getTeam() != null ? matchingPlayer.getTeam().getName() : "null"));
+                                  finalMatchingPlayer.getPlayer() + ", Team: " + 
+                                  (finalMatchingPlayer.getTeam() != null ? finalMatchingPlayer.getTeam().getName() : "null"));
                             
                             // Сохраняем данные плееров БЕЗ показа меню
                             setPlayersDataSilent(players);
@@ -319,7 +325,7 @@ public class PlayersManager {
                             
                             // Вызываем callback для выбора плеера
                             if (playerSelectionCallback != null) {
-                                playerSelectionCallback.onPlayerSelected(matchingPlayer);
+                                playerSelectionCallback.onPlayerSelected(finalMatchingPlayer);
                             } else {
                                 Log.w(TAG, "playerSelectionCallback is null!");
                             }
@@ -348,13 +354,16 @@ public class PlayersManager {
                         if (dataCallback != null) {
                             dataCallback.onPlayersLoaded(allPlayers);
                         }
-                    } else {
+                    });
+                } else {
+                    safeRunOnUiThread(() -> {
+                        hideLoading();
                         Log.e(TAG, "No players found in response");
                         if (dataCallback != null) {
                             dataCallback.onPlayersError("Плееры не найдены");
                         }
-                    }
-                });
+                    });
+                }
             }
 
             @Override

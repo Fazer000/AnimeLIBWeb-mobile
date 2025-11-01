@@ -146,7 +146,7 @@ public class RelatedTitlesManager {
                 animeStatusChip.setVisibility(View.VISIBLE);
             } else {
                 animeStatusChip.setVisibility(View.GONE);
-            }
+        }
         }
         
         // Год выхода
