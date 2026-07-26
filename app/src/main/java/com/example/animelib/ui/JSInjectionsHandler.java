@@ -15,7 +15,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Класс для обработки нажатий кнопок плеера в WebView
+ * Класс для обработки нажатий кнопок плеера в WebView.
  * Содержит JavaScript интерфейс и логику настройки слушателей
  */
 public class JSInjectionsHandler {
@@ -54,6 +54,18 @@ public class JSInjectionsHandler {
         loadAndExecuteJS(webView, "js/debug-info.js", "Debug info");
         loadAndExecuteJS(webView, "js/button-checker.js", "Button checker");
 
+    }
+
+    /**
+     * Повторно внедряет DOM-зависимые слушатели после полной загрузки страницы
+     */
+    public void reinjectDomListeners(WebView webView) {
+        Log.d(TAG, "Re-injecting DOM-dependent listeners");
+
+        loadAndExecuteJS(webView, "js/license-button-listener.js", "License button listener");
+        loadAndExecuteJS(webView, "js/player-button-listener.js", "Player button listener");
+        loadAndExecuteJS(webView, "js/theme-button-listener.js", "Theme button listener");
+        loadAndExecuteJS(webView, "js/search-button-listener.js", "Search button listener");
     }
 
     /**

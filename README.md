@@ -18,6 +18,7 @@ AnimeLIB - это мобильное приложение для Android, пре
 - 📝 **Комментарии** - система комментариев к эпизодам
 - ⚙️ **Настройки** - гибкая настройка качества видео и других параметров
 - 🎮 **Жесты управления** - управление плеером с помощью жестов
+- ⬇️ **Скачивание серии** - сохранение текущей серии в выбранном качестве
 
 ## 🛠 Технические характеристики
 
@@ -34,6 +35,8 @@ AnimeLIB - это мобильное приложение для Android, пре
 - **WebView**: Встроенный браузер для отображения веб-контента
 - **JavaScript Bridge**: Связь между WebView и нативным кодом
 - **Кастомный плеер**: ExoPlayer/Media3 для воспроизведения видео
+- **Сборка**: Gradle 8.13 (wrapper), Android Gradle Plugin 8.13.0
+- **Зависимости**: version catalog — `gradle/libs.versions.toml`
 
 ## 📦 Зависимости
 
@@ -57,26 +60,31 @@ implementation 'androidx.lifecycle:lifecycle-viewmodel:2.7.0'
 implementation 'androidx.lifecycle:lifecycle-livedata:2.7.0'
 implementation 'androidx.media3:media3-exoplayer:1.4.1'
 implementation 'androidx.media3:media3-ui:1.4.1'
+implementation 'androidx.media3:media3-common:1.4.1'
+implementation 'androidx.media3:media3-datasource-okhttp:1.4.1'
 implementation 'androidx.media3:media3-exoplayer-hls:1.8.0'
 implementation 'com.squareup.okhttp3:okhttp:4.12.0'
 implementation 'com.google.code.gson:gson:2.10.1'
 implementation 'org.jsoup:jsoup:1.17.2'
 implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
 implementation 'androidx.core:core-splashscreen:1.0.1'
+annotationProcessor 'androidx.room:room-compiler:2.6.1'
 ```
+
+> Версии объявлены в `gradle/libs.versions.toml`, подключение — в `app/build.gradle`.
 
 ## 🚀 Установка и запуск
 
 ### Предварительные требования
-- Android Studio Arctic Fox или новее
-- JDK 11 или выше
-- Android SDK 35
+- Android Studio с поддержкой AGP 8.13 (Narwhal 3 Feature Drop / 2025.1.3 или новее)
+- JDK 17 или выше (требование AGP 8.13; проект собирался на JDK 21)
+- Android SDK Platform 35 и SDK Build-Tools 35.0.0
 
 ### Установка
 1. Клонируйте репозиторий:
 ```bash
-git clone https://github.com/your-username/AnimeLIB.git
-cd AnimeLIB
+git clone https://github.com/Fazer000/AnimeLib-Mobile.git
+cd AnimeLib-Mobile
 ```
 
 2. Откройте проект в Android Studio
@@ -87,6 +95,9 @@ cd AnimeLIB
 ```bash
 ./gradlew assembleDebug
 ```
+На Windows используйте `.\gradlew.bat`, на Linux/macOS может потребоваться `chmod +x gradlew`.
+
+Готовый APK: `app/build/outputs/apk/debug/AnimeLib-vX.X.X-debug.apk`
 
 5. Установите APK на устройство:
 ```bash
@@ -110,26 +121,36 @@ app/
 │   │   ├── util/              # Утилиты
 │   │   ├── viewmodel/         # ViewModels
 │   │   ├── MainActivity.java  # Главная активность с WebView
-│   │   └── VideoPlayerActivity.java # Активность кастомного видеоплеера
+│   │   ├── VideoPlayerActivity.java # Активность кастомного видеоплеера
+│   │   ├── SearchFragment.java      # Поиск по каталогу
+│   │   └── UrlInputActivity.java    # Ручной ввод адреса сайта
 │   ├── res/                   # Ресурсы приложения
-│   └── assets/js/             # JavaScript файлы для WebView (bridge, обработчики кнопок)
+│   ├── assets/js/             # JavaScript файлы для WebView (bridge, обработчики кнопок)
+│   └── assets/html/           # Разметка, вставляемая в страницу
 ```
 
 ## 🔧 Конфигурация
 
 ### Настройка API
-В файле `app/src/main/res/values/strings.xml` можно настроить:
-- URL сайта аниме
-- Bearer токен для API
+В файле `app/src/main/res/values/strings.xml` задаётся:
+- `site_url` — адрес сайта (может быть переопределён пользователем в приложении)
+- `bearer_token` — устаревший резервный токен
+
+Рабочий токен приложение получает само: после входа на сайте внутри WebView скрипт
+`assets/js/auth-handler.js` забирает `auth` из `localStorage` и передаёт его в Android,
+откуда токен сохраняется в Room. **До входа в аккаунт запросы к API будут отклоняться.**
 
 ### Разрешения
 Приложение запрашивает следующие разрешения:
 - `INTERNET` - для сетевых запросов
 - `ACCESS_NETWORK_STATE` - проверка состояния сети
-- `ACCESS_FINE_LOCATION` - определение местоположения
-- `WRITE_EXTERNAL_STORAGE` - сохранение файлов
+- `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION` - запросы геолокации со стороны сайта
+- `WRITE_EXTERNAL_STORAGE` (до API 28), `READ_EXTERNAL_STORAGE` (до API 32) - сохранение файлов
 - `CAMERA` - доступ к камере
 - `RECORD_AUDIO` - запись аудио
+- `MODIFY_AUDIO_SETTINGS` - управление громкостью в плеере
+- `POST_NOTIFICATIONS` - уведомление о прогрессе скачивания (Android 13+)
+- `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_DATA_SYNC` - скачивание в фоне
 
 ## 🎮 Использование
 
@@ -140,6 +161,15 @@ app/
 5. **Переход к плееру** - нажмите кнопку "Смотреть" для запуска кастомного плеера
 6. **Настройка качества** - настройте качество видео в настройках плеера
 7. **Управление воспроизведением** - используйте жесты для управления плеером
+8. **Скачивание серии** - кнопка со стрелкой в нижней панели плеера: выберите
+      качество, повторное нажатие во время загрузки отменяет её
+
+### Скачивание
+Файлы кладутся в системную папку «Загрузки», подпапка `AnimeLIB`, через
+`MediaStore.Downloads` — разрешения на запись не нужны, файл виден в любом
+файловом менеджере. Одновременно качается одна серия: повторный `ACTION_START` при активной загрузке
+игнорируется. Доступно только для озвучек AnimeLib (прямые файлы по качеству);
+Kodik отдаёт HLS и требует отдельного загрузчика с получением сегментов.
 
 ## 🐛 Известные проблемы
 
@@ -154,7 +184,7 @@ app/
 2. Создайте ветку для новой функции (`git checkout -b feature/AmazingFeature`)
 3. Зафиксируйте изменения (`git commit -m 'Add some AmazingFeature'`)
 4. Отправьте в ветку (`git push origin feature/AmazingFeature`)
-5. Откройте Pull Request
+5. Откройте Pull Request в ветку `dev` (основная ветка разработки)
 
 ## 📄 Лицензия
 

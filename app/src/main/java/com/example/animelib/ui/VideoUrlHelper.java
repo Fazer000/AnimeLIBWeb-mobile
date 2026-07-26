@@ -11,6 +11,20 @@ import java.util.regex.Pattern;
  */
 public class VideoUrlHelper {
     private static final String TAG = "VideoUrlHelper";
+    private static final String VIDEO_CDN = "https://video1.cdnlibs.org/.%D0%B0s";
+
+    /**
+     * Достраивает относительную ссылку на видео доменом CDN
+     */
+    public static String toAbsoluteVideoUrl(String href) {
+        if (href == null || href.isEmpty()) {
+            return null;
+        }
+        if (href.startsWith("http")) {
+            return href;
+        }
+        return VIDEO_CDN + href;
+    }
 
     /**
      * Extract anime identifier from href (including slug)

@@ -70,7 +70,7 @@ public class UrlInputActivity extends AppCompatActivity {
         urlEditText = findViewById(R.id.urlEditText);
         saveButton = findViewById(R.id.saveButton);
 
-        urlEditText.setText("https://v3.animelib.org");
+        urlEditText.setText("https://" + getString(R.string.site_url));
 
         // Кнопка активна по умолчанию, так как в поле уже есть валидный URL
         saveButton.setEnabled(true);

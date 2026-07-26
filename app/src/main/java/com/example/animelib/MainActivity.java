@@ -534,8 +534,9 @@ public class MainActivity extends AppCompatActivity {
             public void onPageFinished(WebView view, String url) {
                 spinner.setVisibility(View.GONE);
                 spinnerBackground.setVisibility(View.GONE);
-                
-                // Скрываем спиннер домена через JavaScript интерфейс
+
+                JSInjectionsHandler.reinjectDomListeners(view);
+
                 hideDomainChangeSpinner();
                 
                 if (isFirstLoad) {
@@ -714,7 +715,7 @@ public class MainActivity extends AppCompatActivity {
         
         Log.d("MainActivity", "Search fragment shown with scale-fade animation");
     }
-    
+
     /**
      * Загружает URL в WebView
      * @param url Относительный или абсолютный URL для загрузки
@@ -724,21 +725,35 @@ public class MainActivity extends AppCompatActivity {
             Log.e("MainActivity", "WebView is null, cannot load URL");
             return;
         }
-        
+
         Log.d("MainActivity", "Loading URL in WebView: " + url);
-        
-        // Если URL относительный, добавляем базовый домен
-        String fullUrl = url;
-        if (url.startsWith("/")) {
-            String baseUrl = databaseManager.getSiteUrl();
-            if (baseUrl == null || baseUrl.isEmpty()) {
-                baseUrl = "https://anilib.one";
-            }
-            fullUrl = baseUrl + url;
-        }
-        
+
+        // Относительный URL достраиваем доменом активной страницы
+        String fullUrl = url.startsWith("/") ? resolveBaseUrl() + url : url;
+
         Log.d("MainActivity", "Full URL: " + fullUrl);
-        webView.loadUrl(fullUrl);
+        webView.loadUrl(fullUrl, getStringStringMap());
+    }
+
+    /**
+     * Определяет базовый адрес по текущей странице WebView
+     */
+    private String resolveBaseUrl() {
+        String currentUrl = webView.getUrl();
+        if (currentUrl != null && (currentUrl.startsWith("http://") || currentUrl.startsWith("https://"))) {
+            try {
+                java.net.URL parsed = new java.net.URL(currentUrl);
+                String base = parsed.getProtocol() + "://" + parsed.getHost();
+                Log.d("MainActivity", "Base URL from WebView: " + base);
+                return base;
+            } catch (Exception e) {
+                Log.w("MainActivity", "Failed to parse WebView URL: " + currentUrl, e);
+            }
+        }
+
+        String fallback = "https://" + getString(R.string.site_url);
+        Log.w("MainActivity", "WebView URL unavailable, using fallback: " + fallback);
+        return fallback;
     }
     
     /**
@@ -820,10 +835,10 @@ public class MainActivity extends AppCompatActivity {
      * Получает токен из localStorage и затем запускает VideoPlayerActivity
      * @param animeUrl URL страницы аниме для воспроизведения
      */
+    @OptIn(markerClass = UnstableApi.class)
     public void getAuthAndStartVideoPlayer(String animeUrl) {
         Log.d("MainActivity", "Getting auth token before starting VideoPlayerActivity");
         getAuthFromLocalStorage(() -> {
-            // После получения и сохранения токена запускаем VideoPlayerActivity
             Log.d("MainActivity", "Starting VideoPlayerActivity with URL: " + animeUrl);
             VideoPlayerActivity.startFromAnimePage(this, animeUrl);
         });

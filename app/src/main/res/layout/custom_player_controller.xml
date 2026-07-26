@@ -272,6 +272,21 @@
                     android:textSize="12sp" />
 
             </LinearLayout>
+
+            <!-- Download Button -->
+            <ImageButton
+                android:id="@+id/downloadButton"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginStart="8dp"
+                android:padding="8dp"
+                android:background="@android:color/transparent"
+                android:foreground="@drawable/ripple_circle"
+                app:tint="@color/white_color"
+                android:src="@drawable/ic_download"
+                android:scaleType="fitCenter"
+                android:contentDescription="Download episode"/>
+
             <Space
                 android:layout_width="0dp"
                 android:layout_height="1dp"

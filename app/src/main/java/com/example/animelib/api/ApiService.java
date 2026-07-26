@@ -90,6 +90,7 @@ public class ApiService {
     private final Gson gson;
     private final ExecutorService executor;
     private final Context context;
+    private final KodikLinksExtractor kodikLinksExtractor;
 
     // Database manager for all DB operations
     private final com.example.animelib.data.DatabaseManager databaseManager;
@@ -98,6 +99,7 @@ public class ApiService {
         this.context = context; // Сохраняем оригинальный context для runOnUiThread
         this.httpClient = new OkHttpClient();
         this.gson = new Gson();
+        this.kodikLinksExtractor = new KodikLinksExtractor(this.httpClient, this.gson);
         this.executor = Executors.newSingleThreadExecutor();
         this.databaseManager = new com.example.animelib.data.DatabaseManager(context.getApplicationContext());
     }
@@ -349,50 +351,24 @@ public class ApiService {
         });
     }
 
+    /**
+     * Получает ссылки Kodik напрямую, без внешнего сервиса.
+     */
     public void fetchKodikVideoLinks(String kodikSrc, KodikVideoCallback callback) {
         safeExecute(() -> {
             try {
-                String apiUrl = "https://anilib-kodik-api.burntv.ru/api/video-links?link=" + kodikSrc;
                 Log.d("AnimeApiService", "Fetching Kodik video links for src: " + kodikSrc);
+                KodikResponse kodikResponse = kodikLinksExtractor.getLinks(kodikSrc);
 
-                Request request = new Request.Builder()
-                        .url(apiUrl)
-                        .addHeader("Authorization", "Bearer " + getBearerToken())
-                        .build();
-
-                httpClient.newCall(request).enqueue(new Callback() {
-                    @Override
-                    public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                        Log.e("AnimeApiService", "Kodik video links request failed", e);
-                        callback.onError("Ошибка загрузки HLS ссылок: " + e.getMessage());
-                    }
-
-                    @Override
-                    public void onResponse(@NonNull Call call, @NonNull Response response) {
-                        try (response) {
-                            if (response.isSuccessful()) {
-                                assert response.body() != null;
-                                String responseBody = response.body().string();
-                                Log.d("AnimeApiService", "Kodik video links response received");
-
-                                KodikResponse kodikResponse = gson.fromJson(responseBody, KodikResponse.class);
-                                if (kodikResponse != null && kodikResponse.isSuccess() && kodikResponse.getData() != null) {
-                                    callback.onKodikVideoReceived(kodikResponse);
-                                } else {
-                                    callback.onError("Неверный формат ответа Kodik");
-                                }
-                            } else {
-                                callback.onError("HTTP ошибка: " + response.code());
-                            }
-                        } catch (Exception e) {
-                            Log.e("AnimeApiService", "Error processing Kodik response", e);
-                            callback.onError("Ошибка обработки HLS данных: " + e.getMessage());
-                        }
-                    }
-                });
+                if (kodikResponse.isSuccess() && kodikResponse.getData() != null
+                        && !kodikResponse.getData().isEmpty()) {
+                    callback.onKodikVideoReceived(kodikResponse);
+                } else {
+                    callback.onError("Kodik не вернул доступных качеств");
+                }
             } catch (Exception e) {
-                Log.e("AnimeApiService", "Error in Kodik API call", e);
-                callback.onError("Ошибка выполнения запроса: " + e.getMessage());
+                Log.e("AnimeApiService", "Error in Kodik links extraction", e);
+                callback.onError("Ошибка получения ссылок Kodik: " + e.getMessage());
             }
         });
     }
@@ -592,61 +568,12 @@ public class ApiService {
     }
 
     /**
-     * Fetch Kodik video links using unsafe HTTP client
+     * Устаревший псевдоним fetchKodikVideoLinks.
      */
+    @Deprecated
     public void fetchKodikVideoLinksUnsafe(String kodikSrc, KodikVideoCallback callback) {
-        safeExecute(() -> {
-            try {
-                String apiUrl = "https://anilib-kodik-api.burntv.ru/api/video-links?link=" + kodikSrc;
-                Log.d("AnimeApiService", "Making direct API request to: " + apiUrl);
-
-                Request request = new Request.Builder()
-                        .url(apiUrl)
-                        .addHeader("Authorization", "Bearer " + getBearerToken())
-                        .build();
-
-                // Create OkHttpClient with disabled SSL verification for Kodik API
-                OkHttpClient kodikClient = getUnsafeOkHttpClient();
-                kodikClient.newCall(request).enqueue(new Callback() {
-                    @Override
-                    public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                        Log.e("AnimeApiService", "Direct API request failed", e);
-                        callback.onError("Ошибка HLS API: " + e.getMessage());
-                    }
-
-                    @Override
-                    public void onResponse(@NonNull Call call, @NonNull Response response) {
-                        try (response) {
-                            if (response.isSuccessful()) {
-                                assert response.body() != null;
-                                String responseBody = response.body().string();
-                                Log.d("AnimeApiService", "Direct API response: " + responseBody);
-
-                                KodikResponse kodikResponse = gson.fromJson(responseBody, KodikResponse.class);
-                                if (kodikResponse != null && kodikResponse.isSuccess() && kodikResponse.getData() != null) {
-                                    Log.d("AnimeApiService", "Starting HLS player with Kodik response");
-                                    callback.onKodikVideoReceived(kodikResponse);
-                                } else {
-                                    callback.onError("HLS ссылки недоступны");
-                                }
-                            } else {
-                                Log.e("AnimeApiService", "API response not successful: " + response.code());
-                                callback.onError("Ошибка HLS API: " + response.code());
-                            }
-                        } catch (Exception e) {
-                            Log.e("AnimeApiService", "Error processing HLS response", e);
-                            callback.onError("Ошибка обработки HLS ответа");
-                        }
-                    }
-                });
-            } catch (Exception e) {
-                Log.e("AnimeApiService", "Error in HLS API call", e);
-                callback.onError("Ошибка HLS запроса");
-            }
-        });
+        fetchKodikVideoLinks(kodikSrc, callback);
     }
-
-    
 
     public void save4KSetting(boolean enable4K) {
         databaseManager.save4KSetting(enable4K);

@@ -16,11 +16,12 @@ import androidx.media3.ui.PlayerView;
 import java.util.Locale;
 
 /**
- * Менеджер для управления жестами плеера
+ * Менеджер для управления жестами плеера.
  * Обеспечивает функциональность свайпа для перемотки и удержания для ускорения
  */
 public class GesturesManager {
     private static final String TAG = "GesturesManager";
+    private static final int DOUBLE_TAP_SKIP_SECONDS = 10;
     
     // Контекст и зависимости
     private final Context context;
@@ -156,7 +157,8 @@ public class GesturesManager {
         if (skipIndicatorRight != null) {
             skipTextRight = skipIndicatorRight.findViewById(com.example.animelib.R.id.skipTextRight);
         }
-        
+
+        updateSkipDurationText(DOUBLE_TAP_SKIP_SECONDS);
         setupGestures();
     }
     
@@ -746,29 +748,23 @@ public class GesturesManager {
             Log.w(TAG, "Skip indicator is null");
             return;
         }
-        
-        // Вызываем callback для выполнения перемотки
+
         if (gestureCallback != null) {
-            // Используем значение по умолчанию, которое будет переопределено в VideoPlayerActivity
-            gestureCallback.onDoubleTapSkip(isForward, 85);
+            gestureCallback.onDoubleTapSkip(isForward, DOUBLE_TAP_SKIP_SECONDS);
         }
-        
-        // Показываем индикатор с анимацией
+
         indicator.setVisibility(View.VISIBLE);
         indicator.setAlpha(0f);
         indicator.setScaleX(0.8f);
         indicator.setScaleY(0.8f);
-        
-        // Анимация появления
+
         indicator.animate()
                 .alpha(1f)
                 .scaleX(1f)
                 .scaleY(1f)
                 .setDuration(200)
                 .withEndAction(() -> {
-                    // Задержка перед исчезновением
                     indicator.postDelayed(() -> {
-                        // Анимация исчезновения
                         indicator.animate()
                                 .alpha(0f)
                                 .scaleX(0.8f)
@@ -776,7 +772,7 @@ public class GesturesManager {
                                 .setDuration(200)
                                 .withEndAction(() -> indicator.setVisibility(View.GONE))
                                 .start();
-                    }, 500); // Показываем 500ms
+                    }, 500);
                 })
                 .start();
         

@@ -5,6 +5,7 @@ import android.util.Log;
 
 import com.example.animelib.data.entity.TokenEntity;
 import com.example.animelib.models.EpisodesListResponse;
+import com.example.animelib.R;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -15,30 +16,30 @@ import java.util.concurrent.Executors;
  */
 public class DatabaseManager {
     private static final String TAG = "DatabaseManager";
-    
+
     private final AppDatabase db;
     private final ExecutorService executor;
-    
+    private final Context context;
+
     public DatabaseManager(Context context) {
-        this.db = AppDatabase.getDatabase(context.getApplicationContext());
+        this.context = context.getApplicationContext();
+        this.db = AppDatabase.getDatabase(this.context);
         this.executor = Executors.newSingleThreadExecutor();
     }
     
     // ========== AppSettings операции ==========
-    
+
     /**
-     * Получает URL сайта из базы данных
+     * Получает URL сайта из базы данных. Вызывать вне главного потока
      */
     public String getSiteUrl() {
         try {
             AppSettings settings = db.appSettingsDao().getSettingsSync();
             if (settings != null && settings.getSiteUrl() != null) {
                 String url = settings.getSiteUrl();
-                // Убираем trailing slash если есть
                 if (url.endsWith("/")) {
                     url = url.substring(0, url.length() - 1);
                 }
-                // Добавляем https:// если нет протокола
                 if (!url.startsWith("http://") && !url.startsWith("https://")) {
                     url = "https://" + url;
                 }
@@ -47,8 +48,7 @@ public class DatabaseManager {
         } catch (Exception e) {
             Log.e(TAG, "Failed to get site URL from DB", e);
         }
-        // Fallback на дефолтный URL
-        return "https://v3.animelib.org";
+        return "https://" + context.getString(R.string.site_url);
     }
     
     /**

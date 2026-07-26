@@ -104,6 +104,22 @@
         android:textStyle="bold"
         android:visibility="gone" />
 
+    <!-- Download progress plaque -->
+    <TextView
+        android:id="@+id/downloadProgressText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="20dp"
+        android:layout_marginBottom="80dp"
+        android:background="@drawable/video_time_background"
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="6dp"
+        android:text="Скачивание 0%"
+        android:textColor="?attr/primaryTextColor"
+        android:textSize="13sp"
+        android:visibility="gone" />
+
     <!-- Double tap skip indicator - Left (backward) -->
     <LinearLayout
         android:id="@+id/skipIndicatorLeft"

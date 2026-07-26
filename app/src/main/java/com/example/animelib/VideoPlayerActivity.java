@@ -1,6 +1,7 @@
 package com.example.animelib;
 
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.PictureInPictureParams;
@@ -9,6 +10,7 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
 import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.Build;
@@ -30,6 +32,8 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.PlaybackException;
 import androidx.media3.common.Player;
@@ -67,6 +71,9 @@ import com.example.animelib.models.EpisodeResponse;
 import com.example.animelib.models.EpisodesListResponse;
 import com.example.animelib.models.KodikResponse;
 import com.example.animelib.models.RelatedTitlesResponse;
+import com.example.animelib.services.DownloadService;
+import com.example.animelib.settings.QualityBottomSheet;
+import com.example.animelib.ui.VideoUrlHelper;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.tabs.TabLayout;
 
@@ -190,6 +197,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
     // Picture-in-Picture support
     private boolean isInPictureInPictureMode = false;
     private boolean wasCommentsVisibleBeforePiP = false;
+    private boolean wasPlayingBeforeBackground = false;
 
     // Episode navigation buttons (for EpisodesManager)
     private ImageButton prevEpisodeButton;
@@ -216,12 +224,15 @@ public class VideoPlayerActivity extends AppCompatActivity {
     private boolean autoBookmarkSaved = false; // Флаг для предотвращения дублирования автосохранения
 
     // User preferences are now managed by PlayersManager
-    private String preferredQuality; // preferred quality (e.g., "720", "480", etc.)
+    private String preferredQuality;
+    private ImageButton downloadButton;
+    private TextView downloadProgressText;
     private boolean enable4K = false;
     private boolean enableAmbientLight = false;
     private boolean autoPlay = true;
     private int longSkipDuration = 85; // seconds
     private int currentTheme = ThemeUtils.THEME_SYSTEM;
+    private boolean autoPlayOnPrepare = true;
 
     // Menu state
     // isMenuVisible is now managed by PlayersManager
@@ -242,60 +253,45 @@ public class VideoPlayerActivity extends AppCompatActivity {
         setTheme(R.style.Theme_AnimeLIB_VideoPlayer);
         setContentView(R.layout.activity_video_player);
 
-        // Keep screen on during video playback
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-        // Initialize views
         playerView = findViewById(R.id.playerView);
         loadingOverlay = findViewById(R.id.loadingOverlay);
         ambientLightView = findViewById(R.id.ambientLightView);
 
-        // Устанавливаем fitsSystemWindows программно для предотвращения сброса при рестарте
         View rootView = findViewById(android.R.id.content);
         if (rootView != null) {
             rootView.setFitsSystemWindows(false);
         }
 
-        // Configure PlayerView to show controls for shorter time
         updateControllerAutoHide();
-        
-        // Disable ExoPlayer's default controller animations to use our custom alpha animation
+
         playerView.setControllerAnimationEnabled(false);
 
-        // Initialize network components
         executor = Executors.newSingleThreadExecutor();
         apiService = new ApiService(this);
 
-        // Load and apply theme
         loadAndApplyTheme();
 
-        // Initialize comments manager
         commentsManager = new CommentsManager(this, apiService);
-        
-        // Initialize episodes manager
+
         episodesManager = new EpisodesManager(this, apiService);
-        
-        // Устанавливаем callback для управления автоматическим скрытием контроллера
+
         episodesManager.setPlayerControlsCallback(shouldAutoHide -> {
             shouldAutoHideControls = shouldAutoHide;
             updateControllerAutoHide();
         });
-        
-        // Initialize players manager
+
         playersManager = new PlayersManager(this, apiService);
-        
-        // Initialize gestures manager
+
         gesturesManager = new GesturesManager(this);
         verticalGesturesManager = new VerticalGesturesManager(this);
-        
-        // Устанавливаем взаимные ссылки для координации
+
         gesturesManager.setVerticalGesturesManager(verticalGesturesManager);
         verticalGesturesManager.setGesturesManager(gesturesManager);
-        
-        // Initialize timecode manager
+
         timecodeManager = new TimecodeManager(this);
 
-        // Clear WebView cache to avoid Chromium errors
         try {
             android.webkit.WebView webView = new android.webkit.WebView(this);
             webView.clearCache(true);
@@ -305,7 +301,6 @@ public class VideoPlayerActivity extends AppCompatActivity {
             Log.w("VideoPlayer", "Failed to clear WebView cache", e);
         }
 
-        // Load settings from database asynchronously
         executor.execute(() -> {
             enable4K = apiService.load4KSetting();
             enableAmbientLight = apiService.loadAmbientLightSetting();
@@ -313,12 +308,8 @@ public class VideoPlayerActivity extends AppCompatActivity {
             longSkipDuration = apiService.loadLongSkipDurationSetting();
             currentTheme = apiService.loadThemeSetting();
             Log.d("VideoPlayer", "Loaded settings - 4K: " + enable4K + ", AmbientLight: " + enableAmbientLight + ", AutoPlay: " + autoPlay + ", SkipDuration: " + longSkipDuration + ", Theme: " + currentTheme);
-            
-            // Update skip indicators text, 4K setting, and ambient light on UI thread
+
             runOnUiThread(() -> {
-                if (gesturesManager != null) {
-                    gesturesManager.updateSkipDurationText(longSkipDuration);
-                }
                 if (playersManager != null) {
                     playersManager.setEnable4K(enable4K);
                 }
@@ -814,7 +805,10 @@ public class VideoPlayerActivity extends AppCompatActivity {
         RecyclerView episodesHorizontalRecyclerView = controllerView.findViewById(R.id.episodesHorizontalRecyclerView);
         ImageButton commentsButton = controllerView.findViewById(R.id.commentsButton);
         bookmarkButton = controllerView.findViewById(R.id.bookmarkButton);
-        
+        downloadButton = controllerView.findViewById(R.id.downloadButton);
+        downloadProgressText = findViewById(R.id.downloadProgressText);
+        setupDownloadListener();
+
         // Store for manager initialization
         this.episodesHorizontalRecyclerView = episodesHorizontalRecyclerView;
         this.commentsButton = commentsButton;
@@ -1492,9 +1486,19 @@ public class VideoPlayerActivity extends AppCompatActivity {
                 finish();
             });
         }
-        
+
         if (episodesMenuButton != null) {
             episodesMenuButton.setOnClickListener(v -> toggleEpisodesInController());
+        }
+
+        if (downloadButton != null) {
+            downloadButton.setOnClickListener(v -> {
+                if (DownloadService.isRunning()) {
+                    DownloadService.cancel(this);
+                } else {
+                    showDownloadDialog();
+                }
+            });
         }
         
         if (bookmarkButton != null) {
@@ -1728,9 +1732,9 @@ public class VideoPlayerActivity extends AppCompatActivity {
                     Log.w("VideoPlayer", "Player is null, cannot perform skip");
                     return;
                 }
-                
+
                 long currentPosition = player.getCurrentPosition();
-                long skipDuration = longSkipDuration * 1000L; // Используем настройку из VideoPlayerActivity
+                long skipDuration = skipDurationSeconds * 1000L;
                 long newPosition = isForward ? currentPosition + skipDuration : currentPosition - skipDuration;
                 long duration = player.getDuration();
                 
@@ -2347,44 +2351,35 @@ public class VideoPlayerActivity extends AppCompatActivity {
 
     private void onPlayerSelected(EpisodeResponse.PlayerData playerData) {
         Log.d("VideoPlayer", "Player selected: " + playerData.getPlayer());
-        
-        // Скрываем anime info placeholder при выборе озвучки
+
+        autoPlayOnPrepare = player == null || player.getPlayWhenReady();
+
         hideAnimeInfoPlaceholder();
-        
-        // СРАЗУ обновляем заголовок с номером эпизода (синхронно, без API запроса)
+
         updateEpisodeHeaderQuick();
-        
-        // СРАЗУ сохраняем предпочтения плеера и озвучки (БЕЗ качества пока)
-        // Качество добавится позже, когда будет выбрано
+
         if (playerData.getPlayer() != null && playerData.getTeam() != null) {
             apiService.savePlayerPreferences(playerData.getPlayer(), playerData.getTeam().getId());
             Log.d("VideoPlayer", "Immediately saved player preferences: player=" + playerData.getPlayer() + 
                   ", teamId=" + playerData.getTeam().getId());
         }
 
-        // Сохраняем текущую позицию перед сменой плеера
         if (player != null) {
             savedPlayerPosition = player.getCurrentPosition();
             Log.d("VideoPlayer", "Saved player position: " + savedPlayerPosition + "ms before switching to: " + playerData.getPlayer());
         }
 
-        // Stop current playback before starting new one
         stopCurrentPlayback();
 
-        // Update preferred quality for new player
         List<String> newQualities = playersManager.getAvailableQualities();
-        
-        // Включаем кнопку закладки когда плеер выбран
+
         enableBookmarkButton();
-        
-        // Обновляем currentPlayerData в PlayersManager для правильной подсветки
+
         playersManager.setCurrentPlayerData(playerData);
 
-        // Don't hide menu automatically - let user control it
         Log.d("VideoPlayer", "Player selected, ready to start playback");
         
         if (!newQualities.isEmpty()) {
-            // Пытаемся загрузить сохраненное качество
             executor.execute(() -> {
                 com.example.animelib.data.entity.PlayerPreferences prefs = apiService.loadPlayerPreferences();
                 String savedQuality = (prefs != null) ? prefs.getPreferredQuality() : null;
@@ -2392,12 +2387,10 @@ public class VideoPlayerActivity extends AppCompatActivity {
                 safeRunOnUiThread(() -> {
                     String newPreferredQuality = null;
                     
-                    // Если есть сохраненное качество и оно доступно - используем его
                     if (savedQuality != null && newQualities.contains(savedQuality)) {
                         newPreferredQuality = savedQuality;
                         Log.d("VideoPlayer", "Using saved quality: " + savedQuality);
                     } else {
-                        // Иначе выбираем максимальное доступное качество
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
                             newPreferredQuality = newQualities.getFirst();
                         }
@@ -2407,19 +2400,16 @@ public class VideoPlayerActivity extends AppCompatActivity {
                     preferredQuality = newPreferredQuality;
                     Log.d("VideoPlayer", "Updated preferred quality to: " + newPreferredQuality + " for player: " + playerData.getPlayer());
                     
-                    // Обновляем сохраненные предпочтения С качеством
                     if (playerData.getPlayer() != null && playerData.getTeam() != null) {
                         apiService.savePlayerPreferences(playerData.getPlayer(), playerData.getTeam().getId(), preferredQuality);
                         Log.d("VideoPlayer", "Updated player preferences with quality: player=" + playerData.getPlayer() + 
                               ", teamId=" + playerData.getTeam().getId() + ", quality=" + preferredQuality);
                     }
                     
-                    // Update settings dialog if it's open
                     if (currentSettingsBottomSheet != null) {
                         currentSettingsBottomSheet.updateQualities(newQualities, preferredQuality);
                     }
                     
-                    // ВАЖНО: Запускаем плеер ПОСЛЕ установки качества
                     long startPosition = bookmarkTimecode > 0 ? bookmarkTimecode : savedPlayerPosition;
                     Log.d("VideoPlayer", "Starting player with position: " + startPosition + "ms (bookmark: " + bookmarkTimecode + "ms, saved: " + savedPlayerPosition + "ms)");
                     
@@ -2429,12 +2419,10 @@ public class VideoPlayerActivity extends AppCompatActivity {
                         handleKodikPlayer(playerData, startPosition);
                     }
                     
-                    // Обновляем полную информацию об аниме (асинхронно с API)
                     updateAnimeInfoHeaderFull();
                 });
             });
         } else {
-            // Если качества недоступны, запускаем плеер сразу
             long startPosition = bookmarkTimecode > 0 ? bookmarkTimecode : savedPlayerPosition;
             Log.d("VideoPlayer", "Starting player with position: " + startPosition + "ms (no qualities available)");
             
@@ -2444,13 +2432,15 @@ public class VideoPlayerActivity extends AppCompatActivity {
                 handleKodikPlayer(playerData, startPosition);
             }
             
-            // Обновляем полную информацию об аниме (асинхронно с API)
             updateAnimeInfoHeaderFull();
         }
     }
 
-    private void onEpisodeSelected(EpisodesListResponse.EpisodeItem episode) {
-        Log.d("VideoPlayer", "Episode selected: " + episode.getNumber() + " (ID: " + episode.getId() + ")");
+    private void onEpisodeSelected(EpisodesListResponse.EpisodeItem episode, boolean autoPlay) {
+        Log.d("VideoPlayer", "Episode selected: " + episode.getNumber() + " (ID: " + episode.getId() + "), autoPlay: " + autoPlay);
+
+        // Слайдер эпизодов открывает серию на паузе, кнопки вперёд/назад — сразу
+        autoPlayOnPrepare = autoPlay;
 
         // Reset bookmark timecode for new episode selection
         bookmarkTimecode = 0;
@@ -2519,14 +2509,12 @@ public class VideoPlayerActivity extends AppCompatActivity {
             return;
         }
 
-        // Create dialog reference first
         SettingsBottomSheet dialog = new SettingsBottomSheet(this, availableQualities, preferredQuality,
                 quality -> {
                     String oldQuality = preferredQuality;
                     preferredQuality = quality;
                     Log.d("VideoPlayer", "Selected quality: " + quality);
-                    
-                    // Сохраняем выбранное качество в БД вместе с плеером и озвучкой
+
                     EpisodeResponse.PlayerData currentPlayer = playersManager.getCurrentPlayerData();
                     if (currentPlayer != null && currentPlayer.getPlayer() != null && currentPlayer.getTeam() != null) {
                         apiService.savePlayerPreferences(currentPlayer.getPlayer(), 
@@ -2535,7 +2523,6 @@ public class VideoPlayerActivity extends AppCompatActivity {
                         Log.d("VideoPlayer", "Saved quality preference: " + quality);
                     }
 
-                    // If quality changed, restart with new quality (regardless of playback state)
                     if (!quality.equals(oldQuality) && player != null) {
                         Log.d("VideoPlayer", "Restarting player with new quality");
                         restartPlayerWithNewQuality();
@@ -2551,22 +2538,17 @@ public class VideoPlayerActivity extends AppCompatActivity {
                 enable4K,
                 enabled -> {
                     enable4K = enabled;
-                    // Save to database
                     apiService.save4KSetting(enabled);
-                    // Update PlayersManager with new 4K setting
                     playersManager.setEnable4K(enabled);
                     Log.d("VideoPlayer", "4K setting changed to: " + enabled);
-                    // Refresh qualities when 4K setting changes
                     List<String> newQualities = playersManager.getAvailableQualities();
                     Log.d("VideoPlayer", "New qualities after 4K toggle: " + newQualities);
                     if (!newQualities.isEmpty()) {
-                        // Update preferred quality if current is not available
                         if (!newQualities.contains(preferredQuality)) {
                             String oldQuality = preferredQuality;
                             preferredQuality = newQualities.get(0);
                             Log.d("VideoPlayer", "Preferred quality changed from " + oldQuality + " to " + preferredQuality);
                         }
-                        // Use currentSettingsDialog instead of dialog
                         if (currentSettingsBottomSheet != null) {
                             Log.d("VideoPlayer", "Updating SettingsBottomSheet with new qualities");
                             currentSettingsBottomSheet.updateQualities(newQualities, preferredQuality);
@@ -2580,9 +2562,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
                 enableAmbientLight,
                 enabled -> {
                     enableAmbientLight = enabled;
-                    // Save to database
                     apiService.saveAmbientLightSetting(enabled);
-                    // Update ambient light manager
                     if (ambientLightManager != null) {
                         ambientLightManager.setEnabled(enabled);
                     }
@@ -2591,45 +2571,33 @@ public class VideoPlayerActivity extends AppCompatActivity {
                 autoPlay,
                 enabled -> {
                     autoPlay = enabled;
-                    // Save to database
                     apiService.saveAutoPlaySetting(enabled);
                     Log.d("VideoPlayer", "AutoPlay enabled: " + enabled);
                 },
                 longSkipDuration,
                 duration -> {
                     longSkipDuration = duration;
-                    // Save to database
                     apiService.saveLongSkipDurationSetting(duration);
-                    // Update skip indicators text
-                    if (gesturesManager != null) {
-                        gesturesManager.updateSkipDurationText(duration);
-                    }
                     Log.d("VideoPlayer", "LongSkipDuration changed: " + duration);
                 },
                 currentTheme,
                 themeMode -> {
                     currentTheme = themeMode;
-                    // Apply theme immediately without recreating activity
                     ThemeUtils.applyThemeToActivity(VideoPlayerActivity.this, themeMode);
                     apiService.saveThemeSetting(themeMode);
                     Log.d("VideoPlayer", "Theme changed: " + themeMode);
                 });
 
-        // Store reference to current dialog
         currentSettingsBottomSheet = dialog;
 
-        // Apply settings when dialog is shown
         dialog.setOnShowListener(dialogInterface -> {
-            // Apply current playback speed and volume
             applySettingsFromDialog(dialog);
         });
-        
-        // Приостанавливаем ambient подсветку при открытии bottom sheet
+
         if (ambientLightManager != null) {
             ambientLightManager.suspend();
         }
-        
-        // Возобновляем ambient подсветку при закрытии bottom sheet
+
         dialog.setOnDismissListener(dialogInterface -> {
             if (ambientLightManager != null) {
                 ambientLightManager.resume();
@@ -2639,24 +2607,171 @@ public class VideoPlayerActivity extends AppCompatActivity {
         dialog.show();
     }
 
+    /**
+     * Показывает выбор качества для скачивания текущей серии
+     */
+    private void showDownloadDialog() {
+        EpisodeResponse.PlayerData playerData = playersManager.getCurrentPlayerData();
+        if (playerData == null) {
+            Toast.makeText(this, "Серия ещё не загружена", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (!"animelib".equalsIgnoreCase(playerData.getPlayer())) {
+            Toast.makeText(this, "Скачивание доступно только для озвучек AnimeLib", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        List<String> qualities = playersManager.getAvailableQualities();
+        if (qualities.isEmpty()) {
+            Toast.makeText(this, "Нет доступных качеств", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        final QualityBottomSheet[] sheet = new QualityBottomSheet[1];
+        sheet[0] = new QualityBottomSheet(this, qualities, null, quality -> {
+            if (sheet[0] != null) {
+                sheet[0].dismiss();
+            }
+            startDownload(quality);
+        });
+        sheet[0].setTitleText("Скачать серию");
+        sheet[0].show();
+    }
+
+    /**
+     * Запускает фоновое скачивание текущей серии в выбранном качестве
+     */
+    private void startDownload(String quality) {
+        String url = resolveDownloadUrl(quality);
+        if (url == null) {
+            Toast.makeText(this, "Нет ссылки для качества " + quality, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        requestNotificationPermission();
+        showDownloadProgress(0);
+
+        String referer = "https://" + getString(R.string.site_url) + "/";
+        DownloadService.start(this, url, buildDownloadFileName(quality), referer);
+    }
+
+    /**
+     * Подписывает плеер на события фонового скачивания
+     */
+    private void setupDownloadListener() {
+        DownloadService.setListener(new DownloadService.ProgressListener() {
+            @Override
+            public void onProgress(int percent) {
+                safeRunOnUiThread(() -> showDownloadProgress(percent));
+            }
+
+            @Override
+            public void onFinished(String fileName) {
+                safeRunOnUiThread(() -> {
+                    resetDownloadUi();
+                    Toast.makeText(VideoPlayerActivity.this,
+                            "Сохранено в «Загрузки»: " + fileName, Toast.LENGTH_LONG).show();
+                });
+            }
+
+            @Override
+            public void onError(String message) {
+                safeRunOnUiThread(() -> {
+                    resetDownloadUi();
+                    Toast.makeText(VideoPlayerActivity.this,
+                            "Скачивание: " + message, Toast.LENGTH_LONG).show();
+                });
+            }
+        });
+    }
+
+    /**
+     * Показывает плашку прогресса скачивания
+     */
+    private void showDownloadProgress(int percent) {
+        if (downloadProgressText != null) {
+            downloadProgressText.setText("Скачивание " + percent + "%");
+            downloadProgressText.setVisibility(View.VISIBLE);
+        }
+        if (downloadButton != null) {
+            downloadButton.setAlpha(0.5f);
+        }
+    }
+
+    /**
+     * Запрашивает разрешение на уведомления о прогрессе
+     */
+    private void requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            return;
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.POST_NOTIFICATIONS}, 4201);
+        }
+    }
+
+    /**
+     * Возвращает ссылку на файл выбранного качества
+     */
+    private String resolveDownloadUrl(String quality) {
+        EpisodeResponse.PlayerData playerData = playersManager.getCurrentPlayerData();
+        if (playerData == null || playerData.getVideo() == null || playerData.getVideo().getQuality() == null) {
+            return null;
+        }
+
+        try {
+            int target = Integer.parseInt(quality.replace("p", ""));
+            for (EpisodeResponse.QualityData data : playerData.getVideo().getQuality()) {
+                if (data.getQuality() == target) {
+                    return VideoUrlHelper.toAbsoluteVideoUrl(data.getHref());
+                }
+            }
+        } catch (NumberFormatException e) {
+            Log.w("VideoPlayer", "Invalid quality format: " + quality);
+        }
+        return null;
+    }
+
+    /**
+     * Формирует имя файла для скачиваемой серии
+     */
+    private String buildDownloadFileName(String quality) {
+        String title = animeTitleView != null ? animeTitleView.getText().toString() : "anime";
+        EpisodesListResponse.EpisodeItem episode = episodesManager.getCurrentEpisode();
+        String number = episode != null ? episode.getNumber() : "0";
+        String name = title + " - " + number + " серия (" + quality + ")";
+        return name.replaceAll("[\\\\/:*?\"<>|]", "_").trim() + ".mp4";
+    }
+
+    /**
+     * Возвращает элементы скачивания в исходное состояние
+     */
+    private void resetDownloadUi() {
+        if (downloadProgressText != null) {
+            downloadProgressText.setVisibility(View.GONE);
+        }
+        if (downloadButton != null) {
+            downloadButton.setAlpha(1.0f);
+        }
+    }
+
     private void restartPlayerWithNewQuality() {
         EpisodeResponse.PlayerData currentPlayerData = playersManager.getCurrentPlayerData();
         if (currentPlayerData == null) {
             return;
         }
 
-        // Save current position
         long currentPosition = player != null ? player.getCurrentPosition() : 0;
 
-        // Stop current playback
+        autoPlayOnPrepare = player == null || player.getPlayWhenReady();
+
         stopCurrentPlayback();
 
-        // Update video URL with new quality for Animelib
         if ("animelib".equalsIgnoreCase(currentPlayerData.getPlayer())) {
-            // For Animelib, we need to restart with new quality URL
             handleAnimelibPlayer(currentPlayerData, currentPosition);
         } else if ("kodik".equalsIgnoreCase(currentPlayerData.getPlayer())) {
-            // For Kodik, we need to restart with new HLS URL
             if (currentKodikResponse != null && currentKodikResponse.getData() != null) {
                 String qualityKey = preferredQuality != null ? preferredQuality.replace("p", "") : "1080";
                 if (currentKodikResponse.getData().containsKey(qualityKey) &&
@@ -2757,7 +2872,10 @@ public class VideoPlayerActivity extends AppCompatActivity {
         player.prepare();
 
         // Start playback
-        player.play();
+        if (autoPlayOnPrepare) {
+            player.play();
+        }
+        autoPlayOnPrepare = true;
 
         // Add listener for errors
         player.addListener(new Player.Listener() {
@@ -2999,19 +3117,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
             String videoUrl = selectedQuality.getHref();
             Log.d("AnimelibPlayer", "Selected quality: " + selectedQuality.getQuality() + "p, URL: " + videoUrl);
 
-            // Ensure URL is absolute - use video CDN domain
-            if (!videoUrl.startsWith("http")) {
-                // Use video1.cdnlibs.org for video files with access token
-                String originalPath = videoUrl;
-                videoUrl = "https://video1.cdnlibs.org/.%D0%B0s" + videoUrl;
-                Log.d("AnimelibPlayer", "Converted relative path '" + originalPath + "' to '" + videoUrl + "'");
-
-                // Alternative: try without token if 403 occurs
-                // videoUrl = "https://video1.cdnlibs.org" + videoUrl;
-                // Log.d("AnimelibPlayer", "Alternative URL without token: " + videoUrl);
-            } else {
-                Log.d("AnimelibPlayer", "URL is already absolute: " + videoUrl);
-            }
+            videoUrl = VideoUrlHelper.toAbsoluteVideoUrl(videoUrl);
 
             Log.d("AnimelibPlayer", "Final video URL: " + videoUrl);
             currentVideoUrl = videoUrl;
@@ -3058,7 +3164,7 @@ public class VideoPlayerActivity extends AppCompatActivity {
         Log.d("KodikAPI", "Fetching HLS links for Kodik src: " + kodikSrc);
         safeRunOnUiThread(() -> showLoading("Получение HLS ссылок..."));
 
-        apiService.fetchKodikVideoLinksUnsafe(kodikSrc, new ApiService.KodikVideoCallback() {
+        apiService.fetchKodikVideoLinks(kodikSrc, new ApiService.KodikVideoCallback() {
             @Override
             public void onKodikVideoReceived(KodikResponse response) {
                 safeRunOnUiThread(() -> {
@@ -3459,13 +3565,17 @@ public class VideoPlayerActivity extends AppCompatActivity {
         OkHttpClient okHttpClient = new OkHttpClient.Builder()
                 .addInterceptor(chain -> {
                     Request original = chain.request();
+                    boolean kodikHost = original.url().host().contains("kodik");
+                    String referer = kodikHost ? "https://kodik.info/" : "https://v3.animelib.org/";
+                    String origin = kodikHost ? "https://kodik.info" : "https://v3.animelib.org";
+
                     Request.Builder requestBuilder = original.newBuilder()
                             .header("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1")
-                            .header("Referer", "https://v3.animelib.org/")
+                            .header("Referer", referer)
                             .header("Accept", "video/mp4,video/*,*/*")
                             .header("Accept-Encoding", "identity;q=1, *;q=0")
                             .header("Accept-Language", "ru,en;q=0.9,de;q=0.8,zh;q=0.7")
-                            .header("Origin", "https://v3.animelib.org")
+                            .header("Origin", origin)
                             .header("Sec-Fetch-Dest", "video")
                             .header("Sec-Fetch-Mode", "cors")
                             .header("Sec-Fetch-Site", "cross-site")
@@ -3527,7 +3637,10 @@ public class VideoPlayerActivity extends AppCompatActivity {
 
         player.setMediaSource(hlsMediaSource);
         player.prepare();
-        player.play();
+        if (autoPlayOnPrepare) {
+            player.play();
+        }
+        autoPlayOnPrepare = true;
 
         // Re-setup all player control buttons for the new player
         setupPlayerControlButtons();
@@ -3817,7 +3930,8 @@ public class VideoPlayerActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        if (player != null) {
+        if (player != null && wasPlayingBeforeBackground
+                && player.getPlaybackState() != Player.STATE_ENDED) {
             player.play();
         }
     }
@@ -3833,12 +3947,11 @@ public class VideoPlayerActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        
-        // Автоматически сохраняем закладку при сворачивании приложения
+
         autoSaveBookmark();
-        
-        // Pause playback
-        if (player != null && player.isPlaying()) {
+
+        if (player != null) {
+            wasPlayingBeforeBackground = player.getPlayWhenReady();
             player.pause();
         }
     }
@@ -3857,11 +3970,17 @@ public class VideoPlayerActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        
-        // Убеждаемся что fitsSystemWindows установлен правильно
+
         View rootView = findViewById(android.R.id.content);
         if (rootView != null) {
             rootView.setFitsSystemWindows(false);
+        }
+
+        // Восстанавливаем плашку прогресса при возврате в плеер
+        if (DownloadService.isRunning()) {
+            showDownloadProgress(DownloadService.getProgress());
+        } else {
+            resetDownloadUi();
         }
     }
 
@@ -3900,8 +4019,8 @@ public class VideoPlayerActivity extends AppCompatActivity {
         if (ambientLightManager != null) {
             ambientLightManager.cleanup();
         }
-        
-        // Останавливаем обратный отсчет следующего эпизода
+        DownloadService.setListener(null);
+
         if (nextEpisodeHandler != null && nextEpisodeRunnable != null) {
             nextEpisodeHandler.removeCallbacks(nextEpisodeRunnable);
         }
@@ -3909,18 +4028,13 @@ public class VideoPlayerActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        // If video is playing and not in PiP mode, enter PiP instead of closing
         if (player != null && player.isPlaying() && !isInPictureInPictureMode) {
-            // Автоматически сохраняем закладку перед переходом в PiP
             autoSaveBookmark();
             enterPictureInPictureMode();
             return;
         }
-
-        // Автоматически сохраняем закладку перед закрытием
         autoSaveBookmark();
-        
-        // Otherwise, close the activity
+
         super.onBackPressed();
     }
 }

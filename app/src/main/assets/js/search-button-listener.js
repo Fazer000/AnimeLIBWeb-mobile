@@ -1,114 +1,106 @@
-(function() {
-    'use strict';
-    
-    console.log('[Search Button Listener] Initializing...');
-    
-    let observerActive = false;
-    let clickHandlersAttached = new WeakSet();
-    
-    // Функция для установки обработчика клика на кнопку поиска
-    function attachSearchButtonHandler(button) {
-        if (!button || clickHandlersAttached.has(button)) {
-            return;
-        }
-        
-        console.log('[Search Button Listener] Attaching click handler to search button');
-        
-        button.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            console.log('[Search Button Listener] Search button clicked!');
-            
-            // Вызываем метод Android интерфейса
-            if (typeof AndroidInterface !== 'undefined' && AndroidInterface.onSearchButtonClicked) {
-                AndroidInterface.onSearchButtonClicked();
-            } else {
-                console.error('[Search Button Listener] AndroidInterface not found');
-            }
-        }, true);
-        
-        clickHandlersAttached.add(button);
-        console.log('[Search Button Listener] Click handler attached successfully');
-    }
-    
-    // Функция для поиска и обработки всех кнопок поиска
-    function findAndAttachSearchButtons() {
-        // Ищем элементы с классом cm_ct, которые содержат SVG с иконкой поиска
-        const searchButtons = document.querySelectorAll('.cm_ct');
-        
-        console.log('[Search Button Listener] Found ' + searchButtons.length + ' potential search buttons');
-        
-        searchButtons.forEach(function(button) {
-            // Проверяем, содержит ли кнопка SVG с иконкой лупы
-            const searchIcon = button.querySelector('svg.fa-magnifying-glass');
-            const searchText = button.querySelector('span');
-            
-            if (searchIcon && searchText && searchText.textContent.includes('Быстрый поиск')) {
-                console.log('[Search Button Listener] Found valid search button');
-                attachSearchButtonHandler(button);
-            }
-        });
-    }
-    
-    // Наблюдатель за изменениями DOM для SPA
-    function startObserver() {
-        if (observerActive) {
-            console.log('[Search Button Listener] Observer already active');
-            return;
-        }
-        
-        const observer = new MutationObserver(function(mutations) {
-            let shouldCheck = false;
-            
-            mutations.forEach(function(mutation) {
-                if (mutation.addedNodes.length > 0) {
-                    mutation.addedNodes.forEach(function(node) {
-                        if (node.nodeType === 1) { // ELEMENT_NODE
-                            if (node.classList && node.classList.contains('cm_ct')) {
-                                shouldCheck = true;
-                            } else if (node.querySelector && node.querySelector('.cm_ct')) {
-                                shouldCheck = true;
-                            }
-                        }
-                    });
-                }
-            });
-            
-            if (shouldCheck) {
-                console.log('[Search Button Listener] DOM changed, checking for search buttons...');
-                findAndAttachSearchButtons();
-            }
-        });
-        
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-        
-        observerActive = true;
-        console.log('[Search Button Listener] Observer started');
-    }
-    
-    // Инициализация при загрузке
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('[Search Button Listener] DOM loaded, initializing...');
-            findAndAttachSearchButtons();
-            startObserver();
-        });
+/**
+ * Перехватывает кнопки поиска сайта и передаёт клик в Android.
+ */
+try {
+    if (window.animelibSearchSetup) {
+        console.log('[AnimeLIB Search] Listener already setup');
     } else {
-        console.log('[Search Button Listener] DOM already loaded, initializing immediately...');
-        findAndAttachSearchButtons();
-        startObserver();
-    }
-    
-    // Дополнительная проверка через небольшой таймаут на случай SPA
-    setTimeout(function() {
-        console.log('[Search Button Listener] Delayed check for search buttons...');
-        findAndAttachSearchButtons();
-    }, 1000);
-    
-    console.log('[Search Button Listener] Initialization complete');
-})();
+        window.animelibSearchSetup = true;
 
+        var SEARCH_ICON = '.fa-magnifying-glass, [data-icon="magnifying-glass"]';
+        var BACK_ICON = '.fa-arrow-left, [data-icon="arrow-left"], .fa-chevron-left, [data-icon="chevron-left"], .fa-xmark, [data-icon="xmark"]';
+        var LABELS = ['быстрый поиск', 'поиск'];
+        var MAX_DEPTH = 4;
+
+        /** Возвращает нормализованный текст элемента. */
+        function normalizeText(el) {
+            return (el.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+        }
+
+        /** Проверяет, что элемент сам является кнопкой поиска, а не её контейнером. */
+        function isSearchButton(el) {
+            if (!el || el.nodeType !== 1 || el === document.body || !el.querySelector) {
+                return false;
+            }
+            if (el.querySelector('input, textarea')) {
+                return false;
+            }
+            if (!el.querySelector(SEARCH_ICON)) {
+                return false;
+            }
+
+            var text = normalizeText(el);
+            if (text === '') {
+                return !!(el.classList && el.classList.contains('cm_ct'));
+            }
+            return LABELS.indexOf(text) !== -1;
+        }
+
+        /** Определяет клик по кнопке «назад» / «закрыть». */
+        function isBackControl(target) {
+            var el = target;
+            for (var i = 0; i < 3 && el; i++) {
+                if (el.matches && el.matches(BACK_ICON)) {
+                    return true;
+                }
+                if ((el.tagName === 'BUTTON' || el.tagName === 'A') && el.querySelector && el.querySelector(BACK_ICON)) {
+                    return true;
+                }
+                el = el.parentElement;
+            }
+            return false;
+        }
+
+        /** Ищет кнопку поиска среди цели события и её ближайших родителей. */
+        function findSearchButton(target) {
+            if (isBackControl(target)) {
+                return null;
+            }
+            var el = target;
+            for (var i = 0; i < MAX_DEPTH && el && el !== document.body; i++) {
+                if (isSearchButton(el)) {
+                    return el;
+                }
+                el = el.parentElement;
+            }
+            return null;
+        }
+
+        /** Гасит событие сайта и открывает нативный поиск. */
+        function handleEvent(e) {
+            var target = e.target;
+            if (!target || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+                return;
+            }
+            if (!findSearchButton(target)) {
+                return;
+            }
+
+            e.stopPropagation();
+            if (e.stopImmediatePropagation) {
+                e.stopImmediatePropagation();
+            }
+            if (e.type !== 'click') {
+                return;
+            }
+            e.preventDefault();
+
+            if (window.AndroidInterface && window.AndroidInterface.onSearchButtonClicked) {
+                console.log('[AnimeLIB Search] Search button clicked');
+                window.AndroidInterface.onSearchButtonClicked();
+            } else {
+                console.error('[AnimeLIB Search] AndroidInterface not found');
+            }
+        }
+
+        ['pointerdown', 'mousedown', 'touchstart', 'click'].forEach(function (type) {
+            document.addEventListener(type, handleEvent, true);
+        });
+
+        console.log('[AnimeLIB Search] Listener setup complete');
+    }
+    'search_setup_ok';
+} catch (e) {
+    console.error('[AnimeLIB Search] Error: ' + e.message);
+    'search_error: ' + e.message;
+}

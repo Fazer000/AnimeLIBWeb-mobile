@@ -58,7 +58,7 @@ public class EpisodesManager {
 
     // Callback интерфейсы
     public interface EpisodeSelectionCallback {
-        void onEpisodeSelected(EpisodesListResponse.EpisodeItem episode);
+        void onEpisodeSelected(EpisodesListResponse.EpisodeItem episode, boolean autoPlay);
     }
 
     public interface EpisodesVisibilityCallback {
@@ -149,12 +149,11 @@ public class EpisodesManager {
 
         episodesAdapter = new HorizontalEpisodesAdapter(episodes, currentEpisode, episode -> {
             if (episodeSelectionCallback != null) {
-                episodeSelectionCallback.onEpisodeSelected(episode);
+                episodeSelectionCallback.onEpisodeSelected(episode, false);
             }
             hideEpisodesMenu();
         });
 
-        // Горизонтальный layout manager для эпизодов в контроллере
         LinearLayoutManager layoutManager = new LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false);
         episodesRecyclerView.setLayoutManager(layoutManager);
         episodesRecyclerView.setAdapter(episodesAdapter);
@@ -304,7 +303,7 @@ public class EpisodesManager {
             Log.d(TAG, "Navigating to previous episode: " + previousEpisode.getNumber());
 
             if (episodeSelectionCallback != null) {
-                episodeSelectionCallback.onEpisodeSelected(previousEpisode);
+                episodeSelectionCallback.onEpisodeSelected(previousEpisode, true);
             }
         } else {
             Log.d(TAG, "No previous episode available");
@@ -342,7 +341,7 @@ public class EpisodesManager {
             Log.d(TAG, "Navigating to next episode: " + nextEpisode.getNumber());
 
             if (episodeSelectionCallback != null) {
-                episodeSelectionCallback.onEpisodeSelected(nextEpisode);
+                episodeSelectionCallback.onEpisodeSelected(nextEpisode, true);
             }
         } else {
             Log.d(TAG, "No next episode available");
@@ -488,7 +487,7 @@ public class EpisodesManager {
                 // Создаем новый адаптер только если его нет
                 episodesAdapter = new HorizontalEpisodesAdapter(episodes, currentEpisode, episode -> {
                     if (episodeSelectionCallback != null) {
-                        episodeSelectionCallback.onEpisodeSelected(episode);
+                        episodeSelectionCallback.onEpisodeSelected(episode, false);
                     }
                     hideEpisodesMenu();
                 });

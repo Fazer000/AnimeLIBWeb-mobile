@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ImageButton;
+import android.widget.TextView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.animelib.R;
@@ -22,6 +23,7 @@ public class QualityBottomSheet extends BottomSheetDialog {
     private final QualityAdapter.OnQualitySelectedListener listener;
     private QualityAdapter adapter;
     private OnBackPressedListener onBackPressedListener;
+    private String titleText;
     
     public interface OnBackPressedListener {
         void onBackPressed();
@@ -79,7 +81,29 @@ public class QualityBottomSheet extends BottomSheetDialog {
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         recyclerView.setAdapter(adapter);
 
+        applyTitle();
         setCancelable(true);
+    }
+
+    /**
+     * Задаёт заголовок шита
+     */
+    public void setTitleText(String titleText) {
+        this.titleText = titleText;
+        applyTitle();
+    }
+
+    /**
+     * Применяет заголовок к разметке
+     */
+    private void applyTitle() {
+        if (titleText == null) {
+            return;
+        }
+        TextView titleView = findViewById(R.id.qualityTitle);
+        if (titleView != null) {
+            titleView.setText(titleText);
+        }
     }
     
     public void updateCurrentQuality(String newCurrentQuality) {
